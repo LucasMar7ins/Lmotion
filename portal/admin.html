@@ -315,6 +315,18 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="videoDetalheModal" style="display:none;">
+  <div class="modal-box" style="width:360px;">
+    <h3 id="vdTitulo">Vídeo</h3>
+    <p class="meta" id="vdMeta" style="margin:4px 0 14px;"></p>
+    <p id="vdObservacao" style="display:none;color:var(--red);font-size:0.9rem;line-height:1.5;background:rgba(227,85,85,0.1);border-radius:8px;padding:12px 14px;"></p>
+    <a href="#" target="_blank" rel="noopener" class="btn btn-block" id="vdLinkDrive" style="margin-top:14px;display:none;">Abrir vídeo no Drive</a>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-outline" id="vdFechar" style="flex:1;">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -726,6 +738,31 @@ document.getElementById('confirmModalCancelar').addEventListener('click', () => 
   document.getElementById('confirmModal').style.display = 'none';
   confirmModalAction = null;
 });
+function abrirVideoDetalheModal(v) {
+  const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+  const feedback = v.feedback || {};
+  document.getElementById('vdTitulo').textContent = v.titulo || 'Sem título';
+  document.getElementById('vdMeta').textContent = `${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}`;
+  const obs = document.getElementById('vdObservacao');
+  if (feedback.comentario) {
+    obs.textContent = feedback.comentario;
+    obs.style.display = 'block';
+  } else {
+    obs.style.display = 'none';
+  }
+  const link = document.getElementById('vdLinkDrive');
+  if (v.linkDrive) {
+    link.href = v.linkDrive;
+    link.style.display = 'flex';
+  } else {
+    link.style.display = 'none';
+  }
+  document.getElementById('videoDetalheModal').style.display = 'flex';
+}
+document.getElementById('vdFechar').addEventListener('click', () => {
+  document.getElementById('videoDetalheModal').style.display = 'none';
+});
+
 document.getElementById('confirmModalConfirmar').addEventListener('click', async () => {
   if (confirmModalAction) await confirmModalAction();
   document.getElementById('confirmModal').style.display = 'none';
@@ -812,8 +849,9 @@ function renderEntregasBoard() {
 
   box.querySelectorAll('.video-mini-card').forEach(card => {
     card.addEventListener('click', () => {
-      const link = card.dataset.link;
-      if (link) window.open(link, '_blank', 'noopener');
+      const id = card.dataset.dragId;
+      const v = todasEntregas.find(e => e.id === id);
+      if (v) abrirVideoDetalheModal(v);
     });
     card.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/plain', card.dataset.dragId);
