@@ -36,6 +36,10 @@
     <section class="tab-section active" id="tab-dashboard">
       <h2>Dashboard</h2>
       <p class="page-sub">Visão geral rápida do portal. Mais conteúdo em breve.</p>
+      <div class="card" style="max-width:220px;">
+        <div class="meta">Clientes ativos</div>
+        <h2 id="dashClientesTotal" style="margin-top:6px;">0</h2>
+      </div>
     </section>
 
     <!-- CALENDÁRIO GERAL -->
@@ -420,6 +424,7 @@ function carregarClientes() {
     clientesCache = {};
     const grid = document.getElementById('gridClientes');
     const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
+    document.getElementById('dashClientesTotal').textContent = snap.size;
 
     if (snap.empty) {
       grid.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
