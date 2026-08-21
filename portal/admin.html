@@ -70,6 +70,7 @@
           <label>Horário</label>
           <input type="time" id="perfilGravacaoHorario">
         </div>
+        <div id="perfilConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"></div>
         <button class="btn" id="btnSalvarGravacao">Salvar</button>
         <p class="success-msg" id="perfilGravacaoMsg"></p>
       </div>
@@ -262,7 +263,24 @@ let currentUser = null;
 let clientesCache = {};
 let perfilUid = null;
 let perfilUnsub = null;
+let perfilClienteUnsub = null;
 let perfilEntregas = [];
+
+function renderConfirmacaoStatus(dados) {
+  const el = document.getElementById('perfilConfirmacaoStatus');
+  const conf = dados.confirmacaoGravacao;
+  if (dados.proximaGravacaoStatus !== 'marcada') {
+    el.innerHTML = '';
+    return;
+  }
+  if (conf && conf.status === 'confirmada') {
+    el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.85rem;font-weight:600;">Cliente confirmou presença</span>';
+  } else if (conf && conf.status === 'remarcar') {
+    el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);display:inline-block;"></span><span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para remarcar</span>';
+  } else {
+    el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#6b6b6b;display:inline-block;"></span><span class="meta">Aguardando resposta do cliente</span>';
+  }
+}
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
@@ -417,6 +435,12 @@ function abrirPerfilCliente(uid) {
     document.getElementById('perfilGravacaoData').value = '';
   }
   document.getElementById('perfilGravacaoHorario').value = c.proximaGravacaoHorario || '';
+  renderConfirmacaoStatus(c);
+
+  if (perfilClienteUnsub) perfilClienteUnsub();
+  perfilClienteUnsub = db.collection('clientes').doc(uid).onSnapshot(docSnap => {
+    if (docSnap.exists) renderConfirmacaoStatus(docSnap.data());
+  });
 
   document.getElementById('perfilVTitulo').value = '';
   document.getElementById('perfilVLink').value = '';
@@ -434,6 +458,7 @@ function abrirPerfilCliente(uid) {
 
 document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
   if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
+  if (perfilClienteUnsub) { perfilClienteUnsub(); perfilClienteUnsub = null; }
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-dashboard').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -448,7 +473,8 @@ document.getElementById('btnSalvarGravacao').addEventListener('click', async () 
   await db.collection('clientes').doc(perfilUid).set({
     proximaGravacaoStatus: status,
     proximaGravacaoData: data ? dateInputToTimestamp(data) : null,
-    proximaGravacaoHorario: horario || ''
+    proximaGravacaoHorario: horario || '',
+    confirmacaoGravacao: firebase.firestore.FieldValue.delete()
   }, { merge: true });
   const msg = document.getElementById('perfilGravacaoMsg');
   msg.textContent = 'Salvo!';
