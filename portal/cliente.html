@@ -16,6 +16,7 @@
     <div class="role-tag" id="clienteNome">Carregando...</div>
 
     <div class="nav-item active" data-tab="inicio">Início</div>
+    <div class="nav-item" data-tab="gravacao">Gravação</div>
     <div class="nav-item" data-tab="videos">Vídeos</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
     <div class="nav-item" data-tab="pauta">Pauta</div>
@@ -45,6 +46,25 @@
         </div>
         <div id="gravacaoDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin-top:8px;"></div>
       </div>
+    </section>
+
+    <!-- GRAVAÇÃO -->
+    <section class="tab-section" id="tab-gravacao">
+      <h2>Gravação</h2>
+      <p class="page-sub">Acompanhe a data da sua próxima gravação e confirme presença.</p>
+
+      <div class="card">
+        <div class="top-actions">
+          <div>
+            <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;">Próxima gravação</div>
+            <h3 id="gravTabTitulo" style="margin-top:4px;">Carregando...</h3>
+          </div>
+          <span class="badge" id="gravTabBadge"></span>
+        </div>
+        <div id="gravTabDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin:8px 0 20px;"></div>
+        <div id="gravTabAcoes" style="display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:18px;"></div>
+      </div>
+      <p style="color:var(--gray);font-size:0.78rem;margin-top:14px;">Depois de confirmar, a Lmotion vê seu status no painel dela.</p>
     </section>
 
     <!-- VÍDEOS -->
@@ -146,6 +166,7 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('clienteNome').textContent = user.email;
     document.getElementById('inicioSaudacao').textContent = 'Olá';
     renderGravacao({});
+    renderGravacaoTab({});
   } else {
     const dados = doc.data();
     if (dados.isAdmin === true) {
@@ -155,6 +176,7 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('clienteNome').textContent = dados.nome || user.email;
     document.getElementById('inicioSaudacao').innerHTML = 'Olá, <span style="color:var(--purple-light)">' + (dados.nome || 'cliente') + '</span>';
     renderGravacao(dados);
+    renderGravacaoTab(dados);
   }
 
   carregarVideos();
@@ -190,6 +212,60 @@ function renderGravacao(dados) {
     badge.className = 'badge badge-pending';
     detalhes.innerHTML = '';
   }
+}
+
+// --- ABA GRAVAÇÃO: card + confirmação de presença ---
+function renderGravacaoTab(dados) {
+  const status = dados.proximaGravacaoStatus || 'a_agendar';
+  const titulo = document.getElementById('gravTabTitulo');
+  const badge = document.getElementById('gravTabBadge');
+  const detalhes = document.getElementById('gravTabDetalhes');
+  const acoes = document.getElementById('gravTabAcoes');
+
+  if (status === 'marcada' && dados.proximaGravacaoData) {
+    const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
+    titulo.textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+    badge.textContent = 'Marcada';
+    badge.className = 'badge badge-approved';
+    detalhes.innerHTML = `
+      <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
+      <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
+    `;
+
+    const conf = dados.confirmacaoGravacao;
+    if (conf && conf.status === 'confirmada') {
+      acoes.innerHTML = '<p style="color:var(--green);font-size:0.85rem;margin:0;">Você confirmou presença nessa gravação.</p>';
+    } else if (conf && conf.status === 'remarcar') {
+      acoes.innerHTML = '<p style="color:var(--yellow);font-size:0.85rem;margin:0;">Você pediu para remarcar essa gravação. A Lmotion vai entrar em contato.</p>';
+    } else {
+      acoes.innerHTML = `
+        <button class="btn" id="btnConfirmarPresenca">Confirmar presença</button>
+        <button class="btn btn-outline" id="btnPrecisoRemarcar">Preciso remarcar</button>
+      `;
+      document.getElementById('btnConfirmarPresenca').addEventListener('click', () => salvarConfirmacaoGravacao('confirmada', dados));
+      document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => salvarConfirmacaoGravacao('remarcar', dados));
+    }
+  } else if (status === 'realizada') {
+    titulo.textContent = 'Gravação concluída';
+    badge.textContent = 'Realizada';
+    badge.className = 'badge badge-neutral';
+    detalhes.innerHTML = '';
+    acoes.innerHTML = '';
+  } else {
+    titulo.textContent = 'Ainda sem data marcada';
+    badge.textContent = 'À agendar';
+    badge.className = 'badge badge-pending';
+    detalhes.innerHTML = '';
+    acoes.innerHTML = '';
+  }
+}
+
+async function salvarConfirmacaoGravacao(status, dados) {
+  await db.collection('clientes').doc(currentUser.uid).set({
+    confirmacaoGravacao: { status, data: firebase.firestore.FieldValue.serverTimestamp() }
+  }, { merge: true });
+  dados.confirmacaoGravacao = { status };
+  renderGravacaoTab(dados);
 }
 
 // --- Util: transformar link do Drive em link de preview ---
