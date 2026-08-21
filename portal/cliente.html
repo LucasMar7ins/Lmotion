@@ -145,6 +145,7 @@ auth.onAuthStateChanged(async (user) => {
   if (!doc.exists) {
     document.getElementById('clienteNome').textContent = user.email;
     document.getElementById('inicioSaudacao').textContent = 'Olá';
+    renderGravacao({});
   } else {
     const dados = doc.data();
     if (dados.isAdmin === true) {
