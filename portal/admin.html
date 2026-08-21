@@ -35,7 +35,7 @@
     </div>
   </aside>
 
-  <main class="main" id="mainArea">
+  <main class="main main-wide" id="mainArea">
 
     <!-- DASHBOARD -->
     <section class="tab-section active" id="tab-dashboard">
@@ -55,6 +55,11 @@
             <button class="cal-nav-btn" id="dashCalNext">›</button>
             <span class="cal-nav-label" id="dashCalMes"></span>
           </div>
+          <div class="view-toggle" id="dashViewToggle">
+            <span class="view-toggle-btn active" data-view="mes">Mês</span>
+            <span class="view-toggle-btn" data-view="semana">Semana</span>
+            <span class="view-toggle-btn" data-view="dia">Dia</span>
+          </div>
         </div>
         <div id="dashCalGrid"></div>
       </div>
@@ -72,7 +77,7 @@
             <button class="cal-nav-btn" id="calAdminNext">›</button>
             <span class="cal-nav-label" id="calAdminMes"></span>
           </div>
-          <div class="view-toggle">
+          <div class="view-toggle" id="calAdminViewToggle">
             <span class="view-toggle-btn active" data-view="mes">Mês</span>
             <span class="view-toggle-btn" data-view="semana">Semana</span>
             <span class="view-toggle-btn" data-view="dia">Dia</span>
@@ -420,7 +425,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     document.getElementById('tab-' + item.dataset.tab).classList.add('active');
     document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('mainArea').classList.toggle('main-wide', item.dataset.tab === 'calendario' || item.dataset.tab === 'entregas');
+    document.getElementById('mainArea').classList.toggle('main-wide', item.dataset.tab === 'calendario' || item.dataset.tab === 'entregas' || item.dataset.tab === 'dashboard');
   });
 });
 
@@ -454,6 +459,7 @@ auth.onAuthStateChanged(async (user) => {
 
 // --- CALENDÁRIO DE ANOTAÇÕES (DASHBOARD) ---
 let dashCalData = new Date();
+let dashCalView = 'mes';
 let notasDashboard = {};
 
 function dataKey(ano, mes, dia) {
@@ -469,8 +475,14 @@ function carregarNotasDashboard() {
 }
 
 function renderDashCalendario() {
+  if (!document.getElementById('dashCalGrid')) return;
+  if (dashCalView === 'mes') renderDashCalMes();
+  else if (dashCalView === 'semana') renderDashCalSemana();
+  else renderDashCalDia();
+}
+
+function renderDashCalMes() {
   const gridEl = document.getElementById('dashCalGrid');
-  if (!gridEl) return;
   const ano = dashCalData.getFullYear();
   const mes = dashCalData.getMonth();
   document.getElementById('dashCalMes').textContent = NOMES_MES[mes] + ' de ' + ano;
@@ -501,6 +513,55 @@ function renderDashCalendario() {
   });
 }
 
+function renderDashCalSemana() {
+  const gridEl = document.getElementById('dashCalGrid');
+  const inicio = inicioDaSemana(dashCalData);
+  const fim = new Date(inicio); fim.setDate(fim.getDate() + 6);
+  const hoje = new Date();
+
+  const mesmoMes = inicio.getMonth() === fim.getMonth();
+  const label = mesmoMes
+    ? `${inicio.getDate()} - ${fim.getDate()} de ${NOMES_MES[fim.getMonth()]} de ${fim.getFullYear()}`
+    : `${inicio.getDate()} de ${NOMES_MES[inicio.getMonth()]} - ${fim.getDate()} de ${NOMES_MES[fim.getMonth()]} de ${fim.getFullYear()}`;
+  document.getElementById('dashCalMes').textContent = label;
+
+  let html = '<div class="cal-big-grid">';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(inicio); d.setDate(d.getDate() + i);
+    const isToday = mesmoDia(d, hoje);
+    html += `<div class="cal-week-head${isToday ? ' is-today' : ''}">${['D','S','T','Q','Q','S','S'][i]}<br>${d.getDate()}</div>`;
+  }
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(inicio); d.setDate(d.getDate() + i);
+    const key = dataKey(d.getFullYear(), d.getMonth(), d.getDate());
+    const texto = notasDashboard[key];
+    const isToday = mesmoDia(d, hoje);
+    let cls = texto ? 'cal-big-cell has-video' : 'cal-big-cell';
+    let extraStyle = 'cursor:pointer;min-height:140px;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
+    let conteudo = '';
+    if (texto) conteudo += `<div class="cal-big-chip">${texto}</div>`;
+    html += `<div class="${cls}" style="${extraStyle}" data-idx="${i}">${conteudo}</div>`;
+  }
+  html += '</div>';
+  gridEl.innerHTML = html;
+
+  gridEl.querySelectorAll('[data-idx]').forEach(el => {
+    const i = parseInt(el.dataset.idx);
+    const d = new Date(inicio); d.setDate(d.getDate() + i);
+    el.addEventListener('click', () => abrirNotaDia(dataKey(d.getFullYear(), d.getMonth(), d.getDate()), d.getDate(), d.getMonth(), d.getFullYear()));
+  });
+}
+
+function renderDashCalDia() {
+  const gridEl = document.getElementById('dashCalGrid');
+  const d = dashCalData;
+  document.getElementById('dashCalMes').textContent = NOMES_DIA_SEMANA[d.getDay()] + ', ' + d.getDate() + ' de ' + NOMES_MES[d.getMonth()] + ' de ' + d.getFullYear();
+  const key = dataKey(d.getFullYear(), d.getMonth(), d.getDate());
+  const texto = notasDashboard[key];
+  gridEl.innerHTML = `<div class="cal-item" style="cursor:pointer;" id="dashCalDiaItem">${texto ? texto : '<span class="meta">Nenhuma anotação para este dia. Clique para adicionar.</span>'}</div>`;
+  document.getElementById('dashCalDiaItem').addEventListener('click', () => abrirNotaDia(key, d.getDate(), d.getMonth(), d.getFullYear()));
+}
+
 let notaDiaKeyAtual = null;
 function abrirNotaDia(key, dia, mes, ano) {
   notaDiaKeyAtual = key;
@@ -523,9 +584,30 @@ document.getElementById('notaDiaSalvar').addEventListener('click', async () => {
   }
   document.getElementById('notaDiaModal').style.display = 'none';
 });
-document.getElementById('dashCalHoje').addEventListener('click', () => { dashCalData = new Date(); renderDashCalendario(); });
-document.getElementById('dashCalPrev').addEventListener('click', () => { dashCalData.setMonth(dashCalData.getMonth() - 1); renderDashCalendario(); });
-document.getElementById('dashCalNext').addEventListener('click', () => { dashCalData.setMonth(dashCalData.getMonth() + 1); renderDashCalendario(); });
+document.getElementById('dashCalHoje').addEventListener('click', () => {
+  dashCalData = new Date();
+  renderDashCalendario();
+});
+document.getElementById('dashCalPrev').addEventListener('click', () => {
+  if (dashCalView === 'mes') dashCalData.setMonth(dashCalData.getMonth() - 1);
+  else if (dashCalView === 'semana') dashCalData.setDate(dashCalData.getDate() - 7);
+  else dashCalData.setDate(dashCalData.getDate() - 1);
+  renderDashCalendario();
+});
+document.getElementById('dashCalNext').addEventListener('click', () => {
+  if (dashCalView === 'mes') dashCalData.setMonth(dashCalData.getMonth() + 1);
+  else if (dashCalView === 'semana') dashCalData.setDate(dashCalData.getDate() + 7);
+  else dashCalData.setDate(dashCalData.getDate() + 1);
+  renderDashCalendario();
+});
+document.querySelectorAll('#dashViewToggle .view-toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#dashViewToggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    dashCalView = btn.dataset.view;
+    renderDashCalendario();
+  });
+});
 
 function formatarData(ts) {
   if (!ts) return '';
@@ -1156,9 +1238,9 @@ document.getElementById('calAdminNext').addEventListener('click', () => {
   else calAdminData.setDate(calAdminData.getDate() + 1);
   renderCalendarioAdmin();
 });
-document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+document.querySelectorAll('#calAdminViewToggle .view-toggle-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#calAdminViewToggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     calAdminView = btn.dataset.view;
     renderCalendarioAdmin();
