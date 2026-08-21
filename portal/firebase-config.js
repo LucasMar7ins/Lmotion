@@ -2,7 +2,7 @@
 // Estes valores são públicos por natureza (não são senhas) — é assim que o Firebase
 // identifica o projeto no navegador. A segurança real fica nas Regras do Firestore.
 const firebaseConfig = {
-  apiKey: "AIzaSyDZAJcCOF2BJJdiGT4xVZDW-Bxjn_iREYs",
+  apiKey: "AIzaSyDZAjcCOF2BJJdiGT4xVZDW-Bxjn_iREYs",
   authDomain: "lmotion.firebaseapp.com",
   projectId: "lmotion",
   storageBucket: "lmotion.firebasestorage.app",
