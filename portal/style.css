@@ -236,6 +236,7 @@ a{color:var(--purple-light);text-decoration:none;}
 .badge-rejected{background:rgba(227,85,85,0.15);color:var(--red);}
 .badge-open{background:rgba(227,181,85,0.15);color:var(--yellow);}
 .badge-answered{background:rgba(62,207,106,0.15);color:var(--green);}
+.badge-neutral{background:rgba(160,160,160,0.15);color:var(--gray);}
 
 .video-embed{
   width:100%;

@@ -53,7 +53,23 @@
           <label>Email de login</label>
           <input type="email" id="clEmail">
         </div>
-        <button class="btn" id="btnAddCliente">Cadastrar cliente</button>
+        <div class="field">
+          <label>Status da próxima gravação</label>
+          <select id="clGravacaoStatus">
+            <option value="a_agendar">À agendar</option>
+            <option value="marcada">Marcada</option>
+            <option value="realizada">Realizada</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Data da gravação (se marcada)</label>
+          <input type="date" id="clGravacaoData">
+        </div>
+        <div class="field">
+          <label>Horário da gravação (se marcada)</label>
+          <input type="time" id="clGravacaoHorario">
+        </div>
+        <button class="btn" id="btnAddCliente">Cadastrar / atualizar cliente</button>
         <p class="success-msg" id="clienteMsg"></p>
       </div>
       <div id="listaClientes"><div class="empty-state">Carregando...</div></div>
@@ -216,11 +232,17 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
   const nome = document.getElementById('clNome').value.trim();
   const empresa = document.getElementById('clEmpresa').value.trim();
   const email = document.getElementById('clEmail').value.trim();
+  const gravacaoStatus = document.getElementById('clGravacaoStatus').value;
+  const gravacaoData = document.getElementById('clGravacaoData').value;
+  const gravacaoHorario = document.getElementById('clGravacaoHorario').value;
   if (!uid || !nome) return;
 
   await db.collection('clientes').doc(uid).set({
     nome, empresa, email,
     isAdmin: false,
+    proximaGravacaoStatus: gravacaoStatus,
+    proximaGravacaoData: gravacaoData ? dateInputToTimestamp(gravacaoData) : null,
+    proximaGravacaoHorario: gravacaoHorario || '',
     dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
@@ -228,6 +250,9 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
   document.getElementById('clNome').value = '';
   document.getElementById('clEmpresa').value = '';
   document.getElementById('clEmail').value = '';
+  document.getElementById('clGravacaoStatus').value = 'a_agendar';
+  document.getElementById('clGravacaoData').value = '';
+  document.getElementById('clGravacaoHorario').value = '';
   const msg = document.getElementById('clienteMsg');
   msg.textContent = 'Cliente cadastrado!';
   setTimeout(() => msg.textContent = '', 3000);
@@ -253,9 +278,10 @@ function carregarClientes() {
       const c = docSnap.data();
       clientesCache[docSnap.id] = c;
 
+      const statusLabel = { a_agendar: 'À agendar', marcada: 'Marcada', realizada: 'Realizada' }[c.proximaGravacaoStatus] || 'À agendar';
       const row = document.createElement('div');
       row.className = 'row';
-      row.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''} · ${c.email || ''}</span></div>`;
+      row.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''} · ${c.email || ''} · Gravação: ${statusLabel}</span></div>`;
       list.appendChild(row);
 
       selects.forEach(s => {

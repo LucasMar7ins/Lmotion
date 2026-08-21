@@ -15,7 +15,8 @@
     <div class="brand">Portal <span>Lmotion</span></div>
     <div class="role-tag" id="clienteNome">Carregando...</div>
 
-    <div class="nav-item active" data-tab="videos">Vídeos</div>
+    <div class="nav-item active" data-tab="inicio">Início</div>
+    <div class="nav-item" data-tab="videos">Vídeos</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
     <div class="nav-item" data-tab="pauta">Pauta</div>
     <div class="nav-item" data-tab="materiais">Materiais da marca</div>
@@ -29,8 +30,25 @@
 
   <main class="main">
 
+    <!-- INÍCIO -->
+    <section class="tab-section active" id="tab-inicio">
+      <h1 id="inicioSaudacao" style="font-size:1.6rem;font-weight:700;margin-bottom:8px;">Olá</h1>
+      <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:28px;max-width:560px;">Este é o seu espaço exclusivo com a Lmotion. Aqui você acompanha de perto toda a produção do marketing digital da sua marca: recebe o cronograma completo de conteúdo, com os vídeos e as datas de postagem já definidos, e pode pedir ajustes sempre que sentir necessidade. Tudo em um só lugar, feito pra facilitar o seu dia a dia.</p>
+
+      <div class="card" id="cardGravacao">
+        <div class="top-actions">
+          <div>
+            <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;">Próxima gravação</div>
+            <h3 id="gravacaoTitulo" style="margin-top:4px;">Carregando...</h3>
+          </div>
+          <span class="badge" id="gravacaoBadge"></span>
+        </div>
+        <div id="gravacaoDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin-top:8px;"></div>
+      </div>
+    </section>
+
     <!-- VÍDEOS -->
-    <section class="tab-section active" id="tab-videos">
+    <section class="tab-section" id="tab-videos">
       <h2>Seus vídeos</h2>
       <p class="page-sub">Materiais entregues pela Lmotion. Aprove, reprove ou comente cada um.</p>
       <div id="listaVideos"><div class="empty-state">Carregando...</div></div>
@@ -126,6 +144,7 @@ auth.onAuthStateChanged(async (user) => {
   const doc = await db.collection('clientes').doc(user.uid).get();
   if (!doc.exists) {
     document.getElementById('clienteNome').textContent = user.email;
+    document.getElementById('inicioSaudacao').textContent = 'Olá';
   } else {
     const dados = doc.data();
     if (dados.isAdmin === true) {
@@ -133,6 +152,8 @@ auth.onAuthStateChanged(async (user) => {
       return;
     }
     document.getElementById('clienteNome').textContent = dados.nome || user.email;
+    document.getElementById('inicioSaudacao').innerHTML = 'Olá, <span style="color:var(--purple-light)">' + (dados.nome || 'cliente') + '</span>';
+    renderGravacao(dados);
   }
 
   carregarVideos();
@@ -140,6 +161,35 @@ auth.onAuthStateChanged(async (user) => {
   carregarDuvidas();
   carregarTutoriais();
 });
+
+// --- INÍCIO: card da próxima gravação ---
+function renderGravacao(dados) {
+  const status = dados.proximaGravacaoStatus || 'a_agendar';
+  const titulo = document.getElementById('gravacaoTitulo');
+  const badge = document.getElementById('gravacaoBadge');
+  const detalhes = document.getElementById('gravacaoDetalhes');
+
+  if (status === 'marcada' && dados.proximaGravacaoData) {
+    const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
+    titulo.textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+    badge.textContent = 'Marcada';
+    badge.className = 'badge badge-approved';
+    detalhes.innerHTML = `
+      <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
+      <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
+    `;
+  } else if (status === 'realizada') {
+    titulo.textContent = 'Gravação concluída';
+    badge.textContent = 'Realizada';
+    badge.className = 'badge badge-neutral';
+    detalhes.innerHTML = '';
+  } else {
+    titulo.textContent = 'Ainda sem data marcada';
+    badge.textContent = 'À agendar';
+    badge.className = 'badge badge-pending';
+    detalhes.innerHTML = '';
+  }
+}
 
 // --- Util: transformar link do Drive em link de preview ---
 function driveEmbedUrl(link) {
