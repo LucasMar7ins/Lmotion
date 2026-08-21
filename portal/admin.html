@@ -29,7 +29,7 @@
     </div>
   </aside>
 
-  <main class="main">
+  <main class="main" id="mainArea">
 
     <!-- DASHBOARD -->
     <section class="tab-section active" id="tab-dashboard">
@@ -314,6 +314,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     document.getElementById('tab-' + item.dataset.tab).classList.add('active');
     document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('mainArea').classList.toggle('main-wide', item.dataset.tab === 'calendario');
   });
 });
 

@@ -207,6 +207,7 @@ a{color:var(--purple-light);text-decoration:none;}
   padding:36px 44px;
   max-width:920px;
 }
+.main.main-wide{max-width:1280px;}
 .main h2{font-size:1.5rem;margin-bottom:4px;}
 .main .page-sub{color:var(--gray);font-size:0.9rem;margin-bottom:28px;}
 .tab-section{display:none;}
