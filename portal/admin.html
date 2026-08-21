@@ -189,35 +189,37 @@
     <section class="tab-section" id="tab-videos">
       <h2>Vídeos / entregas</h2>
       <p class="page-sub">Suba o vídeo no Google Drive primeiro, depois cole o link aqui e vincule ao cliente certo.</p>
-      <div class="card">
-        <div class="field">
-          <label>Cliente</label>
-          <select id="vClienteId"></select>
+      <div class="videos-layout">
+        <div class="card videos-form-card">
+          <div class="field">
+            <label>Cliente</label>
+            <select id="vClienteId"></select>
+          </div>
+          <div class="field">
+            <label>Título</label>
+            <input type="text" id="vTitulo">
+          </div>
+          <div class="field">
+            <label>Link do Google Drive</label>
+            <input type="text" id="vLink" placeholder="https://drive.google.com/file/d/.../view">
+          </div>
+          <div class="field">
+            <label>Legenda de postagem</label>
+            <textarea id="vLegenda" rows="3"></textarea>
+          </div>
+          <div class="field">
+            <label>Data de referência (mês da entrega)</label>
+            <input type="date" id="vDataRef">
+          </div>
+          <div class="field">
+            <label>Data de postagem (aparece no calendário do cliente)</label>
+            <input type="date" id="vDataPost">
+          </div>
+          <button class="btn" id="btnAddVideo">Entregar vídeo</button>
+          <p class="success-msg" id="videoMsg"></p>
         </div>
-        <div class="field">
-          <label>Título</label>
-          <input type="text" id="vTitulo">
-        </div>
-        <div class="field">
-          <label>Link do Google Drive</label>
-          <input type="text" id="vLink" placeholder="https://drive.google.com/file/d/.../view">
-        </div>
-        <div class="field">
-          <label>Legenda de postagem</label>
-          <textarea id="vLegenda" rows="3"></textarea>
-        </div>
-        <div class="field">
-          <label>Data de referência (mês da entrega)</label>
-          <input type="date" id="vDataRef">
-        </div>
-        <div class="field">
-          <label>Data de postagem (aparece no calendário do cliente)</label>
-          <input type="date" id="vDataPost">
-        </div>
-        <button class="btn" id="btnAddVideo">Entregar vídeo</button>
-        <p class="success-msg" id="videoMsg"></p>
+        <div id="listaVideosAdmin" class="videos-list-area"><div class="empty-state">Carregando...</div></div>
       </div>
-      <div id="listaVideosAdmin"><div class="empty-state">Carregando...</div></div>
     </section>
 
     <!-- GRAVAÇÃO GERAL -->
@@ -363,7 +365,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     document.getElementById('tab-' + item.dataset.tab).classList.add('active');
     document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('mainArea').classList.toggle('main-wide', item.dataset.tab === 'calendario');
+    document.getElementById('mainArea').classList.toggle('main-wide', item.dataset.tab === 'calendario' || item.dataset.tab === 'videos');
   });
 });
 
