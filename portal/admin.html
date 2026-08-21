@@ -15,7 +15,8 @@
     <div class="brand">Portal <span>Lmotion</span></div>
     <div class="role-tag">Administrador</div>
 
-    <div class="nav-item active" data-tab="clientes">Clientes</div>
+    <div class="nav-item active" data-tab="dashboard">Dashboard</div>
+    <div class="nav-item" data-tab="clientes">Clientes</div>
     <div class="nav-item" data-tab="videos">Vídeos</div>
     <div class="nav-item" data-tab="pautas">Pautas</div>
     <div class="nav-item" data-tab="materiais">Materiais</div>
@@ -29,8 +30,18 @@
 
   <main class="main">
 
+    <!-- DASHBOARD -->
+    <section class="tab-section active" id="tab-dashboard">
+      <h2>Dashboard</h2>
+      <p class="page-sub">Visão geral rápida do portal.</p>
+      <div class="card">
+        <h3 style="margin-bottom:14px;">Clientes cadastrados (<span id="dashClientesTotal">0</span>)</h3>
+        <div id="dashListaClientes"><div class="empty-state">Carregando...</div></div>
+      </div>
+    </section>
+
     <!-- CLIENTES -->
-    <section class="tab-section active" id="tab-clientes">
+    <section class="tab-section" id="tab-clientes">
       <h2>Clientes</h2>
       <p class="page-sub">
         Para criar o login de um cliente: vá no Firebase Console → Authentication → Add user (email e senha).
@@ -262,13 +273,21 @@ function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
     const box = document.getElementById('listaClientes');
+    const dashBox = document.getElementById('dashListaClientes');
+    const dashTotal = document.getElementById('dashClientesTotal');
     const selects = [document.getElementById('vClienteId'), document.getElementById('mClienteId')];
+
+    dashTotal.textContent = snap.size;
 
     if (snap.empty) {
       box.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
+      dashBox.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
       selects.forEach(s => s.innerHTML = '<option value="">Nenhum cliente cadastrado</option>');
       return;
     }
+
+    dashBox.innerHTML = '<div class="table-list"></div>';
+    const dashList = dashBox.querySelector('.table-list');
 
     box.innerHTML = '<div class="card table-list"></div>';
     const list = box.querySelector('.table-list');
@@ -283,6 +302,11 @@ function carregarClientes() {
       row.className = 'row';
       row.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''} · ${c.email || ''} · Gravação: ${statusLabel}</span></div>`;
       list.appendChild(row);
+
+      const dashRow = document.createElement('div');
+      dashRow.className = 'row';
+      dashRow.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''}</span></div>`;
+      dashList.appendChild(dashRow);
 
       selects.forEach(s => {
         const opt = document.createElement('option');
