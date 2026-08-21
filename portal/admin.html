@@ -21,7 +21,6 @@
     <div class="nav-item" data-tab="videos">Vídeos</div>
     <div class="nav-item" data-tab="gravacao-geral">Gravação</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
-    <div class="nav-item" data-tab="pautas">Pautas</div>
     <div class="nav-item" data-tab="materiais">Materiais</div>
     <div class="nav-item" data-tab="duvidas">Dúvidas</div>
     <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
@@ -76,29 +75,6 @@
           <h2 style="margin:0;" id="perfilNome">Cliente</h2>
           <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
         </div>
-      </div>
-
-      <div class="card">
-        <h3 style="margin-bottom:14px;">Próxima gravação</h3>
-        <div class="field">
-          <label>Status</label>
-          <select id="perfilGravacaoStatus">
-            <option value="a_agendar">À agendar</option>
-            <option value="marcada">Marcada</option>
-            <option value="realizada">Realizada</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Data</label>
-          <input type="date" id="perfilGravacaoData">
-        </div>
-        <div class="field">
-          <label>Horário</label>
-          <input type="time" id="perfilGravacaoHorario">
-        </div>
-        <div id="perfilConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"></div>
-        <button class="btn" id="btnSalvarGravacao">Salvar</button>
-        <p class="success-msg" id="perfilGravacaoMsg"></p>
       </div>
 
       <div class="card">
@@ -245,12 +221,6 @@
       </div>
     </section>
 
-    <!-- PAUTAS -->
-    <section class="tab-section" id="tab-pautas">
-      <h2>Pautas enviadas pelos clientes</h2>
-      <div id="listaPautasAdmin"><div class="empty-state">Carregando...</div></div>
-    </section>
-
     <!-- MATERIAIS -->
     <section class="tab-section" id="tab-materiais">
       <h2>Materiais da marca</h2>
@@ -298,7 +268,6 @@ let currentUser = null;
 let clientesCache = {};
 let perfilUid = null;
 let perfilUnsub = null;
-let perfilClienteUnsub = null;
 let perfilEntregas = [];
 let todasEntregas = [];
 let calAdminData = new Date();
@@ -379,7 +348,6 @@ auth.onAuthStateChanged(async (user) => {
 
   carregarClientes();
   carregarVideosAdmin();
-  carregarPautasAdmin();
   carregarMateriaisAdmin();
   carregarDuvidasAdmin();
   carregarTutoriaisAdmin();
@@ -475,22 +443,6 @@ function abrirPerfilCliente(uid) {
   document.getElementById('perfilNome').textContent = c.nome || 'Cliente';
   document.getElementById('perfilSub').textContent = [c.empresa, c.email].filter(Boolean).join(' · ');
 
-  document.getElementById('perfilGravacaoStatus').value = c.proximaGravacaoStatus || 'a_agendar';
-  const gData = c.proximaGravacaoData;
-  if (gData) {
-    const d = gData.toDate ? gData.toDate() : new Date(gData);
-    document.getElementById('perfilGravacaoData').value = d.toISOString().slice(0,10);
-  } else {
-    document.getElementById('perfilGravacaoData').value = '';
-  }
-  document.getElementById('perfilGravacaoHorario').value = c.proximaGravacaoHorario || '';
-  renderConfirmacaoStatus(c);
-
-  if (perfilClienteUnsub) perfilClienteUnsub();
-  perfilClienteUnsub = db.collection('clientes').doc(uid).onSnapshot(docSnap => {
-    if (docSnap.exists) renderConfirmacaoStatus(docSnap.data());
-  });
-
   document.getElementById('perfilVTitulo').value = '';
   document.getElementById('perfilVLink').value = '';
   document.getElementById('perfilVLegenda').value = '';
@@ -507,7 +459,6 @@ function abrirPerfilCliente(uid) {
 
 document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
   if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
-  if (perfilClienteUnsub) { perfilClienteUnsub(); perfilClienteUnsub = null; }
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-clientes').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -559,22 +510,6 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
     confirmacaoGravacao: firebase.firestore.FieldValue.delete()
   }, { merge: true });
   const msg = document.getElementById('ggMsg');
-  msg.textContent = 'Salvo!';
-  setTimeout(() => msg.textContent = '', 3000);
-});
-
-document.getElementById('btnSalvarGravacao').addEventListener('click', async () => {
-  if (!perfilUid) return;
-  const status = document.getElementById('perfilGravacaoStatus').value;
-  const data = document.getElementById('perfilGravacaoData').value;
-  const horario = document.getElementById('perfilGravacaoHorario').value;
-  await db.collection('clientes').doc(perfilUid).set({
-    proximaGravacaoStatus: status,
-    proximaGravacaoData: data ? dateInputToTimestamp(data) : null,
-    proximaGravacaoHorario: horario || '',
-    confirmacaoGravacao: firebase.firestore.FieldValue.delete()
-  }, { merge: true });
-  const msg = document.getElementById('perfilGravacaoMsg');
   msg.textContent = 'Salvo!';
   setTimeout(() => msg.textContent = '', 3000);
 });
@@ -870,29 +805,6 @@ document.querySelectorAll('.view-toggle-btn').forEach(btn => {
     renderCalendarioAdmin();
   });
 });
-
-// --- PAUTAS ---
-function carregarPautasAdmin() {
-  db.collection('pautas').orderBy('dataEnvio', 'desc').onSnapshot(snap => {
-    const box = document.getElementById('listaPautasAdmin');
-    if (snap.empty) {
-      box.innerHTML = '<div class="empty-state">Nenhuma pauta enviada ainda.</div>';
-      return;
-    }
-    box.innerHTML = '';
-    snap.forEach(docSnap => {
-      const p = docSnap.data();
-      const nomeCliente = (clientesCache[p.clienteId] && clientesCache[p.clienteId].nome) || 'Cliente';
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="meta">${nomeCliente} · ${formatarData(p.dataEnvio)}</div>
-        <p style="margin-top:8px;">${p.texto}</p>
-      `;
-      box.appendChild(card);
-    });
-  });
-}
 
 // --- MATERIAIS (enviados pelos clientes) ---
 function carregarMateriaisAdmin() {

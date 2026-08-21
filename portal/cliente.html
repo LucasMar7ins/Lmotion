@@ -16,10 +16,9 @@
     <div class="role-tag" id="clienteNome">Carregando...</div>
 
     <div class="nav-item active" data-tab="inicio">Início</div>
-    <div class="nav-item" data-tab="gravacao">Gravação</div>
+    <div class="nav-item" data-tab="gravacao" style="position:relative;">Gravação<span id="gravNotifDot" style="display:none;position:absolute;top:10px;right:14px;width:7px;height:7px;border-radius:50%;background:var(--purple-light);"></span></div>
     <div class="nav-item" data-tab="videos">Vídeos</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
-    <div class="nav-item" data-tab="pauta">Pauta</div>
     <div class="nav-item" data-tab="materiais">Materiais da marca</div>
     <div class="nav-item" data-tab="duvidas">Dúvidas</div>
     <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
@@ -64,7 +63,7 @@
         <div id="gravTabDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin:8px 0 20px;"></div>
         <div id="gravTabAcoes" style="display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:18px;"></div>
       </div>
-      <p style="color:var(--gray);font-size:0.78rem;margin-top:14px;">Depois de confirmar, a Lmotion vê seu status no painel dela.</p>
+      <p style="color:var(--gray);font-size:0.78rem;margin-top:14px;">Você pode alterar sua resposta a qualquer momento. Após confirmada, o desmarque da gravação deve ser feito com pelo menos 24 horas de antecedência.</p>
     </section>
 
     <!-- VÍDEOS -->
@@ -79,21 +78,6 @@
       <h2>Calendário de postagens</h2>
       <p class="page-sub">Visualização dos dias previstos para cada vídeo.</p>
       <div id="listaCalendario"><div class="empty-state">Carregando...</div></div>
-    </section>
-
-    <!-- PAUTA -->
-    <section class="tab-section" id="tab-pauta">
-      <h2>Pauta / sugestão de temas</h2>
-      <p class="page-sub">Escreva livremente ideias, temas ou referências para a próxima gravação.</p>
-      <div class="card">
-        <div class="field">
-          <textarea id="pautaTexto" rows="5" placeholder="Ex: gostaria de falar sobre a nova coleção, e mostrar bastidores da loja..."></textarea>
-        </div>
-        <button class="btn" id="btnEnviarPauta">Enviar sugestão</button>
-        <p class="success-msg" id="pautaMsg"></p>
-      </div>
-      <h3 style="margin:24px 0 12px;font-size:1rem;color:var(--gray);">Sugestões enviadas</h3>
-      <div id="listaPautas"><div class="empty-state">Nenhuma sugestão enviada ainda.</div></div>
     </section>
 
     <!-- MATERIAIS -->
@@ -234,6 +218,7 @@ function renderGravacaoTab(dados) {
   const badge = document.getElementById('gravTabBadge');
   const detalhes = document.getElementById('gravTabDetalhes');
   const acoes = document.getElementById('gravTabAcoes');
+  const dot = document.getElementById('gravNotifDot');
 
   if (status === 'marcada' && dados.proximaGravacaoData) {
     const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
@@ -246,30 +231,36 @@ function renderGravacaoTab(dados) {
     `;
 
     const conf = dados.confirmacaoGravacao;
-    if (conf && conf.status === 'confirmada') {
-      acoes.innerHTML = '<p style="color:var(--green);font-size:0.85rem;margin:0;">Você confirmou presença nessa gravação.</p>';
-    } else if (conf && conf.status === 'remarcar') {
-      acoes.innerHTML = '<p style="color:var(--yellow);font-size:0.85rem;margin:0;">Você pediu para remarcar essa gravação. A Lmotion vai entrar em contato.</p>';
-    } else {
-      acoes.innerHTML = `
-        <button class="btn" id="btnConfirmarPresenca">Confirmar presença</button>
-        <button class="btn btn-outline" id="btnPrecisoRemarcar">Preciso remarcar</button>
-      `;
-      document.getElementById('btnConfirmarPresenca').addEventListener('click', () => salvarConfirmacaoGravacao('confirmada', dados));
-      document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => salvarConfirmacaoGravacao('remarcar', dados));
-    }
+    const confirmada = conf && conf.status === 'confirmada';
+    const remarcar = conf && conf.status === 'remarcar';
+
+    acoes.innerHTML = `
+      <button class="btn ${confirmada ? 'btn-state-confirmada' : 'btn-outline'}" id="btnConfirmarPresenca">Confirmar presença</button>
+      <button class="btn ${remarcar ? 'btn-state-remarcar' : 'btn-outline'}" id="btnPrecisoRemarcar">Desmarcar gravação</button>
+      <p style="flex-basis:100%;margin:10px 0 0;font-size:0.85rem;${confirmada ? 'color:var(--green);' : remarcar ? 'color:var(--yellow);' : 'color:var(--gray);'}">${
+        confirmada ? 'Você confirmou presença nessa gravação.' :
+        remarcar ? 'Você pediu para desmarcar essa gravação. A Lmotion vai entrar em contato.' :
+        'Confirme sua presença ou avise se precisar desmarcar.'
+      }</p>
+    `;
+    document.getElementById('btnConfirmarPresenca').addEventListener('click', () => salvarConfirmacaoGravacao('confirmada', dados));
+    document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => salvarConfirmacaoGravacao('remarcar', dados));
+
+    dot.style.display = conf ? 'none' : 'block';
   } else if (status === 'realizada') {
     titulo.textContent = 'Gravação concluída';
     badge.textContent = 'Realizada';
     badge.className = 'badge badge-neutral';
     detalhes.innerHTML = '';
     acoes.innerHTML = '';
+    dot.style.display = 'none';
   } else {
     titulo.textContent = 'Ainda sem data marcada';
     badge.textContent = 'À agendar';
     badge.className = 'badge badge-pending';
     detalhes.innerHTML = '';
     acoes.innerHTML = '';
+    dot.style.display = 'none';
   }
 }
 
@@ -386,44 +377,6 @@ function carregarCalendario() {
     });
 }
 document.querySelector('[data-tab="calendario"]').addEventListener('click', carregarCalendario, { once: true });
-
-// --- PAUTA ---
-document.getElementById('btnEnviarPauta').addEventListener('click', async () => {
-  const texto = document.getElementById('pautaTexto').value.trim();
-  if (!texto) return;
-  await db.collection('pautas').add({
-    clienteId: currentUser.uid,
-    texto,
-    dataEnvio: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  document.getElementById('pautaTexto').value = '';
-  const msg = document.getElementById('pautaMsg');
-  msg.textContent = 'Sugestão enviada!';
-  setTimeout(() => msg.textContent = '', 3000);
-});
-
-function carregarPautas() {
-  db.collection('pautas')
-    .where('clienteId', '==', currentUser.uid)
-    .orderBy('dataEnvio', 'desc')
-    .onSnapshot(snap => {
-      const box = document.getElementById('listaPautas');
-      if (snap.empty) {
-        box.innerHTML = '<div class="empty-state">Nenhuma sugestão enviada ainda.</div>';
-        return;
-      }
-      box.innerHTML = '<div class="card table-list"></div>';
-      const list = box.querySelector('.table-list');
-      snap.forEach(docSnap => {
-        const p = docSnap.data();
-        const row = document.createElement('div');
-        row.className = 'row';
-        row.innerHTML = `<div class="info"><strong>${p.texto}</strong><span>${formatarData(p.dataEnvio)}</span></div>`;
-        list.appendChild(row);
-      });
-    });
-}
-document.querySelector('[data-tab="pauta"]').addEventListener('click', carregarPautas, { once: true });
 
 // --- MATERIAIS ---
 document.getElementById('btnEnviarMaterial').addEventListener('click', async () => {

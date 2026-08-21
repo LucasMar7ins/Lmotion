@@ -141,6 +141,10 @@ a{color:var(--purple-light);text-decoration:none;}
   color:var(--white);
 }
 .btn-outline:hover{border-color:var(--purple);background:transparent;}
+.btn-state-confirmada{background:rgba(62,207,106,0.15);border:1px solid var(--green);color:var(--green);}
+.btn-state-confirmada:hover{background:rgba(62,207,106,0.22);}
+.btn-state-remarcar{background:rgba(227,181,85,0.15);border:1px solid var(--yellow);color:var(--yellow);}
+.btn-state-remarcar:hover{background:rgba(227,181,85,0.22);}
 .btn-danger{background:var(--red);}
 .btn-danger:hover{background:#f07070;}
 .btn-block{width:100%;}
