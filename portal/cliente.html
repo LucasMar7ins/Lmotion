@@ -99,7 +99,20 @@
     <!-- MATERIAIS -->
     <section class="tab-section" id="tab-materiais">
       <h2>Materiais da marca</h2>
-      <p class="page-sub">Logo, guia de marca e referências visuais disponibilizados pela Lmotion.</p>
+      <p class="page-sub">Envie logo, guia de marca e referências visuais para a Lmotion usar nas produções.</p>
+      <div class="card">
+        <div class="field">
+          <label>Tipo de material</label>
+          <input type="text" id="matTipo" placeholder="Ex: Logo, Guia de marca, Referência visual">
+        </div>
+        <div class="field">
+          <label>Link do arquivo (Drive, etc.)</label>
+          <input type="text" id="matLink">
+        </div>
+        <button class="btn" id="btnEnviarMaterial">Enviar material</button>
+        <p class="success-msg" id="materialMsg"></p>
+      </div>
+      <h3 style="margin:24px 0 12px;font-size:1rem;color:var(--gray);">Materiais enviados</h3>
       <div id="listaMateriais"><div class="empty-state">Carregando...</div></div>
     </section>
 
@@ -413,6 +426,24 @@ function carregarPautas() {
 document.querySelector('[data-tab="pauta"]').addEventListener('click', carregarPautas, { once: true });
 
 // --- MATERIAIS ---
+document.getElementById('btnEnviarMaterial').addEventListener('click', async () => {
+  const tipo = document.getElementById('matTipo').value.trim();
+  const link = document.getElementById('matLink').value.trim();
+  if (!tipo || !link) return;
+
+  await db.collection('materiais').add({
+    clienteId: currentUser.uid,
+    tipo, link,
+    dataUpload: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('matTipo').value = '';
+  document.getElementById('matLink').value = '';
+  const msg = document.getElementById('materialMsg');
+  msg.textContent = 'Material enviado!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
 function carregarMateriais() {
   db.collection('materiais')
     .where('clienteId', '==', currentUser.uid)
