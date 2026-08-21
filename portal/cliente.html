@@ -186,9 +186,23 @@ auth.onAuthStateChanged(async (user) => {
   carregarTutoriais();
 });
 
+// --- Estado calculado da gravação: a_agendar / marcada / concluida ---
+function estadoGravacao(dados) {
+  if (!dados || dados.proximaGravacaoStatus !== 'marcada' || !dados.proximaGravacaoData) return 'a_agendar';
+  const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
+  if (dados.proximaGravacaoHorario) {
+    const [h, m] = dados.proximaGravacaoHorario.split(':').map(Number);
+    d.setHours(h || 0, m || 0, 0, 0);
+  } else {
+    d.setHours(23, 59, 0, 0);
+  }
+  const fim = new Date(d.getTime() + 2 * 60 * 60 * 1000);
+  return new Date() > fim ? 'concluida' : 'marcada';
+}
+
 // --- INÍCIO: card da próxima gravação ---
 function renderGravacao(dados) {
-  const status = dados.proximaGravacaoStatus || 'a_agendar';
+  const status = estadoGravacao(dados);
   const titulo = document.getElementById('gravacaoTitulo');
   const badge = document.getElementById('gravacaoBadge');
   const detalhes = document.getElementById('gravacaoDetalhes');
@@ -202,9 +216,9 @@ function renderGravacao(dados) {
       <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
       <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
     `;
-  } else if (status === 'realizada') {
+  } else if (status === 'concluida') {
     titulo.textContent = 'Gravação concluída';
-    badge.textContent = 'Realizada';
+    badge.textContent = 'Concluída';
     badge.className = 'badge badge-neutral';
     detalhes.innerHTML = '';
   } else {
@@ -217,7 +231,7 @@ function renderGravacao(dados) {
 
 // --- ABA GRAVAÇÃO: card + confirmação de presença ---
 function renderGravacaoTab(dados) {
-  const status = dados.proximaGravacaoStatus || 'a_agendar';
+  const status = estadoGravacao(dados);
   const titulo = document.getElementById('gravTabTitulo');
   const badge = document.getElementById('gravTabBadge');
   const detalhes = document.getElementById('gravTabDetalhes');
@@ -251,9 +265,9 @@ function renderGravacaoTab(dados) {
     document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => salvarConfirmacaoGravacao('remarcar', dados));
 
     dot.style.display = conf ? 'none' : 'block';
-  } else if (status === 'realizada') {
+  } else if (status === 'concluida') {
     titulo.textContent = 'Gravação concluída';
-    badge.textContent = 'Realizada';
+    badge.textContent = 'Concluída';
     badge.className = 'badge badge-neutral';
     detalhes.innerHTML = '';
     acoes.innerHTML = '';
