@@ -709,15 +709,25 @@ document.getElementById('confirmModalConfirmar').addEventListener('click', async
   confirmModalAction = null;
 });
 
+function formatarDataHora(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function videoCardHtml(v) {
   const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
   const feedback = v.feedback || {};
+  let quando = '';
+  if (feedback.tipo === 'aprovado' && feedback.data) quando = `Aprovado em ${formatarDataHora(feedback.data)}`;
+  else if (feedback.tipo === 'reprovado' && feedback.data) quando = `Pedido enviado em ${formatarDataHora(feedback.data)}`;
   return `
     <div class="video-mini-card">
       <button class="video-del-btn" data-del="${v.id}" data-titulo="${(v.titulo || '').replace(/"/g,'&quot;')}" aria-label="Excluir vídeo">&#10005;</button>
       <h5>${v.titulo}</h5>
       <div class="meta">${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
       ${feedback.comentario ? `<div class="video-mini-comment">"${feedback.comentario}"</div>` : ''}
+      ${quando ? `<div class="video-mini-when">${quando}</div>` : ''}
     </div>
   `;
 }
