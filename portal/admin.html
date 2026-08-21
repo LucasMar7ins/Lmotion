@@ -45,6 +45,19 @@
         <div class="meta">Clientes ativos</div>
         <h2 id="dashClientesTotal" style="margin-top:6px;">0</h2>
       </div>
+
+      <div class="card" style="margin-top:20px;">
+        <h3 style="margin-bottom:14px;">Calendário de anotações</h3>
+        <div class="cal-nav">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn btn-outline" id="dashCalHoje" style="padding:8px 16px;font-size:0.8rem;">Hoje</button>
+            <button class="cal-nav-btn" id="dashCalPrev">‹</button>
+            <button class="cal-nav-btn" id="dashCalNext">›</button>
+            <span class="cal-nav-label" id="dashCalMes"></span>
+          </div>
+        </div>
+        <div id="dashCalGrid"></div>
+      </div>
     </section>
 
     <!-- CALENDÁRIO GERAL -->
@@ -315,6 +328,19 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="notaDiaModal" style="display:none;">
+  <div class="modal-box" style="width:340px;">
+    <h3 id="notaDiaTitulo">Anotação</h3>
+    <div class="field" style="margin:14px 0 0;">
+      <textarea rows="5" id="notaDiaTexto" placeholder="Escreva sua anotação para esse dia..."></textarea>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn btn-outline" id="notaDiaCancelar">Cancelar</button>
+      <button class="btn" id="notaDiaSalvar">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="videoDetalheModal" style="display:none;">
   <div class="modal-box" style="width:360px;">
     <h3 id="vdTitulo">Vídeo</h3>
@@ -423,7 +449,82 @@ auth.onAuthStateChanged(async (user) => {
   carregarMateriaisAdmin();
   carregarDuvidasAdmin();
   carregarTutoriaisAdmin();
+  carregarNotasDashboard();
 });
+
+// --- CALENDÁRIO DE ANOTAÇÕES (DASHBOARD) ---
+let dashCalData = new Date();
+let notasDashboard = {};
+
+function dataKey(ano, mes, dia) {
+  return `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
+
+function carregarNotasDashboard() {
+  db.collection('notasDashboard').onSnapshot(snap => {
+    notasDashboard = {};
+    snap.forEach(d => notasDashboard[d.id] = d.data().texto || '');
+    renderDashCalendario();
+  });
+}
+
+function renderDashCalendario() {
+  const gridEl = document.getElementById('dashCalGrid');
+  if (!gridEl) return;
+  const ano = dashCalData.getFullYear();
+  const mes = dashCalData.getMonth();
+  document.getElementById('dashCalMes').textContent = NOMES_MES[mes] + ' de ' + ano;
+
+  const hoje = new Date();
+  const primeiroDia = new Date(ano, mes, 1).getDay();
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+
+  let html = '<div class="cal-big-grid">';
+  ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].forEach(d => html += `<div class="cal-big-dow">${d}</div>`);
+  for (let i = 0; i < primeiroDia; i++) html += '<div></div>';
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const key = dataKey(ano, mes, dia);
+    const texto = notasDashboard[key];
+    const isToday = mesmoDia(new Date(ano, mes, dia), hoje);
+    let cls = texto ? 'cal-big-cell has-video' : 'cal-big-cell';
+    let extraStyle = 'cursor:pointer;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
+    let conteudo = `<div class="cal-big-daynum">${dia}</div>`;
+    if (texto) conteudo += `<div class="cal-big-chip">${texto}</div>`;
+    html += `<div class="${cls}" style="${extraStyle}" data-dia="${dia}">${conteudo}</div>`;
+  }
+  html += '</div>';
+  gridEl.innerHTML = html;
+
+  gridEl.querySelectorAll('[data-dia]').forEach(el => {
+    const dia = parseInt(el.dataset.dia);
+    el.addEventListener('click', () => abrirNotaDia(dataKey(ano, mes, dia), dia, mes, ano));
+  });
+}
+
+let notaDiaKeyAtual = null;
+function abrirNotaDia(key, dia, mes, ano) {
+  notaDiaKeyAtual = key;
+  document.getElementById('notaDiaTitulo').textContent = `${dia} de ${NOMES_MES[mes]} de ${ano}`;
+  document.getElementById('notaDiaTexto').value = notasDashboard[key] || '';
+  document.getElementById('notaDiaModal').style.display = 'flex';
+}
+document.getElementById('notaDiaCancelar').addEventListener('click', () => {
+  document.getElementById('notaDiaModal').style.display = 'none';
+});
+document.getElementById('notaDiaSalvar').addEventListener('click', async () => {
+  const texto = document.getElementById('notaDiaTexto').value.trim();
+  if (texto) {
+    await db.collection('notasDashboard').doc(notaDiaKeyAtual).set({
+      texto, atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } else {
+    await db.collection('notasDashboard').doc(notaDiaKeyAtual).delete();
+  }
+  document.getElementById('notaDiaModal').style.display = 'none';
+});
+document.getElementById('dashCalHoje').addEventListener('click', () => { dashCalData = new Date(); renderDashCalendario(); });
+document.getElementById('dashCalPrev').addEventListener('click', () => { dashCalData.setMonth(dashCalData.getMonth() - 1); renderDashCalendario(); });
+document.getElementById('dashCalNext').addEventListener('click', () => { dashCalData.setMonth(dashCalData.getMonth() + 1); renderDashCalendario(); });
 
 function formatarData(ts) {
   if (!ts) return '';
