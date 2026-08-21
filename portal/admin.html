@@ -361,8 +361,8 @@ function carregarClientes() {
       return;
     }
 
-    dashBox.innerHTML = '<div class="table-list"></div>';
-    const dashList = dashBox.querySelector('.table-list');
+    dashBox.innerHTML = '';
+    const dashList = dashBox;
 
     box.innerHTML = '<div class="card table-list"></div>';
     const list = box.querySelector('.table-list');
@@ -379,7 +379,7 @@ function carregarClientes() {
       list.appendChild(row);
 
       const dashRow = document.createElement('div');
-      dashRow.className = 'row';
+      dashRow.className = 'client-row';
       dashRow.style.cursor = 'pointer';
       dashRow.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''}</span></div>`;
       dashRow.addEventListener('click', () => abrirPerfilCliente(docSnap.id));
