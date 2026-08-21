@@ -931,8 +931,10 @@ function gravCardHtml(uid, c, estado) {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;margin-right:6px;"></span><span class="meta">Aguardando resposta</span></div>';
     }
   }
+  const delBtn = estado !== 'a_agendar' ? `<button class="video-del-btn" data-del-grav="${uid}" data-nome="${(c.nome || 'Cliente').replace(/"/g,'&quot;')}" aria-label="Desmarcar gravação">&#10005;</button>` : '';
   return `
     <div class="video-mini-card" data-grav-card="${uid}">
+      ${delBtn}
       <h5>${c.nome || 'Cliente'}</h5>
       <div class="meta">${sub}</div>
       ${statusLine}
@@ -964,6 +966,29 @@ function renderGravBoard() {
     el.addEventListener('click', () => {
       document.getElementById('ggClienteId').value = el.dataset.gravCard;
       carregarGravacaoGeral(el.dataset.gravCard);
+    });
+  });
+
+  document.querySelectorAll('#tab-gravacao-geral [data-del-grav]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const uid = btn.dataset.delGrav;
+      const nome = btn.dataset.nome;
+      abrirConfirmModal(
+        'Desmarcar gravação?',
+        `A gravação de "${nome}" vai ser removida e ela volta para "Precisam ser marcadas". Essa ação não pode ser desfeita.`,
+        async () => {
+          await db.collection('clientes').doc(uid).set({
+            proximaGravacaoStatus: 'a_agendar',
+            proximaGravacaoData: null,
+            proximaGravacaoHorario: '',
+            confirmacaoGravacao: firebase.firestore.FieldValue.delete(),
+            gravacaoEndereco: firebase.firestore.FieldValue.delete(),
+            gravacaoRoteiroLink: firebase.firestore.FieldValue.delete()
+          }, { merge: true });
+          if (document.getElementById('ggClienteId').value === uid) carregarGravacaoGeral(uid);
+        }
+      );
     });
   });
 }
