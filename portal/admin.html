@@ -78,6 +78,32 @@
       </div>
 
       <div class="card">
+        <h3 style="margin-bottom:14px;">Informações do cliente</h3>
+        <div class="field">
+          <label>Nome</label>
+          <input type="text" id="perfilEditNome">
+        </div>
+        <div class="field">
+          <label>Empresa</label>
+          <input type="text" id="perfilEditEmpresa">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="text" id="perfilEditEmail">
+        </div>
+        <div class="field">
+          <label>WhatsApp</label>
+          <input type="text" id="perfilEditWhatsapp" placeholder="Ex: (32) 99164-6261">
+        </div>
+        <div class="field">
+          <label>Resumo do negócio</label>
+          <textarea id="perfilEditResumo" rows="3" placeholder="Breve resumo do que o cliente faz"></textarea>
+        </div>
+        <button class="btn" id="btnSalvarInfoCliente">Salvar informações</button>
+        <p class="success-msg" id="perfilInfoMsg"></p>
+      </div>
+
+      <div class="card">
         <h3 style="margin-bottom:14px;">Enviar vídeo</h3>
         <div class="field">
           <label>Título</label>
@@ -443,6 +469,12 @@ function abrirPerfilCliente(uid) {
   document.getElementById('perfilNome').textContent = c.nome || 'Cliente';
   document.getElementById('perfilSub').textContent = [c.empresa, c.email].filter(Boolean).join(' · ');
 
+  document.getElementById('perfilEditNome').value = c.nome || '';
+  document.getElementById('perfilEditEmpresa').value = c.empresa || '';
+  document.getElementById('perfilEditEmail').value = c.email || '';
+  document.getElementById('perfilEditWhatsapp').value = c.whatsapp || '';
+  document.getElementById('perfilEditResumo').value = c.resumo || '';
+
   document.getElementById('perfilVTitulo').value = '';
   document.getElementById('perfilVLink').value = '';
   document.getElementById('perfilVLegenda').value = '';
@@ -510,6 +542,28 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
     confirmacaoGravacao: firebase.firestore.FieldValue.delete()
   }, { merge: true });
   const msg = document.getElementById('ggMsg');
+  msg.textContent = 'Salvo!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+document.getElementById('btnSalvarInfoCliente').addEventListener('click', async () => {
+  if (!perfilUid) return;
+  const nome = document.getElementById('perfilEditNome').value.trim();
+  const empresa = document.getElementById('perfilEditEmpresa').value.trim();
+  const email = document.getElementById('perfilEditEmail').value.trim();
+  const whatsapp = document.getElementById('perfilEditWhatsapp').value.trim();
+  const resumo = document.getElementById('perfilEditResumo').value.trim();
+  if (!nome) return;
+
+  await db.collection('clientes').doc(perfilUid).set({
+    nome, empresa, email, whatsapp, resumo
+  }, { merge: true });
+
+  document.getElementById('perfilNome').textContent = nome;
+  document.getElementById('perfilSub').textContent = [empresa, email].filter(Boolean).join(' · ');
+  document.getElementById('perfilAvatar').textContent = (nome || '?').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+
+  const msg = document.getElementById('perfilInfoMsg');
   msg.textContent = 'Salvo!';
   setTimeout(() => msg.textContent = '', 3000);
 });
