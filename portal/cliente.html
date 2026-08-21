@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Lmotion — Cliente</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button class="menu-toggle-mobile" id="menuToggle">☰</button>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Portal <span>Lmotion</span></div>
+    <div class="role-tag" id="clienteNome">Carregando...</div>
+
+    <div class="nav-item active" data-tab="videos">Vídeos</div>
+    <div class="nav-item" data-tab="calendario">Calendário</div>
+    <div class="nav-item" data-tab="pauta">Pauta</div>
+    <div class="nav-item" data-tab="materiais">Materiais da marca</div>
+    <div class="nav-item" data-tab="duvidas">Dúvidas</div>
+    <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
+
+    <div class="logout">
+      <button class="btn btn-outline btn-block" id="btnSair">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- VÍDEOS -->
+    <section class="tab-section active" id="tab-videos">
+      <h2>Seus vídeos</h2>
+      <p class="page-sub">Materiais entregues pela Lmotion. Aprove, reprove ou comente cada um.</p>
+      <div id="listaVideos"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- CALENDÁRIO -->
+    <section class="tab-section" id="tab-calendario">
+      <h2>Calendário de postagens</h2>
+      <p class="page-sub">Visualização dos dias previstos para cada vídeo.</p>
+      <div id="listaCalendario"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- PAUTA -->
+    <section class="tab-section" id="tab-pauta">
+      <h2>Pauta / sugestão de temas</h2>
+      <p class="page-sub">Escreva livremente ideias, temas ou referências para a próxima gravação.</p>
+      <div class="card">
+        <div class="field">
+          <textarea id="pautaTexto" rows="5" placeholder="Ex: gostaria de falar sobre a nova coleção, e mostrar bastidores da loja..."></textarea>
+        </div>
+        <button class="btn" id="btnEnviarPauta">Enviar sugestão</button>
+        <p class="success-msg" id="pautaMsg"></p>
+      </div>
+      <h3 style="margin:24px 0 12px;font-size:1rem;color:var(--gray);">Sugestões enviadas</h3>
+      <div id="listaPautas"><div class="empty-state">Nenhuma sugestão enviada ainda.</div></div>
+    </section>
+
+    <!-- MATERIAIS -->
+    <section class="tab-section" id="tab-materiais">
+      <h2>Materiais da marca</h2>
+      <p class="page-sub">Logo, guia de marca e referências visuais disponibilizados pela Lmotion.</p>
+      <div id="listaMateriais"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- DÚVIDAS -->
+    <section class="tab-section" id="tab-duvidas">
+      <h2>Dúvidas</h2>
+      <p class="page-sub">Envie uma pergunta para a Lmotion. Você recebe a resposta aqui mesmo.</p>
+      <div class="card">
+        <div class="field">
+          <textarea id="duvidaTexto" rows="4" placeholder="Escreva sua dúvida..."></textarea>
+        </div>
+        <button class="btn" id="btnEnviarDuvida">Enviar dúvida</button>
+        <p class="success-msg" id="duvidaMsg"></p>
+      </div>
+      <div id="listaDuvidas"></div>
+    </section>
+
+    <!-- TUTORIAIS -->
+    <section class="tab-section" id="tab-tutoriais">
+      <h2>Tutoriais</h2>
+      <p class="page-sub">Conteúdos disponibilizados pela Lmotion.</p>
+      <div id="listaTutoriais"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+
+// --- Navegação entre abas ---
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('tab-' + item.dataset.tab).classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+document.getElementById('btnSair').addEventListener('click', () => {
+  auth.signOut().then(() => window.location.href = 'index.html');
+});
+
+// --- Auth guard ---
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
+  }
+  currentUser = user;
+
+  const doc = await db.collection('clientes').doc(user.uid).get();
+  if (!doc.exists) {
+    document.getElementById('clienteNome').textContent = user.email;
+  } else {
+    const dados = doc.data();
+    if (dados.isAdmin === true) {
+      window.location.href = 'admin.html';
+      return;
+    }
+    document.getElementById('clienteNome').textContent = dados.nome || user.email;
+  }
+
+  carregarVideos();
+  carregarMateriais();
+  carregarDuvidas();
+  carregarTutoriais();
+});
+
+// --- Util: transformar link do Drive em link de preview ---
+function driveEmbedUrl(link) {
+  if (!link) return '';
+  const match = link.match(/[-\w]{25,}/);
+  if (!match) return link;
+  return `https://drive.google.com/file/d/${match[0]}/preview`;
+}
+
+function formatarData(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+// --- VÍDEOS ---
+function carregarVideos() {
+  db.collection('entregas')
+    .where('clienteId', '==', currentUser.uid)
+    .orderBy('dataPostagem', 'desc')
+    .onSnapshot(snap => {
+      const box = document.getElementById('listaVideos');
+      if (snap.empty) {
+        box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
+        return;
+      }
+      box.innerHTML = '';
+      snap.forEach(docSnap => {
+        const v = docSnap.data();
+        const id = docSnap.id;
+        const feedback = v.feedback || {};
+        let badge = '<span class="badge badge-pending">Aguardando avaliação</span>';
+        if (feedback.tipo === 'aprovado') badge = '<span class="badge badge-approved">Aprovado</span>';
+        if (feedback.tipo === 'reprovado') badge = '<span class="badge badge-rejected">Reprovado</span>';
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="top-actions">
+            <div>
+              <h3>${v.titulo || 'Sem título'}</h3>
+              <div class="meta">Postagem prevista: ${formatarData(v.dataPostagem) || 'a definir'}</div>
+            </div>
+            ${badge}
+          </div>
+          <div class="video-embed"><iframe src="${driveEmbedUrl(v.linkDrive)}" allow="autoplay"></iframe></div>
+          ${v.legenda ? `<div class="caption-box"><strong style="color:var(--white)">Legenda:</strong><br>${v.legenda}</div>` : ''}
+          <div class="feedback-row">
+            <button class="btn" data-acao="aprovado" data-id="${id}">Aprovar</button>
+            <button class="btn btn-danger" data-acao="reprovado" data-id="${id}">Reprovar</button>
+          </div>
+          <div class="field">
+            <textarea rows="2" placeholder="Comentário de ajuste (opcional)" data-comentario="${id}">${feedback.comentario || ''}</textarea>
+          </div>
+          <button class="btn btn-outline" data-acao="comentario" data-id="${id}">Enviar comentário</button>
+        `;
+        box.appendChild(card);
+      });
+
+      box.querySelectorAll('[data-acao]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const acao = btn.dataset.acao;
+          if (acao === 'comentario') {
+            const texto = box.querySelector(`[data-comentario="${id}"]`).value.trim();
+            await db.collection('entregas').doc(id).set({
+              'feedback.comentario': texto,
+              'feedback.data': firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          } else {
+            await db.collection('entregas').doc(id).set({
+              'feedback.tipo': acao,
+              'feedback.data': firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          }
+        });
+      });
+    });
+}
+
+// --- CALENDÁRIO ---
+function carregarCalendario() {
+  db.collection('entregas')
+    .where('clienteId', '==', currentUser.uid)
+    .orderBy('dataPostagem', 'asc')
+    .onSnapshot(snap => {
+      const box = document.getElementById('listaCalendario');
+      if (snap.empty) {
+        box.innerHTML = '<div class="empty-state">Nenhuma postagem programada ainda.</div>';
+        return;
+      }
+      box.innerHTML = '';
+      snap.forEach(docSnap => {
+        const v = docSnap.data();
+        if (!v.dataPostagem) return;
+        const item = document.createElement('div');
+        item.className = 'cal-group';
+        item.innerHTML = `
+          <div class="cal-date">${formatarData(v.dataPostagem)}</div>
+          <div class="cal-item">${v.titulo || 'Sem título'}</div>
+        `;
+        box.appendChild(item);
+      });
+    });
+}
+document.querySelector('[data-tab="calendario"]').addEventListener('click', carregarCalendario, { once: true });
+
+// --- PAUTA ---
+document.getElementById('btnEnviarPauta').addEventListener('click', async () => {
+  const texto = document.getElementById('pautaTexto').value.trim();
+  if (!texto) return;
+  await db.collection('pautas').add({
+    clienteId: currentUser.uid,
+    texto,
+    dataEnvio: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  document.getElementById('pautaTexto').value = '';
+  const msg = document.getElementById('pautaMsg');
+  msg.textContent = 'Sugestão enviada!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function carregarPautas() {
+  db.collection('pautas')
+    .where('clienteId', '==', currentUser.uid)
+    .orderBy('dataEnvio', 'desc')
+    .onSnapshot(snap => {
+      const box = document.getElementById('listaPautas');
+      if (snap.empty) {
+        box.innerHTML = '<div class="empty-state">Nenhuma sugestão enviada ainda.</div>';
+        return;
+      }
+      box.innerHTML = '<div class="card table-list"></div>';
+      const list = box.querySelector('.table-list');
+      snap.forEach(docSnap => {
+        const p = docSnap.data();
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `<div class="info"><strong>${p.texto}</strong><span>${formatarData(p.dataEnvio)}</span></div>`;
+        list.appendChild(row);
+      });
+    });
+}
+document.querySelector('[data-tab="pauta"]').addEventListener('click', carregarPautas, { once: true });
+
+// --- MATERIAIS ---
+function carregarMateriais() {
+  db.collection('materiais')
+    .where('clienteId', '==', currentUser.uid)
+    .onSnapshot(snap => {
+      const box = document.getElementById('listaMateriais');
+      if (snap.empty) {
+        box.innerHTML = '<div class="empty-state">Nenhum material disponibilizado ainda.</div>';
+        return;
+      }
+      box.innerHTML = '<div class="card table-list"></div>';
+      const list = box.querySelector('.table-list');
+      snap.forEach(docSnap => {
+        const m = docSnap.data();
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <div class="info"><strong>${m.tipo || 'Material'}</strong><span>${formatarData(m.dataUpload)}</span></div>
+          <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
+        `;
+        list.appendChild(row);
+      });
+    });
+}
+
+// --- DÚVIDAS ---
+document.getElementById('btnEnviarDuvida').addEventListener('click', async () => {
+  const texto = document.getElementById('duvidaTexto').value.trim();
+  if (!texto) return;
+  await db.collection('duvidas').add({
+    clienteId: currentUser.uid,
+    pergunta: texto,
+    resposta: '',
+    status: 'aberta',
+    dataEnvio: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  document.getElementById('duvidaTexto').value = '';
+  const msg = document.getElementById('duvidaMsg');
+  msg.textContent = 'Dúvida enviada!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function carregarDuvidas() {
+  db.collection('duvidas')
+    .where('clienteId', '==', currentUser.uid)
+    .orderBy('dataEnvio', 'desc')
+    .onSnapshot(snap => {
+      const box = document.getElementById('listaDuvidas');
+      if (snap.empty) {
+        box.innerHTML = '';
+        return;
+      }
+      box.innerHTML = '';
+      snap.forEach(docSnap => {
+        const d = docSnap.data();
+        const badge = d.status === 'respondida'
+          ? '<span class="badge badge-answered">Respondida</span>'
+          : '<span class="badge badge-open">Aguardando resposta</span>';
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="top-actions"><div class="meta">${formatarData(d.dataEnvio)}</div>${badge}</div>
+          <p style="margin-bottom:10px;">${d.pergunta}</p>
+          ${d.resposta ? `<div class="caption-box"><strong style="color:var(--white)">Resposta da Lmotion:</strong><br>${d.resposta}</div>` : ''}
+        `;
+        box.appendChild(card);
+      });
+    });
+}
+
+// --- TUTORIAIS ---
+function carregarTutoriais() {
+  db.collection('tutoriais')
+    .orderBy('dataPublicacao', 'desc')
+    .onSnapshot(snap => {
+      const box = document.getElementById('listaTutoriais');
+      if (snap.empty) {
+        box.innerHTML = '<div class="empty-state">Nenhum tutorial publicado ainda.</div>';
+        return;
+      }
+      box.innerHTML = '';
+      snap.forEach(docSnap => {
+        const t = docSnap.data();
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${t.titulo}</h3>
+          <div class="meta">${formatarData(t.dataPublicacao)}</div>
+          <p style="margin-top:10px;white-space:pre-wrap;">${t.conteudo || ''}</p>
+          ${t.link ? `<a href="${t.link}" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:12px;">Abrir link</a>` : ''}
+        `;
+        box.appendChild(card);
+      });
+    });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Lmotion — Admin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<button class="menu-toggle-mobile" id="menuToggle">☰</button>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Portal <span>Lmotion</span></div>
+    <div class="role-tag">Administrador</div>
+
+    <div class="nav-item active" data-tab="clientes">Clientes</div>
+    <div class="nav-item" data-tab="videos">Vídeos</div>
+    <div class="nav-item" data-tab="pautas">Pautas</div>
+    <div class="nav-item" data-tab="materiais">Materiais</div>
+    <div class="nav-item" data-tab="duvidas">Dúvidas</div>
+    <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
+
+    <div class="logout">
+      <button class="btn btn-outline btn-block" id="btnSair">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- CLIENTES -->
+    <section class="tab-section active" id="tab-clientes">
+      <h2>Clientes</h2>
+      <p class="page-sub">
+        Para criar o login de um cliente: vá no Firebase Console → Authentication → Add user (email e senha).
+        Depois copie o UID gerado e cadastre os dados dele aqui embaixo.
+      </p>
+      <div class="card">
+        <div class="field">
+          <label>UID (copiado do Firebase Authentication)</label>
+          <input type="text" id="clUid" placeholder="Ex: A1b2C3d4E5...">
+        </div>
+        <div class="field">
+          <label>Nome do cliente</label>
+          <input type="text" id="clNome">
+        </div>
+        <div class="field">
+          <label>Empresa / marca</label>
+          <input type="text" id="clEmpresa">
+        </div>
+        <div class="field">
+          <label>Email de login</label>
+          <input type="email" id="clEmail">
+        </div>
+        <button class="btn" id="btnAddCliente">Cadastrar cliente</button>
+        <p class="success-msg" id="clienteMsg"></p>
+      </div>
+      <div id="listaClientes"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- VÍDEOS -->
+    <section class="tab-section" id="tab-videos">
+      <h2>Vídeos / entregas</h2>
+      <p class="page-sub">Suba o vídeo no Google Drive primeiro, depois cole o link aqui e vincule ao cliente certo.</p>
+      <div class="card">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="vClienteId"></select>
+        </div>
+        <div class="field">
+          <label>Título</label>
+          <input type="text" id="vTitulo">
+        </div>
+        <div class="field">
+          <label>Link do Google Drive</label>
+          <input type="text" id="vLink" placeholder="https://drive.google.com/file/d/.../view">
+        </div>
+        <div class="field">
+          <label>Legenda de postagem</label>
+          <textarea id="vLegenda" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label>Data de referência (mês da entrega)</label>
+          <input type="date" id="vDataRef">
+        </div>
+        <div class="field">
+          <label>Data de postagem (aparece no calendário do cliente)</label>
+          <input type="date" id="vDataPost">
+        </div>
+        <button class="btn" id="btnAddVideo">Entregar vídeo</button>
+        <p class="success-msg" id="videoMsg"></p>
+      </div>
+      <div id="listaVideosAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- PAUTAS -->
+    <section class="tab-section" id="tab-pautas">
+      <h2>Pautas enviadas pelos clientes</h2>
+      <div id="listaPautasAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- MATERIAIS -->
+    <section class="tab-section" id="tab-materiais">
+      <h2>Materiais da marca</h2>
+      <p class="page-sub">Logo, guia de marca, referências visuais. Sem senhas de redes sociais.</p>
+      <div class="card">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="mClienteId"></select>
+        </div>
+        <div class="field">
+          <label>Tipo de material</label>
+          <input type="text" id="mTipo" placeholder="Ex: Logo, Guia de marca, Referência visual">
+        </div>
+        <div class="field">
+          <label>Link do arquivo (Drive, etc.)</label>
+          <input type="text" id="mLink">
+        </div>
+        <button class="btn" id="btnAddMaterial">Adicionar material</button>
+        <p class="success-msg" id="materialMsg"></p>
+      </div>
+      <div id="listaMateriaisAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- DÚVIDAS -->
+    <section class="tab-section" id="tab-duvidas">
+      <h2>Dúvidas dos clientes</h2>
+      <div id="listaDuvidasAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- TUTORIAIS -->
+    <section class="tab-section" id="tab-tutoriais">
+      <h2>Tutoriais</h2>
+      <div class="card">
+        <div class="field">
+          <label>Título</label>
+          <input type="text" id="tTitulo">
+        </div>
+        <div class="field">
+          <label>Conteúdo</label>
+          <textarea id="tConteudo" rows="4"></textarea>
+        </div>
+        <div class="field">
+          <label>Link (vídeo, arquivo — opcional)</label>
+          <input type="text" id="tLink">
+        </div>
+        <button class="btn" id="btnAddTutorial">Publicar tutorial</button>
+        <p class="success-msg" id="tutorialMsg"></p>
+      </div>
+      <div id="listaTutoriaisAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let clientesCache = {};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('tab-' + item.dataset.tab).classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+document.getElementById('btnSair').addEventListener('click', () => {
+  auth.signOut().then(() => window.location.href = 'index.html');
+});
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
+  }
+  currentUser = user;
+  const doc = await db.collection('clientes').doc(user.uid).get();
+  if (!doc.exists || doc.data().isAdmin !== true) {
+    window.location.href = 'cliente.html';
+    return;
+  }
+
+  carregarClientes();
+  carregarVideosAdmin();
+  carregarPautasAdmin();
+  carregarMateriaisAdmin();
+  carregarDuvidasAdmin();
+  carregarTutoriaisAdmin();
+});
+
+function formatarData(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+function dateInputToTimestamp(value) {
+  if (!value) return null;
+  return firebase.firestore.Timestamp.fromDate(new Date(value + 'T12:00:00'));
+}
+
+// --- CLIENTES ---
+document.getElementById('btnAddCliente').addEventListener('click', async () => {
+  const uid = document.getElementById('clUid').value.trim();
+  const nome = document.getElementById('clNome').value.trim();
+  const empresa = document.getElementById('clEmpresa').value.trim();
+  const email = document.getElementById('clEmail').value.trim();
+  if (!uid || !nome) return;
+
+  await db.collection('clientes').doc(uid).set({
+    nome, empresa, email,
+    isAdmin: false,
+    dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  document.getElementById('clUid').value = '';
+  document.getElementById('clNome').value = '';
+  document.getElementById('clEmpresa').value = '';
+  document.getElementById('clEmail').value = '';
+  const msg = document.getElementById('clienteMsg');
+  msg.textContent = 'Cliente cadastrado!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function carregarClientes() {
+  db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
+    clientesCache = {};
+    const box = document.getElementById('listaClientes');
+    const selects = [document.getElementById('vClienteId'), document.getElementById('mClienteId')];
+
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
+      selects.forEach(s => s.innerHTML = '<option value="">Nenhum cliente cadastrado</option>');
+      return;
+    }
+
+    box.innerHTML = '<div class="card table-list"></div>';
+    const list = box.querySelector('.table-list');
+    selects.forEach(s => s.innerHTML = '');
+
+    snap.forEach(docSnap => {
+      const c = docSnap.data();
+      clientesCache[docSnap.id] = c;
+
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''} · ${c.email || ''}</span></div>`;
+      list.appendChild(row);
+
+      selects.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = docSnap.id;
+        opt.textContent = c.nome;
+        s.appendChild(opt.cloneNode(true));
+      });
+    });
+  });
+}
+
+// --- VÍDEOS ---
+document.getElementById('btnAddVideo').addEventListener('click', async () => {
+  const clienteId = document.getElementById('vClienteId').value;
+  const titulo = document.getElementById('vTitulo').value.trim();
+  const linkDrive = document.getElementById('vLink').value.trim();
+  const legenda = document.getElementById('vLegenda').value.trim();
+  const dataRef = document.getElementById('vDataRef').value;
+  const dataPost = document.getElementById('vDataPost').value;
+  if (!clienteId || !titulo || !linkDrive) return;
+
+  await db.collection('entregas').add({
+    clienteId, titulo, linkDrive, legenda,
+    dataReferencia: dateInputToTimestamp(dataRef),
+    dataPostagem: dateInputToTimestamp(dataPost),
+    status: 'publicado',
+    feedback: {},
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('vTitulo').value = '';
+  document.getElementById('vLink').value = '';
+  document.getElementById('vLegenda').value = '';
+  document.getElementById('vDataRef').value = '';
+  document.getElementById('vDataPost').value = '';
+  const msg = document.getElementById('videoMsg');
+  msg.textContent = 'Vídeo entregue!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function carregarVideosAdmin() {
+  db.collection('entregas').orderBy('criadoEm', 'desc').onSnapshot(snap => {
+    const box = document.getElementById('listaVideosAdmin');
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
+      return;
+    }
+    box.innerHTML = '';
+    snap.forEach(docSnap => {
+      const v = docSnap.data();
+      const feedback = v.feedback || {};
+      let badge = '<span class="badge badge-pending">Aguardando avaliação</span>';
+      if (feedback.tipo === 'aprovado') badge = '<span class="badge badge-approved">Aprovado</span>';
+      if (feedback.tipo === 'reprovado') badge = '<span class="badge badge-rejected">Reprovado</span>';
+      const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="top-actions">
+          <div>
+            <h3>${v.titulo}</h3>
+            <div class="meta">${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+          </div>
+          ${badge}
+        </div>
+        ${feedback.comentario ? `<div class="caption-box"><strong style="color:var(--white)">Comentário do cliente:</strong><br>${feedback.comentario}</div>` : ''}
+      `;
+      box.appendChild(card);
+    });
+  });
+}
+
+// --- PAUTAS ---
+function carregarPautasAdmin() {
+  db.collection('pautas').orderBy('dataEnvio', 'desc').onSnapshot(snap => {
+    const box = document.getElementById('listaPautasAdmin');
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty-state">Nenhuma pauta enviada ainda.</div>';
+      return;
+    }
+    box.innerHTML = '';
+    snap.forEach(docSnap => {
+      const p = docSnap.data();
+      const nomeCliente = (clientesCache[p.clienteId] && clientesCache[p.clienteId].nome) || 'Cliente';
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="meta">${nomeCliente} · ${formatarData(p.dataEnvio)}</div>
+        <p style="margin-top:8px;">${p.texto}</p>
+      `;
+      box.appendChild(card);
+    });
+  });
+}
+
+// --- MATERIAIS ---
+document.getElementById('btnAddMaterial').addEventListener('click', async () => {
+  const clienteId = document.getElementById('mClienteId').value;
+  const tipo = document.getElementById('mTipo').value.trim();
+  const link = document.getElementById('mLink').value.trim();
+  if (!clienteId || !tipo || !link) return;
+
+  await db.collection('materiais').add({
+    clienteId, tipo, link,
+    dataUpload: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('mTipo').value = '';
+  document.getElementById('mLink').value = '';
+  const msg = document.getElementById('materialMsg');
+  msg.textContent = 'Material adicionado!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function carregarMateriaisAdmin() {
+  db.collection('materiais').orderBy('dataUpload', 'desc').onSnapshot(snap => {
+    const box = document.getElementById('listaMateriaisAdmin');
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty-state">Nenhum material adicionado ainda.</div>';
+      return;
+    }
+    box.innerHTML = '<div class="card table-list"></div>';
+    const list = box.querySelector('.table-list');
+    snap.forEach(docSnap => {
+      const m = docSnap.data();
+      const nomeCliente = (clientesCache[m.clienteId] && clientesCache[m.clienteId].nome) || 'Cliente';
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <div class="info"><strong>${m.tipo}</strong><span>${nomeCliente}</span></div>
+        <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
+      `;
+      list.appendChild(row);
+    });
+  });
+}
+
+// --- DÚVIDAS ---
+function carregarDuvidasAdmin() {
+  db.collection('duvidas').orderBy('dataEnvio', 'desc').onSnapshot(snap => {
+    const box = document.getElementById('listaDuvidasAdmin');
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty-state">Nenhuma dúvida enviada ainda.</div>';
+      return;
+    }
+    box.innerHTML = '';
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      const id = docSnap.id;
+      const nomeCliente = (clientesCache[d.clienteId] && clientesCache[d.clienteId].nome) || 'Cliente';
+      const badge = d.status === 'respondida'
+        ? '<span class="badge badge-answered">Respondida</span>'
+        : '<span class="badge badge-open">Aguardando resposta</span>';
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="top-actions"><div class="meta">${nomeCliente} · ${formatarData(d.dataEnvio)}</div>${badge}</div>
+        <p style="margin-bottom:12px;">${d.pergunta}</p>
+        <div class="field">
+          <textarea rows="2" placeholder="Escreva a resposta..." data-resposta="${id}">${d.resposta || ''}</textarea>
+        </div>
+        <button class="btn" data-responder="${id}">Enviar resposta</button>
+      `;
+      box.appendChild(card);
+    });
+
+    box.querySelectorAll('[data-responder]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.responder;
+        const texto = box.querySelector(`[data-resposta="${id}"]`).value.trim();
+        if (!texto) return;
+        await db.collection('duvidas').doc(id).update({
+          resposta: texto,
+          status: 'respondida',
+          dataResposta: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+    });
+  });
+}
+
+// --- TUTORIAIS ---
+document.getElementById('btnAddTutorial').addEventListener('click', async () => {
+  const titulo = document.getElementById('tTitulo').value.trim();
+  const conteudo = document.getElementById('tConteudo').value.trim();
+  const link = document.getElementById('tLink').value.trim();
+  if (!titulo) return;
+
+  await db.collection('tutoriais').add({
+    titulo, conteudo, link,
+    dataPublicacao: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('tTitulo').value = '';
+  document.getElementById('tConteudo').value = '';
+  document.getElementById('tLink').value = '';
+  const msg = document.getElementById('tutorialMsg');
+  msg.textContent = 'Tutorial publicado!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function carregarTutoriaisAdmin() {
+  db.collection('tutoriais').orderBy('dataPublicacao', 'desc').onSnapshot(snap => {
+    const box = document.getElementById('listaTutoriaisAdmin');
+    if (snap.empty) {
+      box.innerHTML = '<div class="empty-state">Nenhum tutorial publicado ainda.</div>';
+      return;
+    }
+    box.innerHTML = '';
+    snap.forEach(docSnap => {
+      const t = docSnap.data();
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${t.titulo}</h3>
+        <div class="meta">${formatarData(t.dataPublicacao)}</div>
+        <p style="margin-top:8px;">${t.conteudo || ''}</p>
+      `;
+      box.appendChild(card);
+    });
+  });
+}
+</script>
+
+</body>
+</html>

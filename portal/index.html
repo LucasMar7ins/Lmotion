@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Portal Lmotion</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>Portal Lmotion</h1>
+    <p class="sub">Entre com o email e senha cadastrados pela Lmotion.</p>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="senha">Senha</label>
+        <input type="password" id="senha" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-block" id="btnEntrar">Entrar</button>
+      <p class="error-msg" id="errorMsg"></p>
+    </form>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const form = document.getElementById('loginForm');
+const btn = document.getElementById('btnEntrar');
+const errorMsg = document.getElementById('errorMsg');
+
+// Se já está logado, redireciona direto
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    await redirecionar(user.uid);
+  }
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorMsg.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+
+  const email = document.getElementById('email').value.trim();
+  const senha = document.getElementById('senha').value;
+
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, senha);
+    await redirecionar(cred.user.uid);
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+      errorMsg.textContent = 'Email ou senha incorretos.';
+    } else if (err.code === 'auth/too-many-requests') {
+      errorMsg.textContent = 'Muitas tentativas. Aguarde um momento e tente de novo.';
+    } else {
+      errorMsg.textContent = 'Não foi possível entrar. Tente novamente.';
+    }
+  }
+});
+
+async function redirecionar(uid) {
+  try {
+    const doc = await db.collection('clientes').doc(uid).get();
+    if (doc.exists && doc.data().isAdmin === true) {
+      window.location.href = 'admin.html';
+    } else {
+      window.location.href = 'cliente.html';
+    }
+  } catch (err) {
+    window.location.href = 'cliente.html';
+  }
+}
+</script>
+
+</body>
+</html>
