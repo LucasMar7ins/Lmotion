@@ -741,7 +741,7 @@ function videoCardHtml(v) {
   if (feedback.tipo === 'aprovado' && feedback.data) quando = `Aprovado em ${formatarDataHora(feedback.data)}`;
   else if (feedback.tipo === 'reprovado' && feedback.data) quando = `Pedido enviado em ${formatarDataHora(feedback.data)}`;
   return `
-    <div class="video-mini-card">
+    <div class="video-mini-card" draggable="true" data-drag-id="${v.id}" data-link="${(v.linkDrive || '').replace(/"/g,'&quot;')}">
       <button class="video-del-btn" data-del="${v.id}" data-titulo="${(v.titulo || '').replace(/"/g,'&quot;')}" aria-label="Excluir vídeo">&#10005;</button>
       <h5>${v.titulo}</h5>
       <div class="meta">${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
@@ -778,15 +778,15 @@ function renderEntregasBoard() {
 
   box.innerHTML = `
       <div class="videos-kanban">
-        <div>
+        <div class="videos-col-drop" data-coluna="pendente">
           <div class="videos-col-header"><h4>Em aprovação</h4><span class="videos-col-count" style="background:rgba(227,181,85,0.15);color:var(--yellow);">${pendentes.length}</span></div>
           ${pendentes.length ? pendentes.map(videoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>'}
         </div>
-        <div>
+        <div class="videos-col-drop" data-coluna="reprovado">
           <div class="videos-col-header"><h4>Pedido de alteração</h4><span class="videos-col-count" style="background:rgba(227,85,85,0.15);color:var(--red);">${alteracao.length}</span></div>
           ${alteracao.length ? alteracao.map(videoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>'}
         </div>
-        <div>
+        <div class="videos-col-drop" data-coluna="aprovado">
           <div class="videos-col-header"><h4>Aprovados</h4><span class="videos-col-count" style="background:rgba(62,207,106,0.15);color:var(--green);">${aprovados.length}</span></div>
           ${aprovados.length ? aprovados.map(videoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>'}
         </div>
@@ -794,7 +794,8 @@ function renderEntregasBoard() {
     `;
 
   box.querySelectorAll('[data-del]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = btn.dataset.del;
       const titulo = btn.dataset.titulo;
       abrirConfirmModal(
@@ -802,6 +803,35 @@ function renderEntregasBoard() {
         `"${titulo}" vai ser removido do portal do cliente. Essa ação não pode ser desfeita.`,
         async () => { await db.collection('entregas').doc(id).delete(); }
       );
+    });
+  });
+
+  box.querySelectorAll('.video-mini-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const link = card.dataset.link;
+      if (link) window.open(link, '_blank', 'noopener');
+    });
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.dataset.dragId);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+  });
+
+  box.querySelectorAll('.videos-col-drop').forEach(col => {
+    col.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      col.classList.add('videos-col-dragover');
+    });
+    col.addEventListener('dragleave', () => {
+      col.classList.remove('videos-col-dragover');
+    });
+    col.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      col.classList.remove('videos-col-dragover');
+      const id = e.dataTransfer.getData('text/plain');
+      if (!id) return;
+      const novoTipo = col.dataset.coluna === 'pendente' ? null : col.dataset.coluna;
+      await db.collection('entregas').doc(id).set({ feedback: { tipo: novoTipo } }, { merge: true });
     });
   });
 }
