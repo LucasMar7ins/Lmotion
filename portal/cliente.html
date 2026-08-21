@@ -336,8 +336,9 @@ function carregarVideos() {
           const acao = btn.dataset.acao;
           if (acao === 'comentario') {
             const texto = box.querySelector(`[data-comentario="${id}"]`).value.trim();
+            if (!texto) return;
             await db.collection('entregas').doc(id).set({
-              feedback: { comentario: texto, data: firebase.firestore.FieldValue.serverTimestamp() }
+              feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
             }, { merge: true });
           } else {
             await db.collection('entregas').doc(id).set({
