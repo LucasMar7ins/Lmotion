@@ -9,8 +9,16 @@
 <body>
 
 <div class="login-wrap">
+  <svg class="login-grain" aria-hidden="true"><filter id="grainFilter"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#grainFilter)"/></svg>
+  <div class="login-glow login-glow-top"></div>
+  <div class="login-glow login-glow-br"></div>
+  <div class="login-glow login-glow-bl"></div>
+
   <div class="login-card">
-    <h1>Portal Lmotion</h1>
+    <div class="login-logo-wrap">
+      <img src="assets/logo-web.jpg" alt="Lmotion logo">
+    </div>
+    <h1>Portal <span>Lmotion</span></h1>
     <p class="sub">Entre com o email e senha cadastrados pela Lmotion.</p>
 
     <form id="loginForm">
@@ -25,6 +33,8 @@
       <button type="submit" class="btn btn-block" id="btnEntrar">Entrar</button>
       <p class="error-msg" id="errorMsg"></p>
     </form>
+
+    <p class="login-footer">Lmotion &middot; portal do cliente</p>
   </div>
 </div>
 
