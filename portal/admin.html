@@ -319,6 +319,10 @@
   <div class="modal-box" style="width:360px;">
     <h3 id="vdTitulo">Vídeo</h3>
     <p class="meta" id="vdMeta" style="margin:4px 0 14px;"></p>
+    <div id="vdLegendaWrap" style="display:none;">
+      <div class="meta" style="margin-bottom:4px;">Legenda</div>
+      <p id="vdLegenda" style="color:var(--white);font-size:0.88rem;line-height:1.5;background:rgba(255,255,255,0.04);border-radius:8px;padding:12px 14px;margin-bottom:12px;"></p>
+    </div>
     <p id="vdObservacao" style="display:none;color:var(--red);font-size:0.9rem;line-height:1.5;background:rgba(227,85,85,0.1);border-radius:8px;padding:12px 14px;"></p>
     <a href="#" target="_blank" rel="noopener" class="btn btn-block" id="vdLinkDrive" style="margin-top:14px;display:none;">Abrir vídeo no Drive</a>
     <div class="modal-actions" style="margin-top:14px;">
@@ -537,7 +541,7 @@ function abrirPerfilCliente(uid) {
   if (perfilUnsub) perfilUnsub();
   perfilUnsub = db.collection('entregas').where('clienteId', '==', uid).onSnapshot(snap => {
     perfilEntregas = [];
-    snap.forEach(d => perfilEntregas.push(d.data()));
+    snap.forEach(d => perfilEntregas.push({ id: d.id, ...d.data() }));
     renderPerfilCalendario();
   });
 }
@@ -692,8 +696,14 @@ function renderPerfilCalendario() {
     el.addEventListener('click', () => {
       const detalhe = document.getElementById('perfilCalDetalhe');
       detalhe.innerHTML = diasComVideo[dia].map(v => `
-        <div class="cal-item"><strong>${v.titulo}</strong>${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>
+        <div class="cal-item" data-abrir-video="${v.id}" style="cursor:pointer;"><strong>${v.titulo}</strong>${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>
       `).join('');
+      detalhe.querySelectorAll('[data-abrir-video]').forEach(item => {
+        item.addEventListener('click', () => {
+          const v = diasComVideo[dia].find(x => x.id === item.dataset.abrirVideo);
+          if (v) abrirVideoDetalheModal(v);
+        });
+      });
     });
   });
 }
@@ -742,7 +752,14 @@ function abrirVideoDetalheModal(v) {
   const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
   const feedback = v.feedback || {};
   document.getElementById('vdTitulo').textContent = v.titulo || 'Sem título';
-  document.getElementById('vdMeta').textContent = `${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}`;
+  document.getElementById('vdMeta').textContent = `${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}${v.horarioPostagem ? ' às ' + v.horarioPostagem : ''}`;
+  const legendaWrap = document.getElementById('vdLegendaWrap');
+  if (v.legenda) {
+    document.getElementById('vdLegenda').textContent = v.legenda;
+    legendaWrap.style.display = 'block';
+  } else {
+    legendaWrap.style.display = 'none';
+  }
   const obs = document.getElementById('vdObservacao');
   if (feedback.comentario) {
     obs.textContent = feedback.comentario;
