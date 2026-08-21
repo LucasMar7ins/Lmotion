@@ -461,7 +461,7 @@ function dataKey(ano, mes, dia) {
 }
 
 function carregarNotasDashboard() {
-  db.collection('notasDashboard').onSnapshot(snap => {
+  db.collection('notasDashboard').doc(currentUser.uid).collection('dias').onSnapshot(snap => {
     notasDashboard = {};
     snap.forEach(d => notasDashboard[d.id] = d.data().texto || '');
     renderDashCalendario();
@@ -513,12 +513,13 @@ document.getElementById('notaDiaCancelar').addEventListener('click', () => {
 });
 document.getElementById('notaDiaSalvar').addEventListener('click', async () => {
   const texto = document.getElementById('notaDiaTexto').value.trim();
+  const notasRef = db.collection('notasDashboard').doc(currentUser.uid).collection('dias');
   if (texto) {
-    await db.collection('notasDashboard').doc(notaDiaKeyAtual).set({
+    await notasRef.doc(notaDiaKeyAtual).set({
       texto, atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
   } else {
-    await db.collection('notasDashboard').doc(notaDiaKeyAtual).delete();
+    await notasRef.doc(notaDiaKeyAtual).delete();
   }
   document.getElementById('notaDiaModal').style.display = 'none';
 });
