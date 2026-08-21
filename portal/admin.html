@@ -289,6 +289,17 @@
   </main>
 </div>
 
+<div class="modal-overlay" id="confirmModal" style="display:none;">
+  <div class="modal-box">
+    <h3 id="confirmModalTitulo">Excluir?</h3>
+    <p id="confirmModalTexto"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="confirmModalCancelar">Cancelar</button>
+      <button class="btn btn-danger" id="confirmModalConfirmar">Excluir</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -679,40 +690,80 @@ document.getElementById('btnAddVideo').addEventListener('click', async () => {
   setTimeout(() => msg.textContent = '', 3000);
 });
 
+let confirmModalAction = null;
+function abrirConfirmModal(titulo, texto, onConfirm) {
+  document.getElementById('confirmModalTitulo').textContent = titulo;
+  document.getElementById('confirmModalTexto').textContent = texto;
+  confirmModalAction = onConfirm;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+document.getElementById('confirmModalCancelar').addEventListener('click', () => {
+  document.getElementById('confirmModal').style.display = 'none';
+  confirmModalAction = null;
+});
+document.getElementById('confirmModalConfirmar').addEventListener('click', async () => {
+  if (confirmModalAction) await confirmModalAction();
+  document.getElementById('confirmModal').style.display = 'none';
+  confirmModalAction = null;
+});
+
+function videoCardHtml(v) {
+  const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+  const feedback = v.feedback || {};
+  return `
+    <div class="video-mini-card">
+      <button class="video-del-btn" data-del="${v.id}" data-titulo="${(v.titulo || '').replace(/"/g,'&quot;')}" aria-label="Excluir vídeo">&#10005;</button>
+      <h5>${v.titulo}</h5>
+      <div class="meta">${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+      ${feedback.comentario ? `<div class="video-mini-comment">"${feedback.comentario}"</div>` : ''}
+    </div>
+  `;
+}
+
 function carregarVideosAdmin() {
   db.collection('entregas').orderBy('criadoEm', 'desc').onSnapshot(snap => {
     const box = document.getElementById('listaVideosAdmin');
 
     todasEntregas = [];
-    snap.forEach(docSnap => todasEntregas.push(docSnap.data()));
+    snap.forEach(docSnap => todasEntregas.push({ id: docSnap.id, ...docSnap.data() }));
     renderCalendarioAdmin();
 
     if (snap.empty) {
       box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
       return;
     }
-    box.innerHTML = '';
-    snap.forEach(docSnap => {
-      const v = docSnap.data();
-      const feedback = v.feedback || {};
-      let badge = '<span class="badge badge-pending">Aguardando avaliação</span>';
-      if (feedback.tipo === 'aprovado') badge = '<span class="badge badge-approved">Aprovado</span>';
-      if (feedback.tipo === 'reprovado') badge = '<span class="badge badge-rejected">Reprovado</span>';
-      const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
 
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="top-actions">
-          <div>
-            <h3>${v.titulo}</h3>
-            <div class="meta">${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
-          </div>
-          ${badge}
+    const pendentes = todasEntregas.filter(v => !(v.feedback && v.feedback.tipo));
+    const alteracao = todasEntregas.filter(v => v.feedback && v.feedback.tipo === 'reprovado');
+    const aprovados = todasEntregas.filter(v => v.feedback && v.feedback.tipo === 'aprovado');
+
+    box.innerHTML = `
+      <div class="videos-kanban">
+        <div>
+          <div class="videos-col-header"><h4>Em aprovação</h4><span class="videos-col-count" style="background:rgba(227,181,85,0.15);color:var(--yellow);">${pendentes.length}</span></div>
+          ${pendentes.length ? pendentes.map(videoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>'}
         </div>
-        ${feedback.comentario ? `<div class="caption-box"><strong style="color:var(--white)">Comentário do cliente:</strong><br>${feedback.comentario}</div>` : ''}
-      `;
-      box.appendChild(card);
+        <div>
+          <div class="videos-col-header"><h4>Pedido de alteração</h4><span class="videos-col-count" style="background:rgba(227,85,85,0.15);color:var(--red);">${alteracao.length}</span></div>
+          ${alteracao.length ? alteracao.map(videoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>'}
+        </div>
+        <div>
+          <div class="videos-col-header"><h4>Aprovados</h4><span class="videos-col-count" style="background:rgba(62,207,106,0.15);color:var(--green);">${aprovados.length}</span></div>
+          ${aprovados.length ? aprovados.map(videoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>'}
+        </div>
+      </div>
+    `;
+
+    box.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.del;
+        const titulo = btn.dataset.titulo;
+        abrirConfirmModal(
+          'Excluir este vídeo?',
+          `"${titulo}" vai ser removido do portal do cliente. Essa ação não pode ser desfeita.`,
+          async () => { await db.collection('entregas').doc(id).delete(); }
+        );
+      });
     });
   });
 }
