@@ -19,6 +19,7 @@
     <div class="nav-item" data-tab="cadastro">Cadastrar cliente</div>
     <div class="nav-item" data-tab="clientes">Clientes</div>
     <div class="nav-item" data-tab="videos">Vídeos</div>
+    <div class="nav-item" data-tab="entregas">Entregas</div>
     <div class="nav-item" data-tab="gravacao-geral">Gravação</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
     <div class="nav-item" data-tab="materiais">Materiais</div>
@@ -189,37 +190,45 @@
     <section class="tab-section" id="tab-videos">
       <h2>Vídeos / entregas</h2>
       <p class="page-sub">Suba o vídeo no Google Drive primeiro, depois cole o link aqui e vincule ao cliente certo.</p>
-      <div class="videos-layout">
-        <div class="card videos-form-card">
-          <div class="field">
-            <label>Cliente</label>
-            <select id="vClienteId"></select>
-          </div>
-          <div class="field">
-            <label>Título</label>
-            <input type="text" id="vTitulo">
-          </div>
-          <div class="field">
-            <label>Link do Google Drive</label>
-            <input type="text" id="vLink" placeholder="https://drive.google.com/file/d/.../view">
-          </div>
-          <div class="field">
-            <label>Legenda de postagem</label>
-            <textarea id="vLegenda" rows="3"></textarea>
-          </div>
-          <div class="field">
-            <label>Data de referência (mês da entrega)</label>
-            <input type="date" id="vDataRef">
-          </div>
-          <div class="field">
-            <label>Data de postagem (aparece no calendário do cliente)</label>
-            <input type="date" id="vDataPost">
-          </div>
-          <button class="btn" id="btnAddVideo">Entregar vídeo</button>
-          <p class="success-msg" id="videoMsg"></p>
+      <div class="card videos-form-card">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="vClienteId"></select>
         </div>
-        <div id="listaVideosAdmin" class="videos-list-area"><div class="empty-state">Carregando...</div></div>
+        <div class="field">
+          <label>Título</label>
+          <input type="text" id="vTitulo">
+        </div>
+        <div class="field">
+          <label>Link do Google Drive</label>
+          <input type="text" id="vLink" placeholder="https://drive.google.com/file/d/.../view">
+        </div>
+        <div class="field">
+          <label>Legenda de postagem</label>
+          <textarea id="vLegenda" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label>Data de referência (mês da entrega)</label>
+          <input type="date" id="vDataRef">
+        </div>
+        <div class="field">
+          <label>Data de postagem (aparece no calendário do cliente)</label>
+          <input type="date" id="vDataPost">
+        </div>
+        <button class="btn" id="btnAddVideo">Entregar vídeo</button>
+        <p class="success-msg" id="videoMsg"></p>
       </div>
+    </section>
+
+    <!-- ENTREGAS -->
+    <section class="tab-section" id="tab-entregas">
+      <h2>Entregas</h2>
+      <p class="page-sub">Acompanhe o status de aprovação de cada vídeo entregue.</p>
+      <div class="field" style="max-width:280px;">
+        <label>Filtrar por cliente</label>
+        <select id="entregasFiltroCliente"><option value="">Todos os clientes</option></select>
+      </div>
+      <div id="listaVideosAdmin" class="videos-list-area"><div class="empty-state">Carregando...</div></div>
     </section>
 
     <!-- GRAVAÇÃO GERAL -->
@@ -365,7 +374,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.add('active');
     document.getElementById('tab-' + item.dataset.tab).classList.add('active');
     document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('mainArea').classList.toggle('main-wide', item.dataset.tab === 'calendario' || item.dataset.tab === 'videos');
+    document.getElementById('mainArea').classList.toggle('main-wide', item.dataset.tab === 'calendario' || item.dataset.tab === 'entregas');
   });
 });
 
@@ -447,6 +456,9 @@ function carregarClientes() {
 
     grid.innerHTML = '';
     selects.forEach(s => s.innerHTML = '');
+    const filtroEntregas = document.getElementById('entregasFiltroCliente');
+    const filtroEntregasAtual = filtroEntregas.value;
+    filtroEntregas.innerHTML = '<option value="">Todos os clientes</option>';
 
     snap.forEach(docSnap => {
       const c = docSnap.data();
@@ -464,7 +476,14 @@ function carregarClientes() {
         opt.textContent = c.nome;
         s.appendChild(opt.cloneNode(true));
       });
+
+      const optFiltro = document.createElement('option');
+      optFiltro.value = docSnap.id;
+      optFiltro.textContent = c.nome;
+      filtroEntregas.appendChild(optFiltro);
     });
+
+    filtroEntregas.value = filtroEntregasAtual;
 
     if (document.getElementById('ggClienteId').value) {
       carregarGravacaoGeral(document.getElementById('ggClienteId').value);
@@ -734,22 +753,30 @@ function videoCardHtml(v) {
 
 function carregarVideosAdmin() {
   db.collection('entregas').orderBy('criadoEm', 'desc').onSnapshot(snap => {
-    const box = document.getElementById('listaVideosAdmin');
-
     todasEntregas = [];
     snap.forEach(docSnap => todasEntregas.push({ id: docSnap.id, ...docSnap.data() }));
     renderCalendarioAdmin();
+    renderEntregasBoard();
+  });
+}
 
-    if (snap.empty) {
-      box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
-      return;
-    }
+document.getElementById('entregasFiltroCliente').addEventListener('change', renderEntregasBoard);
 
-    const pendentes = todasEntregas.filter(v => !(v.feedback && v.feedback.tipo));
-    const alteracao = todasEntregas.filter(v => v.feedback && v.feedback.tipo === 'reprovado');
-    const aprovados = todasEntregas.filter(v => v.feedback && v.feedback.tipo === 'aprovado');
+function renderEntregasBoard() {
+  const box = document.getElementById('listaVideosAdmin');
+  const filtroUid = document.getElementById('entregasFiltroCliente').value;
+  const lista = filtroUid ? todasEntregas.filter(v => v.clienteId === filtroUid) : todasEntregas;
 
-    box.innerHTML = `
+  if (!lista.length) {
+    box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
+    return;
+  }
+
+  const pendentes = lista.filter(v => !(v.feedback && v.feedback.tipo));
+  const alteracao = lista.filter(v => v.feedback && v.feedback.tipo === 'reprovado');
+  const aprovados = lista.filter(v => v.feedback && v.feedback.tipo === 'aprovado');
+
+  box.innerHTML = `
       <div class="videos-kanban">
         <div>
           <div class="videos-col-header"><h4>Em aprovação</h4><span class="videos-col-count" style="background:rgba(227,181,85,0.15);color:var(--yellow);">${pendentes.length}</span></div>
@@ -766,16 +793,15 @@ function carregarVideosAdmin() {
       </div>
     `;
 
-    box.querySelectorAll('[data-del]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.del;
-        const titulo = btn.dataset.titulo;
-        abrirConfirmModal(
-          'Excluir este vídeo?',
-          `"${titulo}" vai ser removido do portal do cliente. Essa ação não pode ser desfeita.`,
-          async () => { await db.collection('entregas').doc(id).delete(); }
-        );
-      });
+  box.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.del;
+      const titulo = btn.dataset.titulo;
+      abrirConfirmModal(
+        'Excluir este vídeo?',
+        `"${titulo}" vai ser removido do portal do cliente. Essa ação não pode ser desfeita.`,
+        async () => { await db.collection('entregas').doc(id).delete(); }
+      );
     });
   });
 }
