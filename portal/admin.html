@@ -40,6 +40,78 @@
       </div>
     </section>
 
+    <!-- PERFIL DO CLIENTE -->
+    <section class="tab-section" id="tab-perfil">
+      <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarPerfil">&larr; Voltar para clientes</div>
+
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
+        <div>
+          <h2 style="margin:0;" id="perfilNome">Cliente</h2>
+          <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px;">Próxima gravação</h3>
+        <div class="field">
+          <label>Status</label>
+          <select id="perfilGravacaoStatus">
+            <option value="a_agendar">À agendar</option>
+            <option value="marcada">Marcada</option>
+            <option value="realizada">Realizada</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="perfilGravacaoData">
+        </div>
+        <div class="field">
+          <label>Horário</label>
+          <input type="time" id="perfilGravacaoHorario">
+        </div>
+        <button class="btn" id="btnSalvarGravacao">Salvar</button>
+        <p class="success-msg" id="perfilGravacaoMsg"></p>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px;">Enviar vídeo</h3>
+        <div class="field">
+          <label>Título</label>
+          <input type="text" id="perfilVTitulo">
+        </div>
+        <div class="field">
+          <label>Link do Google Drive</label>
+          <input type="text" id="perfilVLink">
+        </div>
+        <div class="field">
+          <label>Legenda de postagem</label>
+          <textarea id="perfilVLegenda" rows="3"></textarea>
+        </div>
+        <div class="field">
+          <label>Data de postagem</label>
+          <input type="date" id="perfilVData">
+        </div>
+        <div class="field">
+          <label>Horário de postagem</label>
+          <input type="time" id="perfilVHorario">
+        </div>
+        <button class="btn" id="btnSalvarVideo">Entregar vídeo</button>
+        <p class="success-msg" id="perfilVideoMsg"></p>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom:14px;">Calendário completo</h3>
+        <p class="meta" id="perfilCalMes" style="margin-bottom:12px;"></p>
+        <div id="perfilCalendario"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:rgba(110,45,231,0.28);display:inline-block;"></span>
+          <span class="meta">Dia com vídeo programado</span>
+        </div>
+        <div id="perfilCalDetalhe" style="margin-top:14px;"></div>
+      </div>
+    </section>
+
     <!-- CLIENTES -->
     <section class="tab-section" id="tab-clientes">
       <h2>Clientes</h2>
@@ -188,6 +260,9 @@
 <script>
 let currentUser = null;
 let clientesCache = {};
+let perfilUid = null;
+let perfilUnsub = null;
+let perfilEntregas = [];
 
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => {
@@ -305,7 +380,9 @@ function carregarClientes() {
 
       const dashRow = document.createElement('div');
       dashRow.className = 'row';
+      dashRow.style.cursor = 'pointer';
       dashRow.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''}</span></div>`;
+      dashRow.addEventListener('click', () => abrirPerfilCliente(docSnap.id));
       dashList.appendChild(dashRow);
 
       selects.forEach(s => {
@@ -314,6 +391,143 @@ function carregarClientes() {
         opt.textContent = c.nome;
         s.appendChild(opt.cloneNode(true));
       });
+    });
+  });
+}
+
+// --- PERFIL DO CLIENTE ---
+function abrirPerfilCliente(uid) {
+  perfilUid = uid;
+  const c = clientesCache[uid] || {};
+
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-perfil').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+  document.getElementById('perfilAvatar').textContent = (c.nome || '?').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('perfilNome').textContent = c.nome || 'Cliente';
+  document.getElementById('perfilSub').textContent = [c.empresa, c.email].filter(Boolean).join(' · ');
+
+  document.getElementById('perfilGravacaoStatus').value = c.proximaGravacaoStatus || 'a_agendar';
+  const gData = c.proximaGravacaoData;
+  if (gData) {
+    const d = gData.toDate ? gData.toDate() : new Date(gData);
+    document.getElementById('perfilGravacaoData').value = d.toISOString().slice(0,10);
+  } else {
+    document.getElementById('perfilGravacaoData').value = '';
+  }
+  document.getElementById('perfilGravacaoHorario').value = c.proximaGravacaoHorario || '';
+
+  document.getElementById('perfilVTitulo').value = '';
+  document.getElementById('perfilVLink').value = '';
+  document.getElementById('perfilVLegenda').value = '';
+  document.getElementById('perfilVData').value = '';
+  document.getElementById('perfilVHorario').value = '';
+
+  if (perfilUnsub) perfilUnsub();
+  perfilUnsub = db.collection('entregas').where('clienteId', '==', uid).onSnapshot(snap => {
+    perfilEntregas = [];
+    snap.forEach(d => perfilEntregas.push(d.data()));
+    renderPerfilCalendario();
+  });
+}
+
+document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
+  if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-dashboard').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.querySelector('[data-tab="dashboard"]').classList.add('active');
+});
+
+document.getElementById('btnSalvarGravacao').addEventListener('click', async () => {
+  if (!perfilUid) return;
+  const status = document.getElementById('perfilGravacaoStatus').value;
+  const data = document.getElementById('perfilGravacaoData').value;
+  const horario = document.getElementById('perfilGravacaoHorario').value;
+  await db.collection('clientes').doc(perfilUid).set({
+    proximaGravacaoStatus: status,
+    proximaGravacaoData: data ? dateInputToTimestamp(data) : null,
+    proximaGravacaoHorario: horario || ''
+  }, { merge: true });
+  const msg = document.getElementById('perfilGravacaoMsg');
+  msg.textContent = 'Salvo!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+document.getElementById('btnSalvarVideo').addEventListener('click', async () => {
+  if (!perfilUid) return;
+  const titulo = document.getElementById('perfilVTitulo').value.trim();
+  const linkDrive = document.getElementById('perfilVLink').value.trim();
+  const legenda = document.getElementById('perfilVLegenda').value.trim();
+  const data = document.getElementById('perfilVData').value;
+  const horario = document.getElementById('perfilVHorario').value;
+  if (!titulo || !linkDrive) return;
+
+  await db.collection('entregas').add({
+    clienteId: perfilUid, titulo, linkDrive, legenda,
+    dataReferencia: dateInputToTimestamp(data),
+    dataPostagem: dateInputToTimestamp(data),
+    horarioPostagem: horario || '',
+    status: 'publicado',
+    feedback: {},
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('perfilVTitulo').value = '';
+  document.getElementById('perfilVLink').value = '';
+  document.getElementById('perfilVLegenda').value = '';
+  document.getElementById('perfilVData').value = '';
+  document.getElementById('perfilVHorario').value = '';
+  const msg = document.getElementById('perfilVideoMsg');
+  msg.textContent = 'Vídeo entregue!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function renderPerfilCalendario() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+  const nomesMes = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  document.getElementById('perfilCalMes').textContent = nomesMes[mes] + ' de ' + ano;
+
+  const diasComVideo = {};
+  perfilEntregas.forEach(v => {
+    if (!v.dataPostagem) return;
+    const d = v.dataPostagem.toDate ? v.dataPostagem.toDate() : new Date(v.dataPostagem);
+    if (d.getFullYear() === ano && d.getMonth() === mes) {
+      const key = d.getDate();
+      if (!diasComVideo[key]) diasComVideo[key] = [];
+      diasComVideo[key].push(v);
+    }
+  });
+
+  const primeiroDia = new Date(ano, mes, 1).getDay();
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;">';
+  ['D','S','T','Q','Q','S','S'].forEach(d => {
+    html += `<div class="meta" style="padding:4px;">${d}</div>`;
+  });
+  for (let i = 0; i < primeiroDia; i++) html += '<div></div>';
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const temVideo = diasComVideo[dia];
+    const style = temVideo
+      ? 'background:rgba(110,45,231,0.28);color:var(--purple-light);font-weight:700;'
+      : 'color:var(--gray);';
+    html += `<div data-dia="${dia}" style="${style}padding:8px 0;border-radius:6px;cursor:${temVideo ? 'pointer' : 'default'};font-size:0.85rem;">${dia}</div>`;
+  }
+  html += '</div>';
+  document.getElementById('perfilCalendario').innerHTML = html;
+
+  document.querySelectorAll('#perfilCalendario [data-dia]').forEach(el => {
+    const dia = parseInt(el.dataset.dia);
+    if (!diasComVideo[dia]) return;
+    el.addEventListener('click', () => {
+      const detalhe = document.getElementById('perfilCalDetalhe');
+      detalhe.innerHTML = diasComVideo[dia].map(v => `
+        <div class="cal-item"><strong>${v.titulo}</strong>${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>
+      `).join('');
     });
   });
 }
