@@ -16,6 +16,7 @@
     <div class="role-tag">Administrador</div>
 
     <div class="nav-item active" data-tab="dashboard">Dashboard</div>
+    <div class="nav-item" data-tab="calendario">Calendário</div>
     <div class="nav-item" data-tab="clientes">Clientes</div>
     <div class="nav-item" data-tab="videos">Vídeos</div>
     <div class="nav-item" data-tab="pautas">Pautas</div>
@@ -37,6 +38,21 @@
       <div class="card">
         <h3 style="margin-bottom:14px;">Clientes cadastrados (<span id="dashClientesTotal">0</span>)</h3>
         <div id="dashListaClientes"><div class="empty-state">Carregando...</div></div>
+      </div>
+    </section>
+
+    <!-- CALENDÁRIO GERAL -->
+    <section class="tab-section" id="tab-calendario">
+      <h2>Calendário</h2>
+      <p class="page-sub">Visão geral de todos os clientes por dia.</p>
+      <div class="card">
+        <p class="meta" id="calAdminMes" style="margin-bottom:12px;"></p>
+        <div id="calAdminGrid"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+          <span style="width:12px;height:12px;border-radius:3px;background:rgba(110,45,231,0.28);display:inline-block;"></span>
+          <span class="meta">Dia com vídeo programado</span>
+        </div>
+        <div id="calAdminDetalhe" style="margin-top:14px;"></div>
       </div>
     </section>
 
@@ -265,6 +281,7 @@ let perfilUid = null;
 let perfilUnsub = null;
 let perfilClienteUnsub = null;
 let perfilEntregas = [];
+let todasEntregas = [];
 
 function renderConfirmacaoStatus(dados) {
   const el = document.getElementById('perfilConfirmacaoStatus');
@@ -590,6 +607,11 @@ document.getElementById('btnAddVideo').addEventListener('click', async () => {
 function carregarVideosAdmin() {
   db.collection('entregas').orderBy('criadoEm', 'desc').onSnapshot(snap => {
     const box = document.getElementById('listaVideosAdmin');
+
+    todasEntregas = [];
+    snap.forEach(docSnap => todasEntregas.push(docSnap.data()));
+    renderCalendarioAdmin();
+
     if (snap.empty) {
       box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
       return;
@@ -616,6 +638,59 @@ function carregarVideosAdmin() {
         ${feedback.comentario ? `<div class="caption-box"><strong style="color:var(--white)">Comentário do cliente:</strong><br>${feedback.comentario}</div>` : ''}
       `;
       box.appendChild(card);
+    });
+  });
+}
+
+// --- CALENDÁRIO GERAL ---
+function renderCalendarioAdmin() {
+  const gridEl = document.getElementById('calAdminGrid');
+  if (!gridEl) return;
+
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = hoje.getMonth();
+  const nomesMes = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  document.getElementById('calAdminMes').textContent = nomesMes[mes] + ' de ' + ano;
+
+  const diasComVideo = {};
+  todasEntregas.forEach(v => {
+    if (!v.dataPostagem) return;
+    const d = v.dataPostagem.toDate ? v.dataPostagem.toDate() : new Date(v.dataPostagem);
+    if (d.getFullYear() === ano && d.getMonth() === mes) {
+      const key = d.getDate();
+      if (!diasComVideo[key]) diasComVideo[key] = [];
+      diasComVideo[key].push(v);
+    }
+  });
+
+  const primeiroDia = new Date(ano, mes, 1).getDay();
+  const totalDias = new Date(ano, mes + 1, 0).getDate();
+
+  let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;">';
+  ['D','S','T','Q','Q','S','S'].forEach(d => {
+    html += `<div class="meta" style="padding:4px;">${d}</div>`;
+  });
+  for (let i = 0; i < primeiroDia; i++) html += '<div></div>';
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const temVideo = diasComVideo[dia];
+    const style = temVideo
+      ? 'background:rgba(110,45,231,0.28);color:var(--purple-light);font-weight:700;'
+      : 'color:var(--gray);';
+    html += `<div data-dia="${dia}" style="${style}padding:8px 0;border-radius:6px;cursor:${temVideo ? 'pointer' : 'default'};font-size:0.85rem;">${dia}</div>`;
+  }
+  html += '</div>';
+  gridEl.innerHTML = html;
+
+  gridEl.querySelectorAll('[data-dia]').forEach(el => {
+    const dia = parseInt(el.dataset.dia);
+    if (!diasComVideo[dia]) return;
+    el.addEventListener('click', () => {
+      const detalhe = document.getElementById('calAdminDetalhe');
+      detalhe.innerHTML = diasComVideo[dia].map(v => {
+        const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+        return `<div class="cal-item"><strong>${nomeCliente}</strong> · ${v.titulo}${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>`;
+      }).join('');
     });
   });
 }
