@@ -321,6 +321,7 @@ a{color:var(--purple-light);text-decoration:none;}
   overflow:hidden;
   text-overflow:ellipsis;
 }
+.cal-big-chip.cal-chip-gravacao{background:rgba(62,207,106,0.18);color:var(--green);}
 .cal-big-more{color:var(--gray);font-size:0.68rem;}
 
 .cal-group{margin-bottom:22px;}

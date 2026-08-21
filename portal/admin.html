@@ -314,6 +314,22 @@ function entregasDoDia(data) {
   });
 }
 
+function eventosDoDia(data) {
+  const eventos = entregasDoDia(data).map(v => ({
+    tipo: 'video', clienteId: v.clienteId, titulo: v.titulo, horario: v.horarioPostagem || ''
+  }));
+  Object.keys(clientesCache).forEach(uid => {
+    const c = clientesCache[uid];
+    if (c.proximaGravacaoStatus === 'marcada' && c.confirmacaoGravacao && c.confirmacaoGravacao.status === 'confirmada' && c.proximaGravacaoData) {
+      const d = c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData);
+      if (mesmoDia(d, data)) {
+        eventos.push({ tipo: 'gravacao', clienteId: uid, titulo: 'Gravação', horario: c.proximaGravacaoHorario || '' });
+      }
+    }
+  });
+  return eventos;
+}
+
 function renderConfirmacaoStatus(dados, elId) {
   const el = document.getElementById(elId || 'perfilConfirmacaoStatus');
   const conf = dados.confirmacaoGravacao;
@@ -441,6 +457,8 @@ function carregarClientes() {
     if (document.getElementById('ggClienteId').value) {
       carregarGravacaoGeral(document.getElementById('ggClienteId').value);
     }
+
+    renderCalendarioAdmin();
   });
 }
 
@@ -716,6 +734,9 @@ function renderCalendarioAdmin() {
 
 function itemChip(v) {
   const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+  if (v.tipo === 'gravacao') {
+    return `<div class="cal-big-chip cal-chip-gravacao">${nomeCliente}: Gravação${v.horario ? ' · ' + v.horario : ''}</div>`;
+  }
   return `<div class="cal-big-chip">${nomeCliente}: ${v.titulo}</div>`;
 }
 
@@ -734,7 +755,7 @@ function renderCalMes() {
   for (let i = 0; i < primeiroDia; i++) html += '<div></div>';
   for (let dia = 1; dia <= totalDias; dia++) {
     const dataDia = new Date(ano, mes, dia);
-    const eventos = entregasDoDia(dataDia);
+    const eventos = eventosDoDia(dataDia);
     const isToday = mesmoDia(dataDia, hoje);
     let cls = eventos.length ? 'cal-big-cell has-video' : 'cal-big-cell';
     let extraStyle = isToday ? 'border-color:var(--purple);border-width:2px;' : '';
@@ -779,7 +800,7 @@ function renderCalSemana() {
   }
   for (let i = 0; i < 7; i++) {
     const d = new Date(inicio); d.setDate(d.getDate() + i);
-    const eventos = entregasDoDia(d);
+    const eventos = eventosDoDia(d);
     const isToday = mesmoDia(d, hoje);
     let cls = eventos.length ? 'cal-big-cell has-video' : 'cal-big-cell';
     let extraStyle = isToday ? 'border-color:var(--purple);border-width:2px;' : '';
@@ -803,23 +824,25 @@ function renderCalDia() {
   const d = calAdminData;
   document.getElementById('calAdminMes').textContent = NOMES_DIA_SEMANA[d.getDay()] + ', ' + d.getDate() + ' de ' + NOMES_MES[d.getMonth()] + ' de ' + d.getFullYear();
 
-  const eventos = entregasDoDia(d).sort((a,b) => (a.horarioPostagem || '').localeCompare(b.horarioPostagem || ''));
+  const eventos = eventosDoDia(d).sort((a,b) => (a.horario || '').localeCompare(b.horario || ''));
   if (!eventos.length) {
-    gridEl.innerHTML = '<div class="empty-state">Nenhum vídeo programado para este dia.</div>';
+    gridEl.innerHTML = '<div class="empty-state">Nenhum vídeo ou gravação programado para este dia.</div>';
     return;
   }
   gridEl.innerHTML = eventos.map(v => {
     const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
-    return `<div class="cal-item"><strong>${nomeCliente}</strong> · ${v.titulo}${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>`;
+    const label = v.tipo === 'gravacao' ? 'Gravação' : v.titulo;
+    return `<div class="cal-item"><strong>${nomeCliente}</strong> · ${label}${v.horario ? ' · ' + v.horario : ''}</div>`;
   }).join('');
 }
 
 function mostrarDetalheDia(data) {
-  const eventos = entregasDoDia(data);
+  const eventos = eventosDoDia(data);
   const detalhe = document.getElementById('calAdminDetalhe');
   detalhe.innerHTML = eventos.map(v => {
     const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
-    return `<div class="cal-item"><strong>${nomeCliente}</strong> · ${v.titulo}${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>`;
+    const label = v.tipo === 'gravacao' ? 'Gravação' : v.titulo;
+    return `<div class="cal-item"><strong>${nomeCliente}</strong> · ${label}${v.horario ? ' · ' + v.horario : ''}</div>`;
   }).join('');
 }
 
