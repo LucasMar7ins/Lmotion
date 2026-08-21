@@ -318,14 +318,21 @@ function carregarVideos() {
           </div>
           <div class="video-embed"><iframe src="${driveEmbedUrl(v.linkDrive)}" allow="autoplay"></iframe></div>
           ${v.legenda ? `<div class="caption-box"><strong style="color:var(--white)">Legenda:</strong><br>${v.legenda}</div>` : ''}
+          ${feedback.tipo === 'reprovado' && feedback.comentario ? `<div class="caption-box"><strong style="color:var(--white)">Seu pedido de alteração:</strong><br>${feedback.comentario}</div>` : ''}
           <div class="feedback-row">
             <button class="btn" data-acao="aprovado" data-id="${id}">Aprovar</button>
             <button class="btn btn-danger" data-acao="reprovado" data-id="${id}">Reprovar</button>
+            <button class="btn btn-outline" data-abrir-alt="${id}">Pedido de alteração</button>
           </div>
-          <div class="field">
-            <textarea rows="2" placeholder="Comentário de ajuste (opcional)" data-comentario="${id}">${feedback.comentario || ''}</textarea>
+          <div class="alt-panel" id="altPanel-${id}" style="display:none;">
+            <div class="field" style="margin:12px 0 8px;">
+              <textarea rows="3" placeholder="Descreva o que precisa ser ajustado nesse vídeo..." id="altTexto-${id}"></textarea>
+            </div>
+            <div class="alt-panel-actions">
+              <button class="btn" data-ok-alt="${id}">OK</button>
+              <button class="btn btn-outline" data-cancel-alt="${id}">Cancelar</button>
+            </div>
           </div>
-          <button class="btn btn-outline" data-acao="comentario" data-id="${id}">Enviar comentário</button>
         `;
         box.appendChild(card);
       });
@@ -334,17 +341,35 @@ function carregarVideos() {
         btn.addEventListener('click', async () => {
           const id = btn.dataset.id;
           const acao = btn.dataset.acao;
-          if (acao === 'comentario') {
-            const texto = box.querySelector(`[data-comentario="${id}"]`).value.trim();
-            if (!texto) return;
-            await db.collection('entregas').doc(id).set({
-              feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
-            }, { merge: true });
-          } else {
-            await db.collection('entregas').doc(id).set({
-              feedback: { tipo: acao, data: firebase.firestore.FieldValue.serverTimestamp() }
-            }, { merge: true });
-          }
+          await db.collection('entregas').doc(id).set({
+            feedback: { tipo: acao, data: firebase.firestore.FieldValue.serverTimestamp() }
+          }, { merge: true });
+        });
+      });
+
+      box.querySelectorAll('[data-abrir-alt]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.abrirAlt;
+          const painel = document.getElementById(`altPanel-${id}`);
+          painel.style.display = painel.style.display === 'none' ? 'block' : 'none';
+          if (painel.style.display === 'block') document.getElementById(`altTexto-${id}`).focus();
+        });
+      });
+
+      box.querySelectorAll('[data-cancel-alt]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById(`altPanel-${btn.dataset.cancelAlt}`).style.display = 'none';
+        });
+      });
+
+      box.querySelectorAll('[data-ok-alt]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.okAlt;
+          const texto = document.getElementById(`altTexto-${id}`).value.trim();
+          if (!texto) return;
+          await db.collection('entregas').doc(id).set({
+            feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
+          }, { merge: true });
         });
       });
     });

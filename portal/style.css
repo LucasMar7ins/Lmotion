@@ -327,6 +327,7 @@ a{color:var(--purple-light);text-decoration:none;}
 }
 .cal-big-chip.cal-chip-gravacao{background:rgba(62,207,106,0.18);color:var(--green);}
 
+.alt-panel-actions{display:flex;gap:10px;}
 .videos-layout{display:flex;gap:24px;align-items:flex-start;}
 .videos-form-card{flex:0 0 380px;}
 .videos-list-area{flex:1;min-width:0;}
