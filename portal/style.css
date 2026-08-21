@@ -352,6 +352,8 @@ a{color:var(--purple-light);text-decoration:none;}
   text-overflow:ellipsis;
 }
 .cal-big-chip.cal-chip-gravacao{background:rgba(62,207,106,0.18);color:var(--green);}
+.cal-item.cal-item-gravacao{background:rgba(62,207,106,0.1);border-color:rgba(62,207,106,0.35);cursor:pointer;}
+.cal-item.cal-item-gravacao:hover{border-color:var(--green);}
 
 .alt-panel-actions{display:flex;gap:10px;}
 .videos-layout{display:flex;gap:24px;align-items:flex-start;}
