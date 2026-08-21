@@ -16,9 +16,11 @@
     <div class="role-tag">Administrador</div>
 
     <div class="nav-item active" data-tab="dashboard">Dashboard</div>
-    <div class="nav-item" data-tab="calendario">Calendário</div>
+    <div class="nav-item" data-tab="cadastro">Cadastrar cliente</div>
     <div class="nav-item" data-tab="clientes">Clientes</div>
     <div class="nav-item" data-tab="videos">Vídeos</div>
+    <div class="nav-item" data-tab="gravacao-geral">Gravação</div>
+    <div class="nav-item" data-tab="calendario">Calendário</div>
     <div class="nav-item" data-tab="pautas">Pautas</div>
     <div class="nav-item" data-tab="materiais">Materiais</div>
     <div class="nav-item" data-tab="duvidas">Dúvidas</div>
@@ -34,11 +36,7 @@
     <!-- DASHBOARD -->
     <section class="tab-section active" id="tab-dashboard">
       <h2>Dashboard</h2>
-      <p class="page-sub">Visão geral rápida do portal.</p>
-      <div class="card">
-        <h3 style="margin-bottom:14px;">Clientes cadastrados (<span id="dashClientesTotal">0</span>)</h3>
-        <div id="dashListaClientes"><div class="empty-state">Carregando...</div></div>
-      </div>
+      <p class="page-sub">Visão geral rápida do portal. Mais conteúdo em breve.</p>
     </section>
 
     <!-- CALENDÁRIO GERAL -->
@@ -141,9 +139,9 @@
       </div>
     </section>
 
-    <!-- CLIENTES -->
-    <section class="tab-section" id="tab-clientes">
-      <h2>Clientes</h2>
+    <!-- CADASTRAR CLIENTE -->
+    <section class="tab-section" id="tab-cadastro">
+      <h2>Cadastrar cliente</h2>
       <p class="page-sub">
         Para criar o login de um cliente: vá no Firebase Console → Authentication → Add user (email e senha).
         Depois copie o UID gerado e cadastre os dados dele aqui embaixo.
@@ -166,25 +164,19 @@
           <input type="email" id="clEmail">
         </div>
         <div class="field">
-          <label>Status da próxima gravação</label>
-          <select id="clGravacaoStatus">
-            <option value="a_agendar">À agendar</option>
-            <option value="marcada">Marcada</option>
-            <option value="realizada">Realizada</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Data da gravação (se marcada)</label>
-          <input type="date" id="clGravacaoData">
-        </div>
-        <div class="field">
-          <label>Horário da gravação (se marcada)</label>
-          <input type="time" id="clGravacaoHorario">
+          <label>WhatsApp</label>
+          <input type="text" id="clWhatsapp" placeholder="Ex: (32) 99164-6261">
         </div>
         <button class="btn" id="btnAddCliente">Cadastrar / atualizar cliente</button>
         <p class="success-msg" id="clienteMsg"></p>
       </div>
-      <div id="listaClientes"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section class="tab-section" id="tab-clientes">
+      <h2>Clientes</h2>
+      <p class="page-sub">Clique em um cliente para abrir o perfil dele.</p>
+      <div id="gridClientes" class="client-grid"><div class="empty-state">Carregando...</div></div>
     </section>
 
     <!-- VÍDEOS -->
@@ -220,6 +212,37 @@
         <p class="success-msg" id="videoMsg"></p>
       </div>
       <div id="listaVideosAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- GRAVAÇÃO GERAL -->
+    <section class="tab-section" id="tab-gravacao-geral">
+      <h2>Gravação</h2>
+      <p class="page-sub">Marque a data da próxima gravação de qualquer cliente.</p>
+      <div class="card">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="ggClienteId"></select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="ggStatus">
+            <option value="a_agendar">À agendar</option>
+            <option value="marcada">Marcada</option>
+            <option value="realizada">Realizada</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="ggData">
+        </div>
+        <div class="field">
+          <label>Horário</label>
+          <input type="time" id="ggHorario">
+        </div>
+        <div id="ggConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"></div>
+        <button class="btn" id="btnSalvarGravGeral">Salvar</button>
+        <p class="success-msg" id="ggMsg"></p>
+      </div>
     </section>
 
     <!-- PAUTAS -->
@@ -291,8 +314,8 @@ function entregasDoDia(data) {
   });
 }
 
-function renderConfirmacaoStatus(dados) {
-  const el = document.getElementById('perfilConfirmacaoStatus');
+function renderConfirmacaoStatus(dados, elId) {
+  const el = document.getElementById(elId || 'perfilConfirmacaoStatus');
   const conf = dados.confirmacaoGravacao;
   if (dados.proximaGravacaoStatus !== 'marcada') {
     el.innerHTML = '';
@@ -356,23 +379,18 @@ function dateInputToTimestamp(value) {
   return firebase.firestore.Timestamp.fromDate(new Date(value + 'T12:00:00'));
 }
 
-// --- CLIENTES ---
+// --- CADASTRAR CLIENTE ---
 document.getElementById('btnAddCliente').addEventListener('click', async () => {
   const uid = document.getElementById('clUid').value.trim();
   const nome = document.getElementById('clNome').value.trim();
   const empresa = document.getElementById('clEmpresa').value.trim();
   const email = document.getElementById('clEmail').value.trim();
-  const gravacaoStatus = document.getElementById('clGravacaoStatus').value;
-  const gravacaoData = document.getElementById('clGravacaoData').value;
-  const gravacaoHorario = document.getElementById('clGravacaoHorario').value;
+  const whatsapp = document.getElementById('clWhatsapp').value.trim();
   if (!uid || !nome) return;
 
   await db.collection('clientes').doc(uid).set({
-    nome, empresa, email,
+    nome, empresa, email, whatsapp,
     isAdmin: false,
-    proximaGravacaoStatus: gravacaoStatus,
-    proximaGravacaoData: gravacaoData ? dateInputToTimestamp(gravacaoData) : null,
-    proximaGravacaoHorario: gravacaoHorario || '',
     dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
@@ -380,54 +398,37 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
   document.getElementById('clNome').value = '';
   document.getElementById('clEmpresa').value = '';
   document.getElementById('clEmail').value = '';
-  document.getElementById('clGravacaoStatus').value = 'a_agendar';
-  document.getElementById('clGravacaoData').value = '';
-  document.getElementById('clGravacaoHorario').value = '';
+  document.getElementById('clWhatsapp').value = '';
   const msg = document.getElementById('clienteMsg');
   msg.textContent = 'Cliente cadastrado!';
   setTimeout(() => msg.textContent = '', 3000);
 });
 
+// --- CLIENTES (grid de cards) ---
 function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
-    const box = document.getElementById('listaClientes');
-    const dashBox = document.getElementById('dashListaClientes');
-    const dashTotal = document.getElementById('dashClientesTotal');
-    const selects = [document.getElementById('vClienteId')];
-
-    dashTotal.textContent = snap.size;
+    const grid = document.getElementById('gridClientes');
+    const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
 
     if (snap.empty) {
-      box.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
-      dashBox.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
+      grid.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
       selects.forEach(s => s.innerHTML = '<option value="">Nenhum cliente cadastrado</option>');
       return;
     }
 
-    dashBox.innerHTML = '';
-    const dashList = dashBox;
-
-    box.innerHTML = '<div class="card table-list"></div>';
-    const list = box.querySelector('.table-list');
+    grid.innerHTML = '';
     selects.forEach(s => s.innerHTML = '');
 
     snap.forEach(docSnap => {
       const c = docSnap.data();
       clientesCache[docSnap.id] = c;
 
-      const statusLabel = { a_agendar: 'À agendar', marcada: 'Marcada', realizada: 'Realizada' }[c.proximaGravacaoStatus] || 'À agendar';
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''} · ${c.email || ''} · Gravação: ${statusLabel}</span></div>`;
-      list.appendChild(row);
-
-      const dashRow = document.createElement('div');
-      dashRow.className = 'client-row';
-      dashRow.style.cursor = 'pointer';
-      dashRow.innerHTML = `<div class="info"><strong>${c.nome}</strong><span>${c.empresa || ''}</span></div>`;
-      dashRow.addEventListener('click', () => abrirPerfilCliente(docSnap.id));
-      dashList.appendChild(dashRow);
+      const card = document.createElement('div');
+      card.className = 'client-card';
+      card.textContent = c.nome;
+      card.addEventListener('click', () => abrirPerfilCliente(docSnap.id));
+      grid.appendChild(card);
 
       selects.forEach(s => {
         const opt = document.createElement('option');
@@ -436,6 +437,10 @@ function carregarClientes() {
         s.appendChild(opt.cloneNode(true));
       });
     });
+
+    if (document.getElementById('ggClienteId').value) {
+      carregarGravacaoGeral(document.getElementById('ggClienteId').value);
+    }
   });
 }
 
@@ -486,9 +491,58 @@ document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
   if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
   if (perfilClienteUnsub) { perfilClienteUnsub(); perfilClienteUnsub = null; }
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
-  document.getElementById('tab-dashboard').classList.add('active');
+  document.getElementById('tab-clientes').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-  document.querySelector('[data-tab="dashboard"]').classList.add('active');
+  document.querySelector('[data-tab="clientes"]').classList.add('active');
+});
+
+// --- GRAVAÇÃO (geral, qualquer cliente) ---
+let ggUnsub = null;
+document.getElementById('ggClienteId').addEventListener('change', (e) => {
+  carregarGravacaoGeral(e.target.value);
+});
+
+function carregarGravacaoGeral(uid) {
+  if (ggUnsub) { ggUnsub(); ggUnsub = null; }
+  if (!uid) {
+    document.getElementById('ggStatus').value = 'a_agendar';
+    document.getElementById('ggData').value = '';
+    document.getElementById('ggHorario').value = '';
+    document.getElementById('ggConfirmacaoStatus').innerHTML = '';
+    return;
+  }
+  const c = clientesCache[uid] || {};
+  document.getElementById('ggStatus').value = c.proximaGravacaoStatus || 'a_agendar';
+  const gData = c.proximaGravacaoData;
+  if (gData) {
+    const d = gData.toDate ? gData.toDate() : new Date(gData);
+    document.getElementById('ggData').value = d.toISOString().slice(0,10);
+  } else {
+    document.getElementById('ggData').value = '';
+  }
+  document.getElementById('ggHorario').value = c.proximaGravacaoHorario || '';
+  renderConfirmacaoStatus(c, 'ggConfirmacaoStatus');
+
+  ggUnsub = db.collection('clientes').doc(uid).onSnapshot(docSnap => {
+    if (docSnap.exists) renderConfirmacaoStatus(docSnap.data(), 'ggConfirmacaoStatus');
+  });
+}
+
+document.getElementById('btnSalvarGravGeral').addEventListener('click', async () => {
+  const uid = document.getElementById('ggClienteId').value;
+  if (!uid) return;
+  const status = document.getElementById('ggStatus').value;
+  const data = document.getElementById('ggData').value;
+  const horario = document.getElementById('ggHorario').value;
+  await db.collection('clientes').doc(uid).set({
+    proximaGravacaoStatus: status,
+    proximaGravacaoData: data ? dateInputToTimestamp(data) : null,
+    proximaGravacaoHorario: horario || '',
+    confirmacaoGravacao: firebase.firestore.FieldValue.delete()
+  }, { merge: true });
+  const msg = document.getElementById('ggMsg');
+  msg.textContent = 'Salvo!';
+  setTimeout(() => msg.textContent = '', 3000);
 });
 
 document.getElementById('btnSalvarGravacao').addEventListener('click', async () => {

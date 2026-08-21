@@ -350,6 +350,29 @@ a{color:var(--purple-light);text-decoration:none;}
 }
 .table-list .row:last-child{border-bottom:none;}
 
+.client-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+  gap:14px;
+}
+.client-card{
+  aspect-ratio:1;
+  background:var(--black-card);
+  border:1px solid rgba(110,45,231,0.35);
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:14px;
+  color:var(--white);
+  font-size:0.92rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.client-card:hover{border-color:var(--purple-light);background:var(--black);transform:translateY(-2px);}
+
 .client-row{
   border:1px solid rgba(110,45,231,0.3);
   border-radius:10px;
