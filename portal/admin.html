@@ -96,23 +96,23 @@
     <section class="tab-section" id="tab-perfil">
       <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarPerfil">&larr; Voltar para clientes</div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;">
-        <div style="display:flex;align-items:center;gap:14px;">
-          <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
-          <div>
-            <h2 style="margin:0;" id="perfilNome">Cliente</h2>
-            <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
-          </div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
+        <div>
+          <h2 style="margin:0;" id="perfilNome">Cliente</h2>
+          <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
         </div>
-        <button class="btn btn-outline" id="btnEditarInfoCliente" style="display:none;">Editar</button>
       </div>
 
       <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
         <div>
           <div class="card">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-              <h3 style="margin:0;">Informações do cliente</h3>
-              <span class="badge badge-approved" id="perfilInfoBadge" style="display:none;">Confirmado</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <h3 style="margin:0;">Informações do cliente</h3>
+                <span class="badge badge-approved" id="perfilInfoBadge" style="display:none;">Confirmado</span>
+              </div>
+              <button class="btn btn-outline" id="btnEditarInfoCliente" style="display:none;">Editar</button>
             </div>
 
             <div id="perfilInfoView" style="display:none;">
