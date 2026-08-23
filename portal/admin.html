@@ -928,7 +928,9 @@ function carregarClientes() {
     }
 
     grid.innerHTML = '';
+    const ggAtual = document.getElementById('ggClienteId').value;
     selects.forEach(s => s.innerHTML = '');
+    document.getElementById('ggClienteId').innerHTML = '<option value="">Selecione um cliente</option>';
     const filtroEntregas = document.getElementById('entregasFiltroCliente');
     const filtroEntregasAtual = filtroEntregas.value;
     filtroEntregas.innerHTML = '<option value="">Todos os clientes</option>';
@@ -957,6 +959,7 @@ function carregarClientes() {
     });
 
     filtroEntregas.value = filtroEntregasAtual;
+    document.getElementById('ggClienteId').value = ggAtual;
 
     if (document.getElementById('ggClienteId').value) {
       carregarGravacaoGeral(document.getElementById('ggClienteId').value);
@@ -1089,6 +1092,10 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
     payload.observacaoGravacao = firebase.firestore.FieldValue.delete();
   }
   await db.collection('clientes').doc(uid).set(payload, { merge: true });
+
+  document.getElementById('ggClienteId').value = '';
+  carregarGravacaoGeral('');
+
   const msg = document.getElementById('ggMsg');
   msg.textContent = 'Salvo!';
   setTimeout(() => msg.textContent = '', 3000);
