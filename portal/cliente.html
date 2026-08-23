@@ -138,8 +138,23 @@
     <!-- VÍDEOS -->
     <section class="tab-section" id="tab-videos">
       <h2>Seus vídeos</h2>
-      <p class="page-sub">Materiais entregues pela Lmotion. Aprove, reprove ou comente cada um.</p>
-      <div id="listaVideos" style="max-width:640px;"><div class="empty-state">Carregando...</div></div>
+      <p class="page-sub">Clique num vídeo para assistir, aprovar ou pedir alteração.</p>
+      <div id="listaVideos">
+        <div class="videos-kanban">
+          <div>
+            <div class="videos-col-header"><h4>Para aprovar</h4><span class="videos-col-count" id="vidsCountPendente" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
+            <div id="vidsColPendente"><div class="empty-state">Carregando...</div></div>
+          </div>
+          <div>
+            <div class="videos-col-header"><h4>Em alteração</h4><span class="videos-col-count" id="vidsCountAlteracao" style="background:rgba(227,85,85,0.15);color:var(--red);">0</span></div>
+            <div id="vidsColAlteracao"></div>
+          </div>
+          <div>
+            <div class="videos-col-header"><h4>Aprovados</h4><span class="videos-col-count" id="vidsCountAprovados" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
+            <div id="vidsColAprovados"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- CALENDÁRIO -->
@@ -215,6 +230,37 @@
     <div class="modal-actions">
       <button class="btn btn-outline" id="dgModalCancelar">Cancelar</button>
       <button class="btn btn-danger" id="dgModalConfirmar">Desmarcar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="vdModal" style="display:none;">
+  <div class="modal-box" style="width:440px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <h3 id="vdTitulo" style="margin:0;">Vídeo</h3>
+      <span class="badge" id="vdBadge"></span>
+    </div>
+    <p class="meta" id="vdMeta" style="margin:6px 0 14px;"></p>
+    <div class="video-embed"><iframe id="vdIframe" src="" allow="autoplay"></iframe></div>
+    <div class="caption-box" id="vdLegendaWrap" style="display:none;"><strong style="color:var(--white)">Legenda:</strong><br><span id="vdLegenda"></span></div>
+    <div class="caption-box" id="vdComentarioWrap" style="display:none;"><strong style="color:var(--white)">Seu pedido de alteração:</strong><br><span id="vdComentario"></span></div>
+
+    <div class="feedback-row" id="vdFeedbackRow">
+      <button class="btn" id="vdBtnAprovar">Aprovar</button>
+      <button class="btn btn-outline" id="vdBtnAbrirAlt">Pedir alteração</button>
+    </div>
+    <div class="alt-panel" id="vdAltPanel" style="display:none;">
+      <div class="field" style="margin:12px 0 8px;">
+        <textarea rows="3" placeholder="Descreva o que precisa ser ajustado nesse vídeo..." id="vdAltTexto"></textarea>
+      </div>
+      <div class="alt-panel-actions">
+        <button class="btn" id="vdAltOk">OK</button>
+        <button class="btn btn-outline" id="vdAltCancelar">Cancelar</button>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" id="vdFechar" style="flex:1;">Fechar</button>
     </div>
   </div>
 </div>
@@ -662,89 +708,120 @@ function carregarVideos() {
       meusVideosCache = [];
       snap.forEach(docSnap => meusVideosCache.push({ id: docSnap.id, ...docSnap.data() }));
       renderInicioResumo();
-
-      const box = document.getElementById('listaVideos');
-      if (snap.empty) {
-        box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
-        return;
-      }
-      box.innerHTML = '';
-      snap.forEach(docSnap => {
-        const v = docSnap.data();
-        const id = docSnap.id;
-        const feedback = v.feedback || {};
-        let badge = '<span class="badge badge-pending">Aguardando avaliação</span>';
-        if (feedback.tipo === 'aprovado') badge = '<span class="badge badge-approved">Aprovado</span>';
-        if (feedback.tipo === 'reprovado') badge = '<span class="badge badge-rejected">Reprovado</span>';
-
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <div class="top-actions">
-            <div>
-              <h3>${v.titulo || 'Sem título'}</h3>
-              <div class="meta">Postagem prevista: ${formatarData(v.dataPostagem) || 'a definir'}</div>
-            </div>
-            ${badge}
-          </div>
-          <div class="video-embed"><iframe src="${driveEmbedUrl(v.linkDrive)}" allow="autoplay"></iframe></div>
-          ${v.legenda ? `<div class="caption-box"><strong style="color:var(--white)">Legenda:</strong><br>${v.legenda}</div>` : ''}
-          ${feedback.tipo === 'reprovado' && feedback.comentario ? `<div class="caption-box"><strong style="color:var(--white)">Seu pedido de alteração:</strong><br>${feedback.comentario}</div>` : ''}
-          <div class="feedback-row">
-            <button class="btn" data-acao="aprovado" data-id="${id}">Aprovar</button>
-            <button class="btn btn-danger" data-acao="reprovado" data-id="${id}">Reprovar</button>
-            <button class="btn btn-outline" data-abrir-alt="${id}">Pedido de alteração</button>
-          </div>
-          <div class="alt-panel" id="altPanel-${id}" style="display:none;">
-            <div class="field" style="margin:12px 0 8px;">
-              <textarea rows="3" placeholder="Descreva o que precisa ser ajustado nesse vídeo..." id="altTexto-${id}"></textarea>
-            </div>
-            <div class="alt-panel-actions">
-              <button class="btn" data-ok-alt="${id}">OK</button>
-              <button class="btn btn-outline" data-cancel-alt="${id}">Cancelar</button>
-            </div>
-          </div>
-        `;
-        box.appendChild(card);
-      });
-
-      box.querySelectorAll('[data-acao]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          const acao = btn.dataset.acao;
-          await db.collection('entregas').doc(id).set({
-            feedback: { tipo: acao, data: firebase.firestore.FieldValue.serverTimestamp() }
-          }, { merge: true });
-        });
-      });
-
-      box.querySelectorAll('[data-abrir-alt]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.abrirAlt;
-          const painel = document.getElementById(`altPanel-${id}`);
-          painel.style.display = painel.style.display === 'none' ? 'block' : 'none';
-          if (painel.style.display === 'block') document.getElementById(`altTexto-${id}`).focus();
-        });
-      });
-
-      box.querySelectorAll('[data-cancel-alt]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.getElementById(`altPanel-${btn.dataset.cancelAlt}`).style.display = 'none';
-        });
-      });
-
-      box.querySelectorAll('[data-ok-alt]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.okAlt;
-          const texto = document.getElementById(`altTexto-${id}`).value.trim();
-          if (!texto) return;
-          await db.collection('entregas').doc(id).set({
-            feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
-          }, { merge: true });
-        });
-      });
+      renderVideosBoard();
     });
 }
+
+function clienteVideoCardHtml(v) {
+  const feedback = v.feedback || {};
+  return `
+    <div class="video-mini-card" data-abrir-video="${v.id}">
+      <h5>${v.titulo || 'Sem título'}</h5>
+      <div class="video-mini-when">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+      ${feedback.tipo === 'reprovado' && feedback.comentario ? `<div class="video-mini-comment">"${feedback.comentario}"</div>` : ''}
+    </div>
+  `;
+}
+
+function renderVideosBoard() {
+  const pendentes = meusVideosCache.filter(v => !(v.feedback && v.feedback.tipo));
+  const alteracao = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'reprovado');
+  const aprovados = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'aprovado');
+
+  document.getElementById('vidsCountPendente').textContent = pendentes.length;
+  document.getElementById('vidsCountAlteracao').textContent = alteracao.length;
+  document.getElementById('vidsCountAprovados').textContent = aprovados.length;
+
+  const colPendente = document.getElementById('vidsColPendente');
+  const colAlteracao = document.getElementById('vidsColAlteracao');
+  const colAprovados = document.getElementById('vidsColAprovados');
+
+  colPendente.innerHTML = pendentes.length ? pendentes.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
+  colAlteracao.innerHTML = alteracao.length ? alteracao.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
+  colAprovados.innerHTML = aprovados.length ? aprovados.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
+
+  document.querySelectorAll('#listaVideos [data-abrir-video]').forEach(el => {
+    el.addEventListener('click', () => abrirVideoDetalheCliente(el.dataset.abrirVideo));
+  });
+}
+
+// --- MODAL DE DETALHE DO VÍDEO ---
+let vdModalId = null;
+
+function abrirVideoDetalheCliente(id) {
+  const v = meusVideosCache.find(x => x.id === id);
+  if (!v) return;
+  vdModalId = id;
+  const feedback = v.feedback || {};
+
+  document.getElementById('vdTitulo').textContent = v.titulo || 'Sem título';
+
+  const badge = document.getElementById('vdBadge');
+  if (feedback.tipo === 'aprovado') { badge.textContent = 'Aprovado'; badge.className = 'badge badge-approved'; }
+  else if (feedback.tipo === 'reprovado') { badge.textContent = 'Em alteração'; badge.className = 'badge badge-rejected'; }
+  else { badge.textContent = 'Aguardando avaliação'; badge.className = 'badge badge-pending'; }
+
+  document.getElementById('vdMeta').textContent = 'Postagem prevista: ' + (formatarData(v.dataPostagem) || 'a definir');
+  document.getElementById('vdIframe').src = driveEmbedUrl(v.linkDrive);
+
+  const legWrap = document.getElementById('vdLegendaWrap');
+  if (v.legenda) {
+    document.getElementById('vdLegenda').textContent = v.legenda;
+    legWrap.style.display = 'block';
+  } else {
+    legWrap.style.display = 'none';
+  }
+
+  const comWrap = document.getElementById('vdComentarioWrap');
+  if (feedback.tipo === 'reprovado' && feedback.comentario) {
+    document.getElementById('vdComentario').textContent = feedback.comentario;
+    comWrap.style.display = 'block';
+  } else {
+    comWrap.style.display = 'none';
+  }
+
+  document.getElementById('vdAltTexto').value = '';
+  document.getElementById('vdAltPanel').style.display = 'none';
+  document.getElementById('vdFeedbackRow').style.display = 'flex';
+
+  document.getElementById('vdModal').style.display = 'flex';
+}
+
+function fecharVideoDetalheCliente() {
+  document.getElementById('vdModal').style.display = 'none';
+  vdModalId = null;
+}
+
+document.getElementById('vdFechar').addEventListener('click', fecharVideoDetalheCliente);
+
+document.getElementById('vdBtnAprovar').addEventListener('click', async () => {
+  if (!vdModalId) return;
+  await db.collection('entregas').doc(vdModalId).set({
+    feedback: { tipo: 'aprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
+  }, { merge: true });
+  fecharVideoDetalheCliente();
+});
+
+document.getElementById('vdBtnAbrirAlt').addEventListener('click', () => {
+  document.getElementById('vdFeedbackRow').style.display = 'none';
+  document.getElementById('vdAltPanel').style.display = 'block';
+  document.getElementById('vdAltTexto').focus();
+});
+
+document.getElementById('vdAltCancelar').addEventListener('click', () => {
+  document.getElementById('vdAltPanel').style.display = 'none';
+  document.getElementById('vdFeedbackRow').style.display = 'flex';
+});
+
+document.getElementById('vdAltOk').addEventListener('click', async () => {
+  if (!vdModalId) return;
+  const texto = document.getElementById('vdAltTexto').value.trim();
+  if (!texto) return;
+  await db.collection('entregas').doc(vdModalId).set({
+    feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
+  }, { merge: true });
+  fecharVideoDetalheCliente();
+});
 
 // --- CALENDÁRIO ---
 function carregarCalendario() {
