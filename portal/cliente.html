@@ -57,14 +57,37 @@
       <p class="page-sub">Acompanhe a data da sua próxima gravação e confirme presença.</p>
 
       <div class="card">
-        <div class="top-actions">
-          <div>
-            <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;">Próxima gravação</div>
-            <h3 id="gravTabTitulo" style="margin-top:4px;">Carregando...</h3>
+        <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;">Próxima gravação</div>
+        <div id="gravTabTopoWrap" style="margin-top:4px;">
+          <div class="top-actions">
+            <h3 id="gravTabTitulo">Carregando...</h3>
+            <span class="badge" id="gravTabBadge"></span>
           </div>
-          <span class="badge" id="gravTabBadge"></span>
+          <div id="gravTabDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin:8px 0 20px;"></div>
         </div>
-        <div id="gravTabDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin:8px 0 20px;"></div>
+
+        <div id="gravConfirmadaCard" style="display:none;background:rgba(62,207,106,0.08);border:1px solid rgba(62,207,106,0.3);border-radius:14px;padding:20px 22px;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+            <span style="color:var(--green);font-size:0.92rem;font-weight:600;">Gravação confirmada</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin-bottom:16px;">
+            <div>
+              <div class="meta" style="margin-bottom:3px;">Dia</div>
+              <div id="gravConfDia" style="color:var(--white);font-size:0.95rem;font-weight:600;"></div>
+            </div>
+            <div>
+              <div class="meta" style="margin-bottom:3px;">Horário</div>
+              <div id="gravConfHorario" style="color:var(--white);font-size:0.95rem;font-weight:600;"></div>
+            </div>
+            <div style="grid-column:1 / -1;">
+              <div class="meta" style="margin-bottom:3px;">Local</div>
+              <div id="gravConfLocal" style="color:var(--white);font-size:0.92rem;"></div>
+            </div>
+          </div>
+          <button class="btn btn-outline" id="btnPrecisoRemarcarConfirmado">Quero desmarcar a gravação</button>
+        </div>
+
         <div id="gravTabObsWrap" style="display:none;border-top:1px solid var(--border);padding-top:16px;margin-bottom:4px;">
           <div class="field" style="margin-bottom:10px;">
             <label>Observação</label>
@@ -285,33 +308,40 @@ function renderGravacaoTab(dados) {
   const acoes = document.getElementById('gravTabAcoes');
   const dot = document.getElementById('gravNotifDot');
   const obsWrap = document.getElementById('gravTabObsWrap');
+  const topoWrap = document.getElementById('gravTabTopoWrap');
+  const confirmadaCard = document.getElementById('gravConfirmadaCard');
 
   if (status === 'marcada' && dados.proximaGravacaoData) {
     const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
-    titulo.textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
-    badge.textContent = 'Marcada';
-    badge.className = 'badge badge-approved';
-    detalhes.innerHTML = `
-      <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
-      <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
-    `;
-
-    obsWrap.style.display = 'block';
-    document.getElementById('gravObservacao').value = dados.observacaoGravacao || '';
-
     const conf = dados.confirmacaoGravacao;
     const confirmada = conf && conf.status === 'confirmada';
     const remarcar = conf && conf.status === 'remarcar';
 
+    obsWrap.style.display = 'block';
+    document.getElementById('gravObservacao').value = dados.observacaoGravacao || '';
+
     if (confirmada) {
-      acoes.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;flex-basis:100%;">
-          <span style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;"></span>
-          <span style="color:var(--green);font-size:0.9rem;font-weight:600;">Gravação confirmada para ${d.toLocaleDateString('pt-BR')}${dados.proximaGravacaoHorario ? ' às ' + dados.proximaGravacaoHorario : ''}</span>
-        </div>
-        <button class="btn btn-outline" id="btnPrecisoRemarcar" style="margin-top:10px;">Quero desmarcar a gravação</button>
-      `;
+      topoWrap.style.display = 'none';
+      confirmadaCard.style.display = 'block';
+      acoes.style.display = 'none';
+      acoes.innerHTML = '';
+      document.getElementById('gravConfDia').textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+      document.getElementById('gravConfHorario').textContent = dados.proximaGravacaoHorario || 'a definir';
+      document.getElementById('gravConfLocal').textContent = dados.gravacaoEndereco || 'Local ainda não informado';
+      document.getElementById('btnPrecisoRemarcarConfirmado').addEventListener('click', () => abrirDesmarcarModal());
     } else {
+      topoWrap.style.display = 'block';
+      confirmadaCard.style.display = 'none';
+      acoes.style.display = 'flex';
+
+      titulo.textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+      badge.textContent = 'Marcada';
+      badge.className = 'badge badge-approved';
+      detalhes.innerHTML = `
+        <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
+        <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
+      `;
+
       acoes.innerHTML = `
         <button class="btn btn-outline" id="btnConfirmarPresenca">Confirmar presença</button>
         <button class="btn ${remarcar ? 'btn-state-remarcar' : 'btn-outline'}" id="btnPrecisoRemarcar">Desmarcar gravação</button>
@@ -322,11 +352,14 @@ function renderGravacaoTab(dados) {
         }</p>
       `;
       document.getElementById('btnConfirmarPresenca').addEventListener('click', () => abrirConfirmarPresencaModal());
+      document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => abrirDesmarcarModal());
     }
-    document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => abrirDesmarcarModal());
 
     dot.style.display = conf ? 'none' : 'block';
   } else if (status === 'concluida') {
+    topoWrap.style.display = 'block';
+    confirmadaCard.style.display = 'none';
+    acoes.style.display = 'flex';
     titulo.textContent = 'Gravação concluída';
     badge.textContent = 'Concluída';
     badge.className = 'badge badge-neutral';
@@ -335,6 +368,9 @@ function renderGravacaoTab(dados) {
     acoes.innerHTML = '';
     dot.style.display = 'none';
   } else {
+    topoWrap.style.display = 'block';
+    confirmadaCard.style.display = 'none';
+    acoes.style.display = 'flex';
     titulo.textContent = 'Ainda sem data marcada';
     badge.textContent = 'À agendar';
     badge.className = 'badge badge-pending';
