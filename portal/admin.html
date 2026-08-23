@@ -300,11 +300,7 @@
           <label>Horário</label>
           <input type="time" id="ggHorario">
         </div>
-        <div id="ggConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;"></div>
-        <div id="ggObservacaoWrap" style="display:none;margin-bottom:16px;">
-          <div class="meta" style="margin-bottom:4px;">Observação do cliente</div>
-          <p id="ggObservacaoTexto" style="color:var(--white);font-size:0.88rem;line-height:1.5;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;margin:0;"></p>
-        </div>
+        <div id="ggConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;"></div>
         <button class="btn" id="btnSalvarGravGeral">Salvar</button>
         <p class="success-msg" id="ggMsg"></p>
       </div>
@@ -430,6 +426,11 @@
       <h3 id="gdTitulo" style="margin:0;">Gravação</h3>
     </div>
     <p class="meta" id="gdData" style="margin:6px 0 16px;"></p>
+    <div id="gdStatusConfirmacao" style="display:flex;align-items:center;gap:8px;border-radius:8px;padding:9px 12px;margin-bottom:16px;"></div>
+    <div style="margin-bottom:16px;">
+      <div class="meta" style="margin-bottom:5px;">Observação do cliente</div>
+      <div id="gdObservacao" style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;color:var(--white);font-size:0.85rem;line-height:1.5;"></div>
+    </div>
     <div class="field">
       <label>Endereço da gravação</label>
       <input type="text" id="gdEndereco" placeholder="Rua, número, bairro, cidade">
@@ -726,6 +727,22 @@ function abrirGravacaoModal(uid, data) {
   const c = clientesCache[uid] || {};
   document.getElementById('gdTitulo').textContent = 'Gravação — ' + (c.nome || 'Cliente');
   document.getElementById('gdData').textContent = data.getDate() + ' de ' + NOMES_MES[data.getMonth()] + ' de ' + data.getFullYear() + (c.proximaGravacaoHorario ? ' às ' + c.proximaGravacaoHorario : '');
+
+  const conf = c.confirmacaoGravacao;
+  const statusEl = document.getElementById('gdStatusConfirmacao');
+  if (conf && conf.status === 'confirmada') {
+    statusEl.style.background = 'rgba(62,207,106,0.08)';
+    statusEl.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.85rem;font-weight:600;">Cliente confirmou presença</span>';
+  } else if (conf && conf.status === 'remarcar') {
+    statusEl.style.background = 'rgba(227,181,85,0.08)';
+    statusEl.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;"></span><span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para desmarcar</span>${conf.motivo ? `<div style="flex-basis:100%;color:var(--gray);font-size:0.82rem;margin-top:2px;">Motivo: "${conf.motivo}"</div>` : ''}`;
+  } else {
+    statusEl.style.background = 'rgba(255,255,255,0.04)';
+    statusEl.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;"></span><span class="meta">Aguardando resposta do cliente</span>';
+  }
+
+  document.getElementById('gdObservacao').textContent = c.observacaoGravacao || 'Cliente não registrou nenhuma observação.';
+
   document.getElementById('gdEndereco').value = c.gravacaoEndereco || '';
   document.getElementById('gdRoteiroLink').value = c.gravacaoRoteiroLink || '';
   const chip = document.getElementById('gdRoteiroChip');
@@ -1026,23 +1043,12 @@ document.getElementById('ggClienteId').addEventListener('change', (e) => {
   carregarGravacaoGeral(e.target.value);
 });
 
-function renderObservacaoCliente(c) {
-  const wrap = document.getElementById('ggObservacaoWrap');
-  if (c.observacaoGravacao) {
-    document.getElementById('ggObservacaoTexto').textContent = c.observacaoGravacao;
-    wrap.style.display = 'block';
-  } else {
-    wrap.style.display = 'none';
-  }
-}
-
 function carregarGravacaoGeral(uid) {
   if (ggUnsub) { ggUnsub(); ggUnsub = null; }
   if (!uid) {
     document.getElementById('ggData').value = '';
     document.getElementById('ggHorario').value = '';
     document.getElementById('ggConfirmacaoStatus').innerHTML = '';
-    document.getElementById('ggObservacaoWrap').style.display = 'none';
     return;
   }
   const c = clientesCache[uid] || {};
@@ -1055,13 +1061,9 @@ function carregarGravacaoGeral(uid) {
   }
   document.getElementById('ggHorario').value = c.proximaGravacaoHorario || '';
   renderConfirmacaoStatus(c, 'ggConfirmacaoStatus');
-  renderObservacaoCliente(c);
 
   ggUnsub = db.collection('clientes').doc(uid).onSnapshot(docSnap => {
-    if (docSnap.exists) {
-      renderConfirmacaoStatus(docSnap.data(), 'ggConfirmacaoStatus');
-      renderObservacaoCliente(docSnap.data());
-    }
+    if (docSnap.exists) renderConfirmacaoStatus(docSnap.data(), 'ggConfirmacaoStatus');
   });
 }
 
@@ -1108,7 +1110,7 @@ function gravCardHtml(uid, c, estado) {
   }
   const delBtn = estado !== 'a_agendar' ? `<button class="video-del-btn" data-del-grav="${uid}" data-nome="${(c.nome || 'Cliente').replace(/"/g,'&quot;')}" aria-label="Desmarcar gravação">&#10005;</button>` : '';
   return `
-    <div class="video-mini-card" data-grav-card="${uid}">
+    <div class="video-mini-card" data-grav-card="${uid}" data-grav-estado="${estado}">
       ${delBtn}
       <h5>${c.nome || 'Cliente'}</h5>
       <div class="meta">${sub}</div>
@@ -1139,8 +1141,16 @@ function renderGravBoard() {
 
   document.querySelectorAll('#tab-gravacao-geral [data-grav-card]').forEach(el => {
     el.addEventListener('click', () => {
-      document.getElementById('ggClienteId').value = el.dataset.gravCard;
-      carregarGravacaoGeral(el.dataset.gravCard);
+      const uid = el.dataset.gravCard;
+      if (el.dataset.gravEstado === 'a_agendar') {
+        document.getElementById('ggClienteId').value = uid;
+        carregarGravacaoGeral(uid);
+      } else {
+        const c = clientesCache[uid] || {};
+        const gData = c.proximaGravacaoData;
+        const d = gData ? (gData.toDate ? gData.toDate() : new Date(gData)) : new Date();
+        abrirGravacaoModal(uid, d);
+      }
     });
   });
 
