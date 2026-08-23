@@ -377,14 +377,32 @@
 </div>
 
 <div class="modal-overlay" id="notaDiaModal" style="display:none;">
-  <div class="modal-box" style="width:340px;">
-    <h3 id="notaDiaTitulo">Anotação</h3>
-    <div class="field" style="margin:14px 0 0;">
-      <textarea rows="5" id="notaDiaTexto" placeholder="Escreva sua anotação para esse dia..."></textarea>
+  <div class="modal-box" style="width:360px;">
+    <h3 id="notaDiaTitulo">Eventos</h3>
+    <div id="notaDiaEventosLista" style="margin:14px 0 0;"></div>
+    <div id="notaDiaNovoCard" style="border:1.5px dashed rgba(110,45,231,0.4);border-radius:10px;padding:14px;text-align:center;cursor:pointer;margin-top:10px;">
+      <span style="color:var(--purple-light);font-size:0.85rem;font-weight:600;">+ Criar novo evento</span>
+    </div>
+    <div id="notaDiaNovoForm" style="display:none;border:1px solid rgba(110,45,231,0.4);border-radius:10px;padding:16px;margin-top:10px;">
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" id="notaEventoNome" placeholder="Ex: Reunião com fornecedor">
+      </div>
+      <div class="field">
+        <label>Descrição</label>
+        <textarea id="notaEventoDescricao" rows="2" placeholder="O que vai acontecer"></textarea>
+      </div>
+      <div class="field" style="max-width:140px;">
+        <label>Horário (opcional)</label>
+        <input type="time" id="notaEventoHorario">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="notaEventoCancelar">Cancelar</button>
+        <button class="btn" id="notaEventoSalvar">Salvar evento</button>
+      </div>
     </div>
     <div class="modal-actions" style="margin-top:14px;">
-      <button class="btn btn-outline" id="notaDiaCancelar">Cancelar</button>
-      <button class="btn" id="notaDiaSalvar">Salvar</button>
+      <button class="btn btn-outline" id="notaDiaFechar" style="flex:1;">Fechar</button>
     </div>
   </div>
 </div>
@@ -551,7 +569,7 @@ function dataKey(ano, mes, dia) {
 function carregarNotasDashboard() {
   db.collection('notasDashboard').doc(currentUser.uid).collection('dias').onSnapshot(snap => {
     notasDashboard = {};
-    snap.forEach(d => notasDashboard[d.id] = d.data().texto || '');
+    snap.forEach(d => notasDashboard[d.id] = d.data().eventos || []);
     renderDashCalendario();
   });
 }
@@ -592,14 +610,15 @@ function renderDashCalMes() {
   for (let i = 0; i < primeiroDia; i++) html += '<div></div>';
   for (let dia = 1; dia <= totalDias; dia++) {
     const key = dataKey(ano, mes, dia);
-    const texto = notasDashboard[key];
+    const eventos = notasDashboard[key] || [];
     const gravs = gravacoesDoDia(new Date(ano, mes, dia));
     const isToday = mesmoDia(new Date(ano, mes, dia), hoje);
-    let cls = (texto || gravs.length) ? 'cal-big-cell has-video' : 'cal-big-cell';
+    let cls = (eventos.length || gravs.length) ? 'cal-big-cell has-video' : 'cal-big-cell';
     let extraStyle = 'cursor:pointer;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
     let conteudo = `<div class="cal-big-daynum">${dia}</div>`;
     gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
-    if (texto) conteudo += `<div class="cal-big-chip">${texto}</div>`;
+    eventos.slice(0, 2).forEach(ev => conteudo += `<div class="cal-big-chip">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
+    if (eventos.length > 2) conteudo += `<div class="cal-big-more">+${eventos.length - 2} mais</div>`;
     html += `<div class="${cls}" style="${extraStyle}" data-dia="${dia}">${conteudo}</div>`;
   }
   html += '</div>';
@@ -639,14 +658,15 @@ function renderDashCalSemana() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(inicio); d.setDate(d.getDate() + i);
     const key = dataKey(d.getFullYear(), d.getMonth(), d.getDate());
-    const texto = notasDashboard[key];
+    const eventos = notasDashboard[key] || [];
     const gravs = gravacoesDoDia(d);
     const isToday = mesmoDia(d, hoje);
-    let cls = (texto || gravs.length) ? 'cal-big-cell has-video' : 'cal-big-cell';
+    let cls = (eventos.length || gravs.length) ? 'cal-big-cell has-video' : 'cal-big-cell';
     let extraStyle = 'cursor:pointer;min-height:140px;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
     let conteudo = '';
     gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}" data-idx="${i}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
-    if (texto) conteudo += `<div class="cal-big-chip">${texto}</div>`;
+    eventos.slice(0, 3).forEach(ev => conteudo += `<div class="cal-big-chip" data-idx="${i}">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
+    if (eventos.length > 3) conteudo += `<div class="cal-big-more">+${eventos.length - 3} mais</div>`;
     html += `<div class="${cls}" style="${extraStyle}" data-idx="${i}">${conteudo}</div>`;
   }
   html += '</div>';
@@ -672,15 +692,23 @@ function renderDashCalDia() {
   const d = dashCalData;
   document.getElementById('dashCalMes').textContent = NOMES_DIA_SEMANA[d.getDay()] + ', ' + d.getDate() + ' de ' + NOMES_MES[d.getMonth()] + ' de ' + d.getFullYear();
   const key = dataKey(d.getFullYear(), d.getMonth(), d.getDate());
-  const texto = notasDashboard[key];
+  const eventos = notasDashboard[key] || [];
   const gravs = gravacoesDoDia(d);
   let html = '';
   gravs.forEach(g => {
     html += `<div class="cal-item cal-item-gravacao" data-grav-uid="${g.clienteId}"><strong>${g.nome}</strong> · Gravação${g.horario ? ' · ' + g.horario : ''}</div>`;
   });
-  html += `<div class="cal-item" style="cursor:pointer;" id="dashCalDiaItem">${texto ? texto : '<span class="meta">Nenhuma anotação para este dia. Clique para adicionar.</span>'}</div>`;
+  if (eventos.length) {
+    eventos.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||'')).forEach(ev => {
+      html += `<div class="cal-item" style="cursor:pointer;" data-abrir-dia="1"><strong>${ev.nome}</strong>${ev.horario ? ' · ' + ev.horario : ''}${ev.descricao ? `<div class="meta" style="margin-top:4px;">${ev.descricao}</div>` : ''}</div>`;
+    });
+  } else {
+    html += `<div class="cal-item" style="cursor:pointer;" data-abrir-dia="1"><span class="meta">Nenhum evento para este dia. Clique para adicionar.</span></div>`;
+  }
   gridEl.innerHTML = html;
-  document.getElementById('dashCalDiaItem').addEventListener('click', () => abrirNotaDia(key, d.getDate(), d.getMonth(), d.getFullYear()));
+  gridEl.querySelectorAll('[data-abrir-dia]').forEach(el => {
+    el.addEventListener('click', () => abrirNotaDia(key, d.getDate(), d.getMonth(), d.getFullYear()));
+  });
   gridEl.querySelectorAll('[data-grav-uid]').forEach(el => {
     el.addEventListener('click', () => abrirGravacaoModal(el.dataset.gravUid, d));
   });
@@ -718,25 +746,80 @@ document.getElementById('gdSalvar').addEventListener('click', async () => {
 });
 
 let notaDiaKeyAtual = null;
-function abrirNotaDia(key, dia, mes, ano) {
-  notaDiaKeyAtual = key;
-  document.getElementById('notaDiaTitulo').textContent = `${dia} de ${NOMES_MES[mes]} de ${ano}`;
-  document.getElementById('notaDiaTexto').value = notasDashboard[key] || '';
-  document.getElementById('notaDiaModal').style.display = 'flex';
+let notaDiaEventosAtual = [];
+
+function eventoCardHtml(ev) {
+  return `
+    <div class="video-mini-card" style="cursor:default;margin-bottom:10px;padding:14px 16px;">
+      <button class="video-del-btn" data-del-evento="${ev.id}" aria-label="Excluir evento">&#10005;</button>
+      <h5 style="padding-right:20px;font-size:0.92rem;">${ev.nome}</h5>
+      <div class="meta" style="margin-top:3px;">${ev.horario || 'Sem horário'}</div>
+      ${ev.descricao ? `<div style="color:var(--gray);font-size:0.82rem;margin-top:8px;line-height:1.4;">${ev.descricao}</div>` : ''}
+    </div>
+  `;
 }
-document.getElementById('notaDiaCancelar').addEventListener('click', () => {
-  document.getElementById('notaDiaModal').style.display = 'none';
-});
-document.getElementById('notaDiaSalvar').addEventListener('click', async () => {
-  const texto = document.getElementById('notaDiaTexto').value.trim();
-  const notasRef = db.collection('notasDashboard').doc(currentUser.uid).collection('dias');
-  if (texto) {
-    await notasRef.doc(notaDiaKeyAtual).set({
-      texto, atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+
+function renderNotaDiaEventos() {
+  const box = document.getElementById('notaDiaEventosLista');
+  box.innerHTML = notaDiaEventosAtual.length
+    ? notaDiaEventosAtual.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||'')).map(eventoCardHtml).join('')
+    : '';
+  box.querySelectorAll('[data-del-evento]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      notaDiaEventosAtual = notaDiaEventosAtual.filter(ev => ev.id !== btn.dataset.delEvento);
+      await salvarEventosDoDia();
+      renderNotaDiaEventos();
     });
+  });
+}
+
+async function salvarEventosDoDia() {
+  const notasRef = db.collection('notasDashboard').doc(currentUser.uid).collection('dias');
+  if (notaDiaEventosAtual.length) {
+    await notasRef.doc(notaDiaKeyAtual).set({ eventos: notaDiaEventosAtual }, { merge: true });
   } else {
     await notasRef.doc(notaDiaKeyAtual).delete();
   }
+}
+
+function abrirNotaDia(key, dia, mes, ano) {
+  notaDiaKeyAtual = key;
+  notaDiaEventosAtual = (notasDashboard[key] || []).slice();
+  document.getElementById('notaDiaTitulo').textContent = `${dia} de ${NOMES_MES[mes]} de ${ano}`;
+  renderNotaDiaEventos();
+  document.getElementById('notaDiaNovoCard').style.display = 'block';
+  document.getElementById('notaDiaNovoForm').style.display = 'none';
+  document.getElementById('notaEventoNome').value = '';
+  document.getElementById('notaEventoDescricao').value = '';
+  document.getElementById('notaEventoHorario').value = '';
+  document.getElementById('notaDiaModal').style.display = 'flex';
+}
+document.getElementById('notaDiaNovoCard').addEventListener('click', () => {
+  document.getElementById('notaDiaNovoCard').style.display = 'none';
+  document.getElementById('notaDiaNovoForm').style.display = 'block';
+});
+document.getElementById('notaEventoCancelar').addEventListener('click', () => {
+  document.getElementById('notaDiaNovoForm').style.display = 'none';
+  document.getElementById('notaDiaNovoCard').style.display = 'block';
+});
+document.getElementById('notaEventoSalvar').addEventListener('click', async () => {
+  const nome = document.getElementById('notaEventoNome').value.trim();
+  if (!nome) return;
+  const descricao = document.getElementById('notaEventoDescricao').value.trim();
+  const horario = document.getElementById('notaEventoHorario').value;
+  notaDiaEventosAtual.push({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    nome, descricao, horario
+  });
+  await salvarEventosDoDia();
+  renderNotaDiaEventos();
+  document.getElementById('notaEventoNome').value = '';
+  document.getElementById('notaEventoDescricao').value = '';
+  document.getElementById('notaEventoHorario').value = '';
+  document.getElementById('notaDiaNovoForm').style.display = 'none';
+  document.getElementById('notaDiaNovoCard').style.display = 'block';
+});
+document.getElementById('notaDiaFechar').addEventListener('click', () => {
   document.getElementById('notaDiaModal').style.display = 'none';
 });
 document.getElementById('dashCalHoje').addEventListener('click', () => {
