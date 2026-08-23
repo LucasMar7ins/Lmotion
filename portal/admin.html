@@ -165,32 +165,6 @@
       </div>
 
       <div class="card">
-        <h3 style="margin-bottom:14px;">Enviar vídeo</h3>
-        <div class="field">
-          <label>Título</label>
-          <input type="text" id="perfilVTitulo">
-        </div>
-        <div class="field">
-          <label>Link do Google Drive</label>
-          <input type="text" id="perfilVLink">
-        </div>
-        <div class="field">
-          <label>Legenda de postagem</label>
-          <textarea id="perfilVLegenda" rows="3"></textarea>
-        </div>
-        <div class="field">
-          <label>Data de postagem</label>
-          <input type="date" id="perfilVData">
-        </div>
-        <div class="field">
-          <label>Horário de postagem</label>
-          <input type="time" id="perfilVHorario">
-        </div>
-        <button class="btn" id="btnSalvarVideo">Entregar vídeo</button>
-        <p class="success-msg" id="perfilVideoMsg"></p>
-      </div>
-
-      <div class="card">
         <h3 style="margin-bottom:14px;">Calendário completo</h3>
         <p class="meta" id="perfilCalMes" style="margin-bottom:12px;"></p>
         <div id="perfilCalendario"></div>
@@ -1056,12 +1030,6 @@ function abrirPerfilCliente(uid) {
   document.getElementById('perfilEditResumo').value = c.resumo || '';
   renderPerfilInfoModo(c);
 
-  document.getElementById('perfilVTitulo').value = '';
-  document.getElementById('perfilVLink').value = '';
-  document.getElementById('perfilVLegenda').value = '';
-  document.getElementById('perfilVData').value = '';
-  document.getElementById('perfilVHorario').value = '';
-
   if (perfilUnsub) perfilUnsub();
   perfilUnsub = db.collection('entregas').where('clienteId', '==', uid).onSnapshot(snap => {
     perfilEntregas = [];
@@ -1264,34 +1232,6 @@ document.getElementById('btnSalvarInfoCliente').addEventListener('click', async 
 
   const msg = document.getElementById('perfilInfoMsg');
   msg.textContent = 'Salvo!';
-  setTimeout(() => msg.textContent = '', 3000);
-});
-
-document.getElementById('btnSalvarVideo').addEventListener('click', async () => {
-  if (!perfilUid) return;
-  const titulo = document.getElementById('perfilVTitulo').value.trim();
-  const linkDrive = document.getElementById('perfilVLink').value.trim();
-  const legenda = document.getElementById('perfilVLegenda').value.trim();
-  const data = document.getElementById('perfilVData').value;
-  const horario = document.getElementById('perfilVHorario').value;
-  if (!titulo || !linkDrive) return;
-
-  await db.collection('entregas').add({
-    clienteId: perfilUid, titulo, linkDrive, legenda,
-    dataPostagem: dateInputToTimestamp(data),
-    horarioPostagem: horario || '',
-    status: 'publicado',
-    feedback: {},
-    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  document.getElementById('perfilVTitulo').value = '';
-  document.getElementById('perfilVLink').value = '';
-  document.getElementById('perfilVLegenda').value = '';
-  document.getElementById('perfilVData').value = '';
-  document.getElementById('perfilVHorario').value = '';
-  const msg = document.getElementById('perfilVideoMsg');
-  msg.textContent = 'Vídeo entregue!';
   setTimeout(() => msg.textContent = '', 3000);
 });
 
