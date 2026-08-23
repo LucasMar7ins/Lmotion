@@ -55,11 +55,6 @@
             <button class="cal-nav-btn" id="dashCalNext">›</button>
             <span class="cal-nav-label" id="dashCalMes"></span>
           </div>
-          <div class="view-toggle" id="dashViewToggle">
-            <span class="view-toggle-btn active" data-view="mes">Mês</span>
-            <span class="view-toggle-btn" data-view="semana">Semana</span>
-            <span class="view-toggle-btn" data-view="dia">Dia</span>
-          </div>
         </div>
         <div id="dashCalGrid"></div>
       </div>
@@ -68,7 +63,7 @@
     <!-- CALENDÁRIO GERAL -->
     <section class="tab-section" id="tab-calendario">
       <h2>Calendário</h2>
-      <p class="page-sub">Visão geral de todos os clientes por dia.</p>
+      <p class="page-sub">Suas anotações e as gravações confirmadas, por dia.</p>
       <div class="card">
         <div class="cal-nav">
           <div style="display:flex;align-items:center;gap:12px;">
@@ -85,10 +80,9 @@
         </div>
         <div id="calAdminGrid"></div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
-          <span style="width:12px;height:12px;border-radius:3px;background:rgba(110,45,231,0.28);display:inline-block;"></span>
-          <span class="meta">Dia com vídeo programado</span>
+          <span style="width:12px;height:12px;border-radius:3px;background:rgba(62,207,106,0.18);display:inline-block;"></span>
+          <span class="meta">Dia com gravação confirmada</span>
         </div>
-        <div id="calAdminDetalhe" style="margin-top:14px;"></div>
       </div>
     </section>
 
@@ -587,9 +581,8 @@ auth.onAuthStateChanged(async (user) => {
   carregarNotasDashboard();
 });
 
-// --- CALENDÁRIO DE ANOTAÇÕES (DASHBOARD) ---
+// --- CALENDÁRIO DE ANOTAÇÕES (compartilhado: Dashboard e aba Calendário) ---
 let dashCalData = new Date();
-let dashCalView = 'mes';
 let notasDashboard = {};
 
 function dataKey(ano, mes, dia) {
@@ -601,14 +594,13 @@ function carregarNotasDashboard() {
     notasDashboard = {};
     snap.forEach(d => notasDashboard[d.id] = d.data().eventos || []);
     renderDashCalendario();
+    renderCalendarioAdmin();
   });
 }
 
 function renderDashCalendario() {
   if (!document.getElementById('dashCalGrid')) return;
-  if (dashCalView === 'mes') renderDashCalMes();
-  else if (dashCalView === 'semana') renderDashCalSemana();
-  else renderDashCalDia();
+  renderNotasCalSemana('dashCalGrid', 'dashCalMes', dashCalData);
 }
 
 function gravacoesDoDia(data) {
@@ -625,11 +617,11 @@ function gravacoesDoDia(data) {
   return lista;
 }
 
-function renderDashCalMes() {
-  const gridEl = document.getElementById('dashCalGrid');
-  const ano = dashCalData.getFullYear();
-  const mes = dashCalData.getMonth();
-  document.getElementById('dashCalMes').textContent = NOMES_MES[mes] + ' de ' + ano;
+function renderNotasCalMes(gridId, mesId, dataRef) {
+  const gridEl = document.getElementById(gridId);
+  const ano = dataRef.getFullYear();
+  const mes = dataRef.getMonth();
+  document.getElementById(mesId).textContent = NOMES_MES[mes] + ' de ' + ano;
 
   const hoje = new Date();
   const primeiroDia = new Date(ano, mes, 1).getDay();
@@ -668,9 +660,9 @@ function renderDashCalMes() {
   });
 }
 
-function renderDashCalSemana() {
-  const gridEl = document.getElementById('dashCalGrid');
-  const inicio = inicioDaSemana(dashCalData);
+function renderNotasCalSemana(gridId, mesId, dataRef) {
+  const gridEl = document.getElementById(gridId);
+  const inicio = inicioDaSemana(dataRef);
   const fim = new Date(inicio); fim.setDate(fim.getDate() + 6);
   const hoje = new Date();
 
@@ -678,7 +670,7 @@ function renderDashCalSemana() {
   const label = mesmoMes
     ? `${inicio.getDate()} - ${fim.getDate()} de ${NOMES_MES[fim.getMonth()]} de ${fim.getFullYear()}`
     : `${inicio.getDate()} de ${NOMES_MES[inicio.getMonth()]} - ${fim.getDate()} de ${NOMES_MES[fim.getMonth()]} de ${fim.getFullYear()}`;
-  document.getElementById('dashCalMes').textContent = label;
+  document.getElementById(mesId).textContent = label;
 
   let html = '<div class="cal-big-grid">';
   for (let i = 0; i < 7; i++) {
@@ -719,10 +711,10 @@ function renderDashCalSemana() {
   });
 }
 
-function renderDashCalDia() {
-  const gridEl = document.getElementById('dashCalGrid');
-  const d = dashCalData;
-  document.getElementById('dashCalMes').textContent = NOMES_DIA_SEMANA[d.getDay()] + ', ' + d.getDate() + ' de ' + NOMES_MES[d.getMonth()] + ' de ' + d.getFullYear();
+function renderNotasCalDia(gridId, mesId, dataRef) {
+  const gridEl = document.getElementById(gridId);
+  const d = dataRef;
+  document.getElementById(mesId).textContent = NOMES_DIA_SEMANA[d.getDay()] + ', ' + d.getDate() + ' de ' + NOMES_MES[d.getMonth()] + ' de ' + d.getFullYear();
   const key = dataKey(d.getFullYear(), d.getMonth(), d.getDate());
   const eventos = notasDashboard[key] || [];
   const gravs = gravacoesDoDia(d);
@@ -914,24 +906,12 @@ document.getElementById('dashCalHoje').addEventListener('click', () => {
   renderDashCalendario();
 });
 document.getElementById('dashCalPrev').addEventListener('click', () => {
-  if (dashCalView === 'mes') dashCalData.setMonth(dashCalData.getMonth() - 1);
-  else if (dashCalView === 'semana') dashCalData.setDate(dashCalData.getDate() - 7);
-  else dashCalData.setDate(dashCalData.getDate() - 1);
+  dashCalData.setDate(dashCalData.getDate() - 7);
   renderDashCalendario();
 });
 document.getElementById('dashCalNext').addEventListener('click', () => {
-  if (dashCalView === 'mes') dashCalData.setMonth(dashCalData.getMonth() + 1);
-  else if (dashCalView === 'semana') dashCalData.setDate(dashCalData.getDate() + 7);
-  else dashCalData.setDate(dashCalData.getDate() + 1);
+  dashCalData.setDate(dashCalData.getDate() + 7);
   renderDashCalendario();
-});
-document.querySelectorAll('#dashViewToggle .view-toggle-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#dashViewToggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    dashCalView = btn.dataset.view;
-    renderDashCalendario();
-  });
 });
 
 function formatarData(ts) {
@@ -1616,51 +1596,9 @@ function renderEntregasBoard() {
 // --- CALENDÁRIO GERAL ---
 function renderCalendarioAdmin() {
   if (!document.getElementById('calAdminGrid')) return;
-  document.getElementById('calAdminDetalhe').innerHTML = '';
-  if (calAdminView === 'mes') renderCalMes();
-  else if (calAdminView === 'semana') renderCalSemana();
-  else renderCalDia();
-}
-
-function itemChip(v) {
-  const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
-  if (v.tipo === 'gravacao') {
-    return `<div class="cal-big-chip cal-chip-gravacao">${nomeCliente}: Gravação${v.horario ? ' · ' + v.horario : ''}</div>`;
-  }
-  return `<div class="cal-big-chip">${nomeCliente}: ${v.titulo}</div>`;
-}
-
-function renderCalMes() {
-  const gridEl = document.getElementById('calAdminGrid');
-  const ano = calAdminData.getFullYear();
-  const mes = calAdminData.getMonth();
-  document.getElementById('calAdminMes').textContent = NOMES_MES[mes] + ' de ' + ano;
-
-  const hoje = new Date();
-  const primeiroDia = new Date(ano, mes, 1).getDay();
-  const totalDias = new Date(ano, mes + 1, 0).getDate();
-
-  let html = '<div class="cal-big-grid">';
-  ['D','S','T','Q','Q','S','S'].forEach(d => html += `<div class="cal-big-dow">${d}</div>`);
-  for (let i = 0; i < primeiroDia; i++) html += '<div></div>';
-  for (let dia = 1; dia <= totalDias; dia++) {
-    const dataDia = new Date(ano, mes, dia);
-    const eventos = eventosDoDia(dataDia);
-    const isToday = mesmoDia(dataDia, hoje);
-    let cls = eventos.length ? 'cal-big-cell has-video' : 'cal-big-cell';
-    let extraStyle = isToday ? 'border-color:var(--purple);border-width:2px;' : '';
-    let conteudo = `<div class="cal-big-daynum">${dia}</div>`;
-    eventos.slice(0, 2).forEach(v => conteudo += itemChip(v));
-    if (eventos.length > 2) conteudo += `<div class="cal-big-more">+${eventos.length - 2} mais</div>`;
-    html += `<div class="${cls}" style="${extraStyle}" data-dia="${dia}">${conteudo}</div>`;
-  }
-  html += '</div>';
-  gridEl.innerHTML = html;
-
-  gridEl.querySelectorAll('.has-video').forEach(el => {
-    const dia = parseInt(el.dataset.dia);
-    el.addEventListener('click', () => mostrarDetalheDia(new Date(ano, mes, dia)));
-  });
+  if (calAdminView === 'mes') renderNotasCalMes('calAdminGrid', 'calAdminMes', calAdminData);
+  else if (calAdminView === 'semana') renderNotasCalSemana('calAdminGrid', 'calAdminMes', calAdminData);
+  else renderNotasCalDia('calAdminGrid', 'calAdminMes', calAdminData);
 }
 
 function inicioDaSemana(data) {
@@ -1668,72 +1606,6 @@ function inicioDaSemana(data) {
   d.setDate(d.getDate() - d.getDay());
   d.setHours(0,0,0,0);
   return d;
-}
-
-function renderCalSemana() {
-  const gridEl = document.getElementById('calAdminGrid');
-  const inicio = inicioDaSemana(calAdminData);
-  const fim = new Date(inicio); fim.setDate(fim.getDate() + 6);
-  const hoje = new Date();
-
-  const mesmoMes = inicio.getMonth() === fim.getMonth();
-  const label = mesmoMes
-    ? `${inicio.getDate()} - ${fim.getDate()} de ${NOMES_MES[fim.getMonth()]} de ${fim.getFullYear()}`
-    : `${inicio.getDate()} de ${NOMES_MES[inicio.getMonth()]} - ${fim.getDate()} de ${NOMES_MES[fim.getMonth()]} de ${fim.getFullYear()}`;
-  document.getElementById('calAdminMes').textContent = label;
-
-  let html = '<div class="cal-big-grid">';
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(inicio); d.setDate(d.getDate() + i);
-    const isToday = mesmoDia(d, hoje);
-    html += `<div class="cal-week-head${isToday ? ' is-today' : ''}">${['D','S','T','Q','Q','S','S'][i]}<br>${d.getDate()}</div>`;
-  }
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(inicio); d.setDate(d.getDate() + i);
-    const eventos = eventosDoDia(d);
-    const isToday = mesmoDia(d, hoje);
-    let cls = eventos.length ? 'cal-big-cell has-video' : 'cal-big-cell';
-    let extraStyle = isToday ? 'border-color:var(--purple);border-width:2px;' : '';
-    extraStyle += 'min-height:140px;';
-    let conteudo = '';
-    eventos.forEach(v => conteudo += itemChip(v));
-    html += `<div class="${cls}" style="${extraStyle}" data-idx="${i}">${conteudo}</div>`;
-  }
-  html += '</div>';
-  gridEl.innerHTML = html;
-
-  gridEl.querySelectorAll('.has-video').forEach(el => {
-    const i = parseInt(el.dataset.idx);
-    const d = new Date(inicio); d.setDate(d.getDate() + i);
-    el.addEventListener('click', () => mostrarDetalheDia(d));
-  });
-}
-
-function renderCalDia() {
-  const gridEl = document.getElementById('calAdminGrid');
-  const d = calAdminData;
-  document.getElementById('calAdminMes').textContent = NOMES_DIA_SEMANA[d.getDay()] + ', ' + d.getDate() + ' de ' + NOMES_MES[d.getMonth()] + ' de ' + d.getFullYear();
-
-  const eventos = eventosDoDia(d).sort((a,b) => (a.horario || '').localeCompare(b.horario || ''));
-  if (!eventos.length) {
-    gridEl.innerHTML = '<div class="empty-state">Nenhum vídeo ou gravação programado para este dia.</div>';
-    return;
-  }
-  gridEl.innerHTML = eventos.map(v => {
-    const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
-    const label = v.tipo === 'gravacao' ? 'Gravação' : v.titulo;
-    return `<div class="cal-item"><strong>${nomeCliente}</strong> · ${label}${v.horario ? ' · ' + v.horario : ''}</div>`;
-  }).join('');
-}
-
-function mostrarDetalheDia(data) {
-  const eventos = eventosDoDia(data);
-  const detalhe = document.getElementById('calAdminDetalhe');
-  detalhe.innerHTML = eventos.map(v => {
-    const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
-    const label = v.tipo === 'gravacao' ? 'Gravação' : v.titulo;
-    return `<div class="cal-item"><strong>${nomeCliente}</strong> · ${label}${v.horario ? ' · ' + v.horario : ''}</div>`;
-  }).join('');
 }
 
 document.getElementById('calAdminHoje').addEventListener('click', () => {
