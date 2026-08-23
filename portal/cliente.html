@@ -65,6 +65,14 @@
           <span class="badge" id="gravTabBadge"></span>
         </div>
         <div id="gravTabDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin:8px 0 20px;"></div>
+        <div id="gravTabObsWrap" style="display:none;border-top:1px solid var(--border);padding-top:16px;margin-bottom:4px;">
+          <div class="field" style="margin-bottom:10px;">
+            <label>Observação</label>
+            <textarea id="gravObservacao" rows="2" placeholder="Descreva aqui se tem algo que deseja focar ou lembrar na gravação"></textarea>
+          </div>
+          <button class="btn btn-outline" id="btnSalvarObservacao" style="padding:8px 16px;font-size:0.8rem;">Salvar observação</button>
+          <span class="success-msg" id="gravObsMsg" style="margin-left:10px;"></span>
+        </div>
         <div id="gravTabAcoes" style="display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:18px;"></div>
       </div>
       <p style="color:var(--gray);font-size:0.78rem;margin-top:14px;">Você pode alterar sua resposta a qualquer momento. Após confirmada, o desmarque da gravação deve ser feito com pelo menos 24 horas de antecedência.</p>
@@ -126,6 +134,32 @@
     </section>
 
   </main>
+</div>
+
+<div class="modal-overlay" id="confirmarPresencaModal" style="display:none;">
+  <div class="modal-box" style="width:340px;">
+    <h3>Confirmar presença?</h3>
+    <p id="cpModalTexto"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="cpModalCancelar">Cancelar</button>
+      <button class="btn" id="cpModalConfirmar">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="desmarcarGravacaoModal" style="display:none;">
+  <div class="modal-box" style="width:340px;">
+    <h3>Desmarcar gravação?</h3>
+    <p id="dgModalTexto"></p>
+    <div class="field" style="margin:0 0 16px;">
+      <label>Por qual motivo você não poderá comparecer? (opcional)</label>
+      <textarea id="dgModalMotivo" rows="3" placeholder="Ex: vou estar viajando nessa data"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="dgModalCancelar">Cancelar</button>
+      <button class="btn btn-danger" id="dgModalConfirmar">Desmarcar</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -230,13 +264,17 @@ function renderGravacao(dados) {
 }
 
 // --- ABA GRAVAÇÃO: card + confirmação de presença ---
+let gravDadosAtuais = null;
+
 function renderGravacaoTab(dados) {
+  gravDadosAtuais = dados;
   const status = estadoGravacao(dados);
   const titulo = document.getElementById('gravTabTitulo');
   const badge = document.getElementById('gravTabBadge');
   const detalhes = document.getElementById('gravTabDetalhes');
   const acoes = document.getElementById('gravTabAcoes');
   const dot = document.getElementById('gravNotifDot');
+  const obsWrap = document.getElementById('gravTabObsWrap');
 
   if (status === 'marcada' && dados.proximaGravacaoData) {
     const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
@@ -248,21 +286,34 @@ function renderGravacaoTab(dados) {
       <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
     `;
 
+    obsWrap.style.display = 'block';
+    document.getElementById('gravObservacao').value = dados.observacaoGravacao || '';
+
     const conf = dados.confirmacaoGravacao;
     const confirmada = conf && conf.status === 'confirmada';
     const remarcar = conf && conf.status === 'remarcar';
 
-    acoes.innerHTML = `
-      <button class="btn ${confirmada ? 'btn-state-confirmada' : 'btn-outline'}" id="btnConfirmarPresenca">Confirmar presença</button>
-      <button class="btn ${remarcar ? 'btn-state-remarcar' : 'btn-outline'}" id="btnPrecisoRemarcar">Desmarcar gravação</button>
-      <p style="flex-basis:100%;margin:10px 0 0;font-size:0.85rem;${confirmada ? 'color:var(--green);' : remarcar ? 'color:var(--yellow);' : 'color:var(--gray);'}">${
-        confirmada ? 'Você confirmou presença nessa gravação.' :
-        remarcar ? 'Você pediu para desmarcar essa gravação. A Lmotion vai entrar em contato.' :
-        'Confirme sua presença ou avise se precisar desmarcar.'
-      }</p>
-    `;
-    document.getElementById('btnConfirmarPresenca').addEventListener('click', () => salvarConfirmacaoGravacao('confirmada', dados));
-    document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => salvarConfirmacaoGravacao('remarcar', dados));
+    if (confirmada) {
+      acoes.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;flex-basis:100%;">
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--green);display:inline-block;flex-shrink:0;"></span>
+          <span style="color:var(--green);font-size:0.9rem;font-weight:600;">Gravação confirmada para ${d.toLocaleDateString('pt-BR')}${dados.proximaGravacaoHorario ? ' às ' + dados.proximaGravacaoHorario : ''}</span>
+        </div>
+        <button class="btn btn-outline" id="btnPrecisoRemarcar" style="margin-top:10px;">Quero desmarcar a gravação</button>
+      `;
+    } else {
+      acoes.innerHTML = `
+        <button class="btn btn-outline" id="btnConfirmarPresenca">Confirmar presença</button>
+        <button class="btn ${remarcar ? 'btn-state-remarcar' : 'btn-outline'}" id="btnPrecisoRemarcar">Desmarcar gravação</button>
+        <p style="flex-basis:100%;margin:10px 0 0;font-size:0.85rem;${remarcar ? 'color:var(--yellow);' : 'color:var(--gray);'}">${
+          remarcar
+            ? 'Você pediu para desmarcar essa gravação. A Lmotion vai entrar em contato.' + (conf.motivo ? ` Motivo: "${conf.motivo}"` : '')
+            : 'Confirme sua presença ou avise se precisar desmarcar.'
+        }</p>
+      `;
+      document.getElementById('btnConfirmarPresenca').addEventListener('click', () => abrirConfirmarPresencaModal());
+    }
+    document.getElementById('btnPrecisoRemarcar').addEventListener('click', () => abrirDesmarcarModal());
 
     dot.style.display = conf ? 'none' : 'block';
   } else if (status === 'concluida') {
@@ -270,6 +321,7 @@ function renderGravacaoTab(dados) {
     badge.textContent = 'Concluída';
     badge.className = 'badge badge-neutral';
     detalhes.innerHTML = '';
+    obsWrap.style.display = 'none';
     acoes.innerHTML = '';
     dot.style.display = 'none';
   } else {
@@ -277,18 +329,60 @@ function renderGravacaoTab(dados) {
     badge.textContent = 'À agendar';
     badge.className = 'badge badge-pending';
     detalhes.innerHTML = '';
+    obsWrap.style.display = 'none';
     acoes.innerHTML = '';
     dot.style.display = 'none';
   }
 }
 
-async function salvarConfirmacaoGravacao(status, dados) {
+async function salvarConfirmacaoGravacao(status, motivo) {
+  const payload = { status, data: firebase.firestore.FieldValue.serverTimestamp() };
+  if (motivo) payload.motivo = motivo;
   await db.collection('clientes').doc(currentUser.uid).set({
-    confirmacaoGravacao: { status, data: firebase.firestore.FieldValue.serverTimestamp() }
+    confirmacaoGravacao: payload
   }, { merge: true });
-  dados.confirmacaoGravacao = { status };
-  renderGravacaoTab(dados);
+  gravDadosAtuais.confirmacaoGravacao = payload;
+  renderGravacaoTab(gravDadosAtuais);
 }
+
+document.getElementById('btnSalvarObservacao').addEventListener('click', async () => {
+  const texto = document.getElementById('gravObservacao').value.trim();
+  await db.collection('clientes').doc(currentUser.uid).set({ observacaoGravacao: texto }, { merge: true });
+  if (gravDadosAtuais) gravDadosAtuais.observacaoGravacao = texto;
+  const msg = document.getElementById('gravObsMsg');
+  msg.textContent = 'Salvo!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function abrirConfirmarPresencaModal() {
+  if (!gravDadosAtuais || !gravDadosAtuais.proximaGravacaoData) return;
+  const d = gravDadosAtuais.proximaGravacaoData.toDate ? gravDadosAtuais.proximaGravacaoData.toDate() : new Date(gravDadosAtuais.proximaGravacaoData);
+  document.getElementById('cpModalTexto').textContent = `Você está confirmando presença na gravação do dia ${d.toLocaleDateString('pt-BR')}${gravDadosAtuais.proximaGravacaoHorario ? ' às ' + gravDadosAtuais.proximaGravacaoHorario : ''}.`;
+  document.getElementById('confirmarPresencaModal').style.display = 'flex';
+}
+document.getElementById('cpModalCancelar').addEventListener('click', () => {
+  document.getElementById('confirmarPresencaModal').style.display = 'none';
+});
+document.getElementById('cpModalConfirmar').addEventListener('click', async () => {
+  document.getElementById('confirmarPresencaModal').style.display = 'none';
+  await salvarConfirmacaoGravacao('confirmada');
+});
+
+function abrirDesmarcarModal() {
+  if (!gravDadosAtuais || !gravDadosAtuais.proximaGravacaoData) return;
+  const d = gravDadosAtuais.proximaGravacaoData.toDate ? gravDadosAtuais.proximaGravacaoData.toDate() : new Date(gravDadosAtuais.proximaGravacaoData);
+  document.getElementById('dgModalTexto').textContent = `A gravação do dia ${d.toLocaleDateString('pt-BR')}${gravDadosAtuais.proximaGravacaoHorario ? ' às ' + gravDadosAtuais.proximaGravacaoHorario : ''} vai ficar marcada como desmarcada. A Lmotion vai entrar em contato pra reagendar.`;
+  document.getElementById('dgModalMotivo').value = '';
+  document.getElementById('desmarcarGravacaoModal').style.display = 'flex';
+}
+document.getElementById('dgModalCancelar').addEventListener('click', () => {
+  document.getElementById('desmarcarGravacaoModal').style.display = 'none';
+});
+document.getElementById('dgModalConfirmar').addEventListener('click', async () => {
+  const motivo = document.getElementById('dgModalMotivo').value.trim();
+  document.getElementById('desmarcarGravacaoModal').style.display = 'none';
+  await salvarConfirmacaoGravacao('remarcar', motivo);
+});
 
 // --- Util: transformar link do Drive em link de preview ---
 function driveEmbedUrl(link) {

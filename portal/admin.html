@@ -300,7 +300,11 @@
           <label>Horário</label>
           <input type="time" id="ggHorario">
         </div>
-        <div id="ggConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"></div>
+        <div id="ggConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;"></div>
+        <div id="ggObservacaoWrap" style="display:none;margin-bottom:16px;">
+          <div class="meta" style="margin-bottom:4px;">Observação do cliente</div>
+          <p id="ggObservacaoTexto" style="color:var(--white);font-size:0.88rem;line-height:1.5;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;margin:0;"></p>
+        </div>
         <button class="btn" id="btnSalvarGravGeral">Salvar</button>
         <p class="success-msg" id="ggMsg"></p>
       </div>
@@ -508,7 +512,11 @@ function renderConfirmacaoStatus(dados, elId) {
   if (conf && conf.status === 'confirmada') {
     el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.85rem;font-weight:600;">Cliente confirmou presença</span>';
   } else if (conf && conf.status === 'remarcar') {
-    el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);display:inline-block;"></span><span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para remarcar</span>';
+    el.innerHTML = `
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);display:inline-block;"></span>
+      <span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para desmarcar</span>
+      ${conf.motivo ? `<div style="flex-basis:100%;color:var(--gray);font-size:0.82rem;">Motivo: "${conf.motivo}"</div>` : ''}
+    `;
   } else {
     el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#6b6b6b;display:inline-block;"></span><span class="meta">Aguardando resposta do cliente</span>';
   }
@@ -1018,12 +1026,23 @@ document.getElementById('ggClienteId').addEventListener('change', (e) => {
   carregarGravacaoGeral(e.target.value);
 });
 
+function renderObservacaoCliente(c) {
+  const wrap = document.getElementById('ggObservacaoWrap');
+  if (c.observacaoGravacao) {
+    document.getElementById('ggObservacaoTexto').textContent = c.observacaoGravacao;
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
 function carregarGravacaoGeral(uid) {
   if (ggUnsub) { ggUnsub(); ggUnsub = null; }
   if (!uid) {
     document.getElementById('ggData').value = '';
     document.getElementById('ggHorario').value = '';
     document.getElementById('ggConfirmacaoStatus').innerHTML = '';
+    document.getElementById('ggObservacaoWrap').style.display = 'none';
     return;
   }
   const c = clientesCache[uid] || {};
@@ -1036,9 +1055,13 @@ function carregarGravacaoGeral(uid) {
   }
   document.getElementById('ggHorario').value = c.proximaGravacaoHorario || '';
   renderConfirmacaoStatus(c, 'ggConfirmacaoStatus');
+  renderObservacaoCliente(c);
 
   ggUnsub = db.collection('clientes').doc(uid).onSnapshot(docSnap => {
-    if (docSnap.exists) renderConfirmacaoStatus(docSnap.data(), 'ggConfirmacaoStatus');
+    if (docSnap.exists) {
+      renderConfirmacaoStatus(docSnap.data(), 'ggConfirmacaoStatus');
+      renderObservacaoCliente(docSnap.data());
+    }
   });
 }
 
@@ -1061,6 +1084,7 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
     payload.confirmacaoGravacao = firebase.firestore.FieldValue.delete();
     payload.gravacaoEndereco = firebase.firestore.FieldValue.delete();
     payload.gravacaoRoteiroLink = firebase.firestore.FieldValue.delete();
+    payload.observacaoGravacao = firebase.firestore.FieldValue.delete();
   }
   await db.collection('clientes').doc(uid).set(payload, { merge: true });
   const msg = document.getElementById('ggMsg');
@@ -1135,7 +1159,8 @@ function renderGravBoard() {
             proximaGravacaoHorario: '',
             confirmacaoGravacao: firebase.firestore.FieldValue.delete(),
             gravacaoEndereco: firebase.firestore.FieldValue.delete(),
-            gravacaoRoteiroLink: firebase.firestore.FieldValue.delete()
+            gravacaoRoteiroLink: firebase.firestore.FieldValue.delete(),
+            observacaoGravacao: firebase.firestore.FieldValue.delete()
           }, { merge: true });
           if (document.getElementById('ggClienteId').value === uid) carregarGravacaoGeral(uid);
         }
