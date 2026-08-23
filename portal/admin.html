@@ -617,8 +617,9 @@ function renderDashCalMes() {
     let extraStyle = 'cursor:pointer;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
     let conteudo = `<div class="cal-big-daynum">${dia}</div>`;
     gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
-    eventos.slice(0, 2).forEach(ev => conteudo += `<div class="cal-big-chip">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
-    if (eventos.length > 2) conteudo += `<div class="cal-big-more">+${eventos.length - 2} mais</div>`;
+    const eventosOrdenados = eventos.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||''));
+    eventosOrdenados.slice(0, 2).forEach(ev => conteudo += `<div class="cal-big-chip">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
+    if (eventosOrdenados.length > 2) conteudo += `<div class="cal-big-more">+${eventosOrdenados.length - 2} mais</div>`;
     html += `<div class="${cls}" style="${extraStyle}" data-dia="${dia}">${conteudo}</div>`;
   }
   html += '</div>';
@@ -665,8 +666,9 @@ function renderDashCalSemana() {
     let extraStyle = 'cursor:pointer;min-height:140px;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
     let conteudo = '';
     gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}" data-idx="${i}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
-    eventos.slice(0, 3).forEach(ev => conteudo += `<div class="cal-big-chip" data-idx="${i}">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
-    if (eventos.length > 3) conteudo += `<div class="cal-big-more">+${eventos.length - 3} mais</div>`;
+    const eventosOrdenados = eventos.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||''));
+    eventosOrdenados.slice(0, 3).forEach(ev => conteudo += `<div class="cal-big-chip" data-idx="${i}">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
+    if (eventosOrdenados.length > 3) conteudo += `<div class="cal-big-more">+${eventosOrdenados.length - 3} mais</div>`;
     html += `<div class="${cls}" style="${extraStyle}" data-idx="${i}">${conteudo}</div>`;
   }
   html += '</div>';
