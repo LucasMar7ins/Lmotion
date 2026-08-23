@@ -918,6 +918,22 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
 });
 
 // --- CLIENTES (grid de cards) ---
+let gravAutoClearEmAndamento = new Set();
+function autoClearDesmarque(uid, c) {
+  if (gravAutoClearEmAndamento.has(uid)) return;
+  gravAutoClearEmAndamento.add(uid);
+  db.collection('clientes').doc(uid).set({
+    proximaGravacaoStatus: 'a_agendar',
+    proximaGravacaoData: null,
+    proximaGravacaoHorario: '',
+    confirmacaoGravacao: firebase.firestore.FieldValue.delete(),
+    gravacaoEndereco: firebase.firestore.FieldValue.delete(),
+    gravacaoRoteiroLink: firebase.firestore.FieldValue.delete(),
+    observacaoGravacao: firebase.firestore.FieldValue.delete(),
+    ultimoMotivoDesmarque: (c.confirmacaoGravacao && c.confirmacaoGravacao.motivo) || null
+  }, { merge: true }).finally(() => gravAutoClearEmAndamento.delete(uid));
+}
+
 function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
@@ -942,6 +958,10 @@ function carregarClientes() {
     snap.forEach(docSnap => {
       const c = docSnap.data();
       clientesCache[docSnap.id] = c;
+
+      if (c.confirmacaoGravacao && c.confirmacaoGravacao.status === 'remarcar' && c.proximaGravacaoStatus === 'marcada') {
+        autoClearDesmarque(docSnap.id, c);
+      }
 
       const card = document.createElement('div');
       card.className = 'client-card';
@@ -1094,6 +1114,7 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
     payload.gravacaoEndereco = firebase.firestore.FieldValue.delete();
     payload.gravacaoRoteiroLink = firebase.firestore.FieldValue.delete();
     payload.observacaoGravacao = firebase.firestore.FieldValue.delete();
+    payload.ultimoMotivoDesmarque = firebase.firestore.FieldValue.delete();
   }
   await db.collection('clientes').doc(uid).set(payload, { merge: true });
 
@@ -1126,6 +1147,10 @@ function gravCardHtml(uid, c, coluna) {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;margin-right:6px;"></span><span class="meta">Aguardando resposta</span></div>';
     }
   }
+  let avisoDesmarque = '';
+  if (coluna === 'a_agendar' && c.ultimoMotivoDesmarque) {
+    avisoDesmarque = `<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;color:var(--yellow);">Pediu para desmarcar: "${c.ultimoMotivoDesmarque}"</div>`;
+  }
   const delBtn = coluna !== 'a_agendar' ? `<button class="video-del-btn" data-del-grav="${uid}" data-nome="${(c.nome || 'Cliente').replace(/"/g,'&quot;')}" aria-label="Desmarcar gravação">&#10005;</button>` : '';
   return `
     <div class="video-mini-card" data-grav-card="${uid}" data-grav-coluna="${coluna}">
@@ -1133,6 +1158,7 @@ function gravCardHtml(uid, c, coluna) {
       <h5>${c.nome || 'Cliente'}</h5>
       <div class="meta">${sub}</div>
       ${statusLine}
+      ${avisoDesmarque}
     </div>
   `;
 }
@@ -1191,7 +1217,8 @@ function renderGravBoard() {
             confirmacaoGravacao: firebase.firestore.FieldValue.delete(),
             gravacaoEndereco: firebase.firestore.FieldValue.delete(),
             gravacaoRoteiroLink: firebase.firestore.FieldValue.delete(),
-            observacaoGravacao: firebase.firestore.FieldValue.delete()
+            observacaoGravacao: firebase.firestore.FieldValue.delete(),
+            ultimoMotivoDesmarque: firebase.firestore.FieldValue.delete()
           }, { merge: true });
           if (document.getElementById('ggClienteId').value === uid) carregarGravacaoGeral(uid);
         }
