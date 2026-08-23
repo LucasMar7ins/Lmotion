@@ -37,17 +37,35 @@
     <!-- INÍCIO -->
     <section class="tab-section active" id="tab-inicio">
       <h1 id="inicioSaudacao" style="font-size:1.6rem;font-weight:700;margin-bottom:8px;">Olá</h1>
-      <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:28px;max-width:560px;">Este é o seu espaço exclusivo com a Lmotion. Aqui você acompanha de perto toda a produção do marketing digital da sua marca: recebe o cronograma completo de conteúdo, com os vídeos e as datas de postagem já definidos, e pode pedir ajustes sempre que sentir necessidade. Tudo em um só lugar, feito pra facilitar o seu dia a dia.</p>
+      <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:22px;max-width:560px;">Este é o seu espaço exclusivo com a Lmotion. Aqui você acompanha de perto toda a produção do marketing digital da sua marca: recebe o cronograma completo de conteúdo, com os vídeos e as datas de postagem já definidos, e pode pedir ajustes sempre que sentir necessidade. Tudo em um só lugar, feito pra facilitar o seu dia a dia.</p>
 
-      <div class="card" id="cardGravacao">
-        <div class="top-actions">
-          <div>
-            <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;">Próxima gravação</div>
-            <h3 id="gravacaoTitulo" style="margin-top:4px;">Carregando...</h3>
-          </div>
-          <span class="badge" id="gravacaoBadge"></span>
+      <div class="dash-stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">
+        <div class="card" style="margin-bottom:0;border-color:rgba(227,181,85,0.3);">
+          <div class="meta">Aguardando sua aprovação</div>
+          <h2 id="inicioStatAprovacao" style="margin-top:6px;color:var(--yellow);">0</h2>
         </div>
-        <div id="gravacaoDetalhes" style="display:flex;gap:28px;flex-wrap:wrap;margin-top:8px;"></div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="meta">Vídeos no ar este mês</div>
+          <h2 id="inicioStatNoAr" style="margin-top:6px;">0</h2>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+          <div class="meta">Próximo post</div>
+          <h2 id="inicioStatProximoPost" style="margin-top:6px;font-size:1.15rem;">--</h2>
+        </div>
+      </div>
+
+      <div class="card" id="inicioAprovacaoCard" style="display:none;border-color:rgba(227,181,85,0.25);">
+        <h3 style="margin-bottom:4px;">Aguardando sua aprovação</h3>
+        <p class="meta" style="margin-bottom:14px;">Revise antes de irem para o ar.</p>
+        <div id="inicioAprovacaoLista"></div>
+      </div>
+
+      <div class="inicio-bottom-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card" id="inicioGravacaoCard" style="margin-bottom:0;"></div>
+        <div class="card" style="margin-bottom:0;">
+          <h4 style="margin-bottom:12px;font-size:0.92rem;">Próximos posts</h4>
+          <div id="inicioProximosPosts"></div>
+        </div>
       </div>
     </section>
 
@@ -191,6 +209,14 @@
 <script src="firebase-config.js"></script>
 <script>
 let currentUser = null;
+let meusVideosCache = [];
+
+function saudacaoPorHorario() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
 
 // --- Navegação entre abas ---
 function ativarAba(tab) {
@@ -232,7 +258,7 @@ auth.onAuthStateChanged(async (user) => {
   const doc = await db.collection('clientes').doc(user.uid).get();
   if (!doc.exists) {
     document.getElementById('clienteNome').textContent = user.email;
-    document.getElementById('inicioSaudacao').textContent = 'Olá';
+    document.getElementById('inicioSaudacao').textContent = saudacaoPorHorario();
     renderGravacao({});
     renderGravacaoTab({});
   } else {
@@ -242,7 +268,7 @@ auth.onAuthStateChanged(async (user) => {
       return;
     }
     document.getElementById('clienteNome').textContent = dados.nome || user.email;
-    document.getElementById('inicioSaudacao').innerHTML = 'Olá, <span style="color:var(--purple-light)">' + (dados.nome || 'cliente') + '</span>';
+    document.getElementById('inicioSaudacao').innerHTML = saudacaoPorHorario() + ', <span style="color:var(--purple-light)">' + (dados.nome || 'cliente') + '</span>';
     renderGravacao(dados);
     renderGravacaoTab(dados);
   }
@@ -251,6 +277,7 @@ auth.onAuthStateChanged(async (user) => {
   carregarMateriais();
   carregarDuvidas();
   carregarTutoriais();
+  renderInicioResumo();
 });
 
 // --- Estado calculado da gravação: a_agendar / marcada / concluida ---
@@ -270,29 +297,161 @@ function estadoGravacao(dados) {
 // --- INÍCIO: card da próxima gravação ---
 function renderGravacao(dados) {
   const status = estadoGravacao(dados);
-  const titulo = document.getElementById('gravacaoTitulo');
-  const badge = document.getElementById('gravacaoBadge');
-  const detalhes = document.getElementById('gravacaoDetalhes');
+  const card = document.getElementById('inicioGravacaoCard');
+  if (!card) return;
+  const conf = dados.confirmacaoGravacao;
+  const confirmada = status === 'marcada' && conf && conf.status === 'confirmada';
 
-  if (status === 'marcada' && dados.proximaGravacaoData) {
+  if (confirmada) {
     const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
-    titulo.textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
-    badge.textContent = 'Marcada';
-    badge.className = 'badge badge-approved';
-    detalhes.innerHTML = `
-      <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
-      <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
+    card.style.borderColor = 'rgba(62,207,106,0.3)';
+    card.style.background = 'rgba(62,207,106,0.08)';
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <span style="color:var(--green);font-size:0.85rem;font-weight:600;">Gravação confirmada</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:14px;">
+        <div>
+          <div class="meta" style="margin-bottom:2px;">Dia</div>
+          <div style="color:var(--white);font-size:0.88rem;font-weight:600;">${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</div>
+        </div>
+        <div>
+          <div class="meta" style="margin-bottom:2px;">Horário</div>
+          <div style="color:var(--white);font-size:0.88rem;font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div>
+        </div>
+        <div style="grid-column:1 / -1;">
+          <div class="meta" style="margin-bottom:2px;">Local</div>
+          <div style="color:var(--white);font-size:0.85rem;">${dados.gravacaoEndereco || 'Local ainda não informado'}</div>
+        </div>
+      </div>
+      <span style="color:var(--purple-light);font-size:0.78rem;font-weight:600;cursor:pointer;" id="inicioGravVerDetalhes">Ver detalhes &rarr;</span>
     `;
-  } else if (status === 'concluida') {
-    titulo.textContent = 'Gravação concluída';
-    badge.textContent = 'Concluída';
-    badge.className = 'badge badge-neutral';
-    detalhes.innerHTML = '';
   } else {
-    titulo.textContent = 'Ainda sem data marcada';
-    badge.textContent = 'À agendar';
-    badge.className = 'badge badge-pending';
-    detalhes.innerHTML = '';
+    card.style.borderColor = '';
+    card.style.background = '';
+    let titulo = 'Ainda sem data marcada';
+    let badgeClass = 'badge-pending';
+    let badgeTexto = 'À agendar';
+    let detalhesHtml = '';
+    if (status === 'marcada' && dados.proximaGravacaoData) {
+      const d = dados.proximaGravacaoData.toDate ? dados.proximaGravacaoData.toDate() : new Date(dados.proximaGravacaoData);
+      titulo = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+      badgeClass = 'badge-approved';
+      badgeTexto = 'Marcada';
+      detalhesHtml = `
+        <div style="display:flex;gap:28px;flex-wrap:wrap;margin-top:8px;">
+          <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
+          <div><div class="meta">Horário</div><div style="font-weight:600;">${dados.proximaGravacaoHorario || 'a definir'}</div></div>
+        </div>
+      `;
+    } else if (status === 'concluida') {
+      titulo = 'Gravação concluída';
+      badgeClass = 'badge-neutral';
+      badgeTexto = 'Concluída';
+    }
+    card.innerHTML = `
+      <div class="top-actions" style="margin-bottom:0;">
+        <div>
+          <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;">Próxima gravação</div>
+          <h3 style="margin-top:4px;">${titulo}</h3>
+        </div>
+        <span class="badge ${badgeClass}">${badgeTexto}</span>
+      </div>
+      ${detalhesHtml}
+    `;
+  }
+
+  const verDetalhes = document.getElementById('inicioGravVerDetalhes');
+  if (verDetalhes) verDetalhes.addEventListener('click', () => ativarAba('gravacao'));
+}
+
+function isPublicado(v) {
+  if (!v.dataPostagem) return false;
+  const d = v.dataPostagem.toDate ? v.dataPostagem.toDate() : new Date(v.dataPostagem);
+  if (v.horarioPostagem) {
+    const [h, m] = v.horarioPostagem.split(':').map(Number);
+    d.setHours(h || 0, m || 0, 0, 0);
+  } else {
+    d.setHours(23, 59, 59, 999);
+  }
+  return (Date.now() - d.getTime()) > 24 * 60 * 60 * 1000;
+}
+
+function renderInicioResumo() {
+  const statAprovacao = document.getElementById('inicioStatAprovacao');
+  if (!statAprovacao) return;
+
+  const pendentes = meusVideosCache
+    .filter(v => !isPublicado(v) && !(v.feedback && v.feedback.tipo))
+    .sort((a, b) => {
+      const da = a.dataPostagem ? (a.dataPostagem.toDate ? a.dataPostagem.toDate() : new Date(a.dataPostagem)) : new Date(8640000000000000);
+      const db_ = b.dataPostagem ? (b.dataPostagem.toDate ? b.dataPostagem.toDate() : new Date(b.dataPostagem)) : new Date(8640000000000000);
+      return da - db_;
+    });
+
+  const hoje = new Date();
+  const noAr = meusVideosCache.filter(v => {
+    if (!isPublicado(v) || !v.dataPostagem) return false;
+    const d = v.dataPostagem.toDate ? v.dataPostagem.toDate() : new Date(v.dataPostagem);
+    return d.getFullYear() === hoje.getFullYear() && d.getMonth() === hoje.getMonth();
+  });
+
+  const futuros = meusVideosCache
+    .filter(v => v.dataPostagem)
+    .map(v => ({ v, d: v.dataPostagem.toDate ? v.dataPostagem.toDate() : new Date(v.dataPostagem) }))
+    .filter(item => {
+      const fimDoDia = new Date(item.d); fimDoDia.setHours(23, 59, 59, 999);
+      return fimDoDia >= hoje;
+    })
+    .sort((a, b) => a.d - b.d);
+
+  statAprovacao.textContent = pendentes.length;
+  document.getElementById('inicioStatNoAr').textContent = noAr.length;
+
+  const statProximo = document.getElementById('inicioStatProximoPost');
+  if (futuros.length) {
+    const d = futuros[0].d;
+    const diffDias = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) / 86400000);
+    if (diffDias === 0) statProximo.textContent = 'Hoje';
+    else if (diffDias === 1) statProximo.textContent = 'Amanhã';
+    else statProximo.textContent = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+  } else {
+    statProximo.textContent = '--';
+  }
+
+  const aprovacaoCard = document.getElementById('inicioAprovacaoCard');
+  const aprovacaoLista = document.getElementById('inicioAprovacaoLista');
+  if (pendentes.length) {
+    aprovacaoCard.style.display = 'block';
+    aprovacaoLista.innerHTML = pendentes.map(v => `
+      <div class="dash-atencao-item" data-ir-videos="1">
+        <span class="dash-atencao-dot" style="background:var(--yellow);"></span>
+        <div style="flex:1;">
+          <div class="dash-atencao-titulo">${v.titulo || 'Sem título'}</div>
+          <div class="dash-atencao-sub">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+        </div>
+        <span style="color:var(--purple-light);font-size:0.8rem;font-weight:600;">Ver vídeo &rarr;</span>
+      </div>
+    `).join('');
+    aprovacaoLista.querySelectorAll('[data-ir-videos]').forEach(el => {
+      el.addEventListener('click', () => ativarAba('videos'));
+    });
+  } else {
+    aprovacaoCard.style.display = 'none';
+  }
+
+  const proximosBox = document.getElementById('inicioProximosPosts');
+  if (proximosBox) {
+    const proximos = futuros.slice(0, 3);
+    proximosBox.innerHTML = proximos.length
+      ? proximos.map(item => `
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
+            <span style="color:var(--white);font-size:0.82rem;">${item.v.titulo || 'Sem título'}</span>
+            <span class="meta">${item.d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+          </div>
+        `).join('')
+      : '<div class="meta">Nenhum post programado ainda.</div>';
   }
 }
 
@@ -450,6 +609,10 @@ function carregarVideos() {
     .where('clienteId', '==', currentUser.uid)
     .orderBy('dataPostagem', 'desc')
     .onSnapshot(snap => {
+      meusVideosCache = [];
+      snap.forEach(docSnap => meusVideosCache.push({ id: docSnap.id, ...docSnap.data() }));
+      renderInicioResumo();
+
       const box = document.getElementById('listaVideos');
       if (snap.empty) {
         box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';

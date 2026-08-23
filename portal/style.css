@@ -476,6 +476,7 @@ a{color:var(--purple-light);text-decoration:none;}
   .videos-form-card{flex-basis:auto;width:100%;}
   .videos-kanban{grid-template-columns:1fr;}
   .dash-stats-grid{grid-template-columns:repeat(2,1fr) !important;}
+  .inicio-bottom-grid{grid-template-columns:1fr !important;}
 }
 .dash-atencao-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;}
 .dash-atencao-item:last-child{border-bottom:none;}
