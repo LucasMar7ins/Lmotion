@@ -306,10 +306,14 @@
       </div>
 
       <div class="card" style="margin-top:20px;">
-        <div class="videos-kanban">
+        <div class="videos-kanban videos-kanban-4">
           <div>
             <div class="videos-col-header"><h4>Precisam ser marcadas</h4><span class="videos-col-count" id="gravCountAgendar" style="background:rgba(160,160,160,0.15);color:var(--gray);">0</span></div>
             <div id="gravColAgendar"></div>
+          </div>
+          <div>
+            <div class="videos-col-header"><h4>Esperando confirmação</h4><span class="videos-col-count" id="gravCountAguardando" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
+            <div id="gravColAguardando"></div>
           </div>
           <div>
             <div class="videos-col-header"><h4>Marcadas</h4><span class="videos-col-count" id="gravCountMarcadas" style="background:rgba(110,45,231,0.15);color:var(--purple-light);">0</span></div>
@@ -1101,11 +1105,18 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
   setTimeout(() => msg.textContent = '', 3000);
 });
 
-function gravCardHtml(uid, c, estado) {
+function colunaGravacao(c) {
+  const estado = estadoGravacao(c);
+  if (estado !== 'marcada') return estado;
+  const conf = c.confirmacaoGravacao;
+  return (conf && conf.status === 'confirmada') ? 'marcada' : 'aguardando';
+}
+
+function gravCardHtml(uid, c, coluna) {
   const d = c.proximaGravacaoData ? (c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData)) : null;
   const sub = d ? d.toLocaleDateString('pt-BR') + (c.proximaGravacaoHorario ? ' às ' + c.proximaGravacaoHorario : '') : 'Sem data definida';
   let statusLine = '';
-  if (estado === 'marcada') {
+  if (coluna === 'marcada' || coluna === 'aguardando') {
     const conf = c.confirmacaoGravacao;
     if (conf && conf.status === 'confirmada') {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;"></span><span style="color:var(--green);">Confirmou presença</span></div>';
@@ -1115,9 +1126,9 @@ function gravCardHtml(uid, c, estado) {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;margin-right:6px;"></span><span class="meta">Aguardando resposta</span></div>';
     }
   }
-  const delBtn = estado !== 'a_agendar' ? `<button class="video-del-btn" data-del-grav="${uid}" data-nome="${(c.nome || 'Cliente').replace(/"/g,'&quot;')}" aria-label="Desmarcar gravação">&#10005;</button>` : '';
+  const delBtn = coluna !== 'a_agendar' ? `<button class="video-del-btn" data-del-grav="${uid}" data-nome="${(c.nome || 'Cliente').replace(/"/g,'&quot;')}" aria-label="Desmarcar gravação">&#10005;</button>` : '';
   return `
-    <div class="video-mini-card" data-grav-card="${uid}" data-grav-estado="${estado}">
+    <div class="video-mini-card" data-grav-card="${uid}" data-grav-coluna="${coluna}">
       ${delBtn}
       <h5>${c.nome || 'Cliente'}</h5>
       <div class="meta">${sub}</div>
@@ -1127,29 +1138,32 @@ function gravCardHtml(uid, c, estado) {
 }
 
 function renderGravBoard() {
-  const cols = { a_agendar: [], marcada: [], concluida: [] };
+  const cols = { a_agendar: [], aguardando: [], marcada: [], concluida: [] };
   Object.keys(clientesCache).forEach(uid => {
     const c = clientesCache[uid];
-    cols[estadoGravacao(c)].push({ uid, c });
+    cols[colunaGravacao(c)].push({ uid, c });
   });
 
   const colAgendar = document.getElementById('gravColAgendar');
+  const colAguardando = document.getElementById('gravColAguardando');
   const colMarcadas = document.getElementById('gravColMarcadas');
   const colConcluidas = document.getElementById('gravColConcluidas');
   if (!colAgendar) return;
 
   colAgendar.innerHTML = cols.a_agendar.length ? cols.a_agendar.map(x => gravCardHtml(x.uid, x.c, 'a_agendar')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
+  colAguardando.innerHTML = cols.aguardando.length ? cols.aguardando.map(x => gravCardHtml(x.uid, x.c, 'aguardando')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
   colMarcadas.innerHTML = cols.marcada.length ? cols.marcada.map(x => gravCardHtml(x.uid, x.c, 'marcada')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
   colConcluidas.innerHTML = cols.concluida.length ? cols.concluida.map(x => gravCardHtml(x.uid, x.c, 'concluida')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
 
   document.getElementById('gravCountAgendar').textContent = cols.a_agendar.length;
+  document.getElementById('gravCountAguardando').textContent = cols.aguardando.length;
   document.getElementById('gravCountMarcadas').textContent = cols.marcada.length;
   document.getElementById('gravCountConcluidas').textContent = cols.concluida.length;
 
   document.querySelectorAll('#tab-gravacao-geral [data-grav-card]').forEach(el => {
     el.addEventListener('click', () => {
       const uid = el.dataset.gravCard;
-      if (el.dataset.gravEstado === 'a_agendar') {
+      if (el.dataset.gravColuna === 'a_agendar') {
         document.getElementById('ggClienteId').value = uid;
         carregarGravacaoGeral(uid);
       } else {
