@@ -170,15 +170,25 @@
 let currentUser = null;
 
 // --- Navegação entre abas ---
+function ativarAba(tab) {
+  const navItem = document.querySelector('.nav-item[data-tab="' + tab + '"]');
+  const tabSection = document.getElementById('tab-' + tab);
+  if (!navItem || !tabSection) return false;
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  navItem.classList.add('active');
+  tabSection.classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  localStorage.setItem('clienteAbaAtiva', tab);
+  return true;
+}
+
 document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
-    item.classList.add('active');
-    document.getElementById('tab-' + item.dataset.tab).classList.add('active');
-    document.getElementById('sidebar').classList.remove('open');
-  });
+  item.addEventListener('click', () => ativarAba(item.dataset.tab));
 });
+
+const abaSalvaCliente = localStorage.getItem('clienteAbaAtiva');
+if (abaSalvaCliente) ativarAba(abaSalvaCliente);
 
 document.getElementById('menuToggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
