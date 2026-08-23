@@ -22,7 +22,7 @@
     <div class="nav-item active" data-tab="dashboard">Dashboard</div>
     <div class="nav-item" data-tab="cadastro">Cadastrar cliente</div>
     <div class="nav-item" data-tab="clientes">Clientes</div>
-    <div class="nav-item" data-tab="videos">Vídeos</div>
+    <div class="nav-item" data-tab="videos">Entregar vídeos</div>
     <div class="nav-item" data-tab="entregas">Entregas</div>
     <div class="nav-item" data-tab="gravacao-geral">Gravação</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
@@ -244,7 +244,7 @@
 
     <!-- VÍDEOS -->
     <section class="tab-section" id="tab-videos">
-      <h2>Vídeos / entregas</h2>
+      <h2>Entregar vídeos</h2>
       <p class="page-sub">Suba o vídeo no Google Drive primeiro, depois cole o link aqui e vincule ao cliente certo.</p>
       <div class="card videos-form-card">
         <div class="field">
@@ -262,10 +262,6 @@
         <div class="field">
           <label>Legenda de postagem</label>
           <textarea id="vLegenda" rows="3"></textarea>
-        </div>
-        <div class="field">
-          <label>Data de referência (mês da entrega)</label>
-          <input type="date" id="vDataRef">
         </div>
         <div class="field">
           <label>Data de postagem (aparece no calendário do cliente)</label>
@@ -1185,7 +1181,6 @@ document.getElementById('btnSalvarVideo').addEventListener('click', async () => 
 
   await db.collection('entregas').add({
     clienteId: perfilUid, titulo, linkDrive, legenda,
-    dataReferencia: dateInputToTimestamp(data),
     dataPostagem: dateInputToTimestamp(data),
     horarioPostagem: horario || '',
     status: 'publicado',
@@ -1263,13 +1258,11 @@ document.getElementById('btnAddVideo').addEventListener('click', async () => {
   const titulo = document.getElementById('vTitulo').value.trim();
   const linkDrive = document.getElementById('vLink').value.trim();
   const legenda = document.getElementById('vLegenda').value.trim();
-  const dataRef = document.getElementById('vDataRef').value;
   const dataPost = document.getElementById('vDataPost').value;
   if (!clienteId || !titulo || !linkDrive) return;
 
   await db.collection('entregas').add({
     clienteId, titulo, linkDrive, legenda,
-    dataReferencia: dateInputToTimestamp(dataRef),
     dataPostagem: dateInputToTimestamp(dataPost),
     status: 'publicado',
     feedback: {},
@@ -1279,7 +1272,6 @@ document.getElementById('btnAddVideo').addEventListener('click', async () => {
   document.getElementById('vTitulo').value = '';
   document.getElementById('vLink').value = '';
   document.getElementById('vLegenda').value = '';
-  document.getElementById('vDataRef').value = '';
   document.getElementById('vDataPost').value = '';
   const msg = document.getElementById('videoMsg');
   msg.textContent = 'Vídeo entregue!';
