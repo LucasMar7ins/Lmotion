@@ -96,38 +96,72 @@
     <section class="tab-section" id="tab-perfil">
       <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarPerfil">&larr; Voltar para clientes</div>
 
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
-        <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
-        <div>
-          <h2 style="margin:0;" id="perfilNome">Cliente</h2>
-          <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
+          <div>
+            <h2 style="margin:0;" id="perfilNome">Cliente</h2>
+            <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
+          </div>
         </div>
+        <button class="btn btn-outline" id="btnEditarInfoCliente" style="display:none;">Editar</button>
       </div>
 
       <div class="card">
-        <h3 style="margin-bottom:14px;">Informações do cliente</h3>
-        <div class="field">
-          <label>Nome</label>
-          <input type="text" id="perfilEditNome">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <h3 style="margin:0;">Informações do cliente</h3>
+          <span class="badge badge-approved" id="perfilInfoBadge" style="display:none;">Confirmado</span>
         </div>
-        <div class="field">
-          <label>Empresa</label>
-          <input type="text" id="perfilEditEmpresa">
+
+        <div id="perfilInfoView" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-bottom:4px;">
+            <div>
+              <div class="meta" style="margin-bottom:4px;">Nome</div>
+              <div id="viewNome" style="color:var(--white);font-size:0.92rem;"></div>
+            </div>
+            <div>
+              <div class="meta" style="margin-bottom:4px;">Empresa</div>
+              <div id="viewEmpresa" style="color:var(--white);font-size:0.92rem;"></div>
+            </div>
+            <div>
+              <div class="meta" style="margin-bottom:4px;">Email</div>
+              <div id="viewEmail" style="color:var(--white);font-size:0.92rem;"></div>
+            </div>
+            <div>
+              <div class="meta" style="margin-bottom:4px;">WhatsApp</div>
+              <div id="viewWhatsapp" style="color:var(--white);font-size:0.92rem;"></div>
+            </div>
+            <div style="grid-column:1 / -1;">
+              <div class="meta" style="margin-bottom:4px;">Resumo do negócio</div>
+              <div id="viewResumo" style="color:var(--white);font-size:0.92rem;line-height:1.5;"></div>
+            </div>
+          </div>
         </div>
-        <div class="field">
-          <label>Email</label>
-          <input type="text" id="perfilEditEmail">
+
+        <div id="perfilInfoForm">
+          <div class="field">
+            <label>Nome</label>
+            <input type="text" id="perfilEditNome">
+          </div>
+          <div class="field">
+            <label>Empresa</label>
+            <input type="text" id="perfilEditEmpresa">
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="text" id="perfilEditEmail">
+          </div>
+          <div class="field">
+            <label>WhatsApp</label>
+            <input type="text" id="perfilEditWhatsapp" placeholder="Ex: (32) 99164-6261">
+          </div>
+          <div class="field">
+            <label>Resumo do negócio</label>
+            <textarea id="perfilEditResumo" rows="3" placeholder="Breve resumo do que o cliente faz"></textarea>
+          </div>
+          <button class="btn" id="btnSalvarInfoCliente">Salvar informações</button>
+          <p class="success-msg" id="perfilInfoMsg"></p>
         </div>
-        <div class="field">
-          <label>WhatsApp</label>
-          <input type="text" id="perfilEditWhatsapp" placeholder="Ex: (32) 99164-6261">
-        </div>
-        <div class="field">
-          <label>Resumo do negócio</label>
-          <textarea id="perfilEditResumo" rows="3" placeholder="Breve resumo do que o cliente faz"></textarea>
-        </div>
-        <button class="btn" id="btnSalvarInfoCliente">Salvar informações</button>
-        <p class="success-msg" id="perfilInfoMsg"></p>
       </div>
 
       <div class="card">
@@ -821,8 +855,35 @@ function carregarClientes() {
 }
 
 // --- PERFIL DO CLIENTE ---
+let perfilEditando = false;
+
+function perfilCamposCompletos(c) {
+  return !!(c && c.nome && c.empresa && c.email && c.whatsapp && c.resumo);
+}
+
+function renderPerfilInfoModo(c) {
+  const mostrarEdicao = perfilEditando || !perfilCamposCompletos(c);
+  document.getElementById('perfilInfoForm').style.display = mostrarEdicao ? 'block' : 'none';
+  document.getElementById('perfilInfoView').style.display = mostrarEdicao ? 'none' : 'block';
+  document.getElementById('btnEditarInfoCliente').style.display = mostrarEdicao ? 'none' : 'inline-block';
+  document.getElementById('perfilInfoBadge').style.display = mostrarEdicao ? 'none' : 'inline-block';
+  if (!mostrarEdicao) {
+    document.getElementById('viewNome').textContent = c.nome || '';
+    document.getElementById('viewEmpresa').textContent = c.empresa || '';
+    document.getElementById('viewEmail').textContent = c.email || '';
+    document.getElementById('viewWhatsapp').textContent = c.whatsapp || '';
+    document.getElementById('viewResumo').textContent = c.resumo || '';
+  }
+}
+
+document.getElementById('btnEditarInfoCliente').addEventListener('click', () => {
+  perfilEditando = true;
+  renderPerfilInfoModo(clientesCache[perfilUid] || {});
+});
+
 function abrirPerfilCliente(uid) {
   perfilUid = uid;
+  perfilEditando = false;
   const c = clientesCache[uid] || {};
 
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
@@ -838,6 +899,7 @@ function abrirPerfilCliente(uid) {
   document.getElementById('perfilEditEmail').value = c.email || '';
   document.getElementById('perfilEditWhatsapp').value = c.whatsapp || '';
   document.getElementById('perfilEditResumo').value = c.resumo || '';
+  renderPerfilInfoModo(c);
 
   document.getElementById('perfilVTitulo').value = '';
   document.getElementById('perfilVLink').value = '';
@@ -1010,6 +1072,9 @@ document.getElementById('btnSalvarInfoCliente').addEventListener('click', async 
   document.getElementById('perfilNome').textContent = nome;
   document.getElementById('perfilSub').textContent = [empresa, email].filter(Boolean).join(' · ');
   document.getElementById('perfilAvatar').textContent = (nome || '?').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+
+  perfilEditando = false;
+  renderPerfilInfoModo({ nome, empresa, email, whatsapp, resumo });
 
   const msg = document.getElementById('perfilInfoMsg');
   msg.textContent = 'Salvo!';
