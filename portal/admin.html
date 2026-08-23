@@ -278,6 +278,10 @@
           <label>Horário</label>
           <input type="time" id="ggHorario">
         </div>
+        <div class="field">
+          <label>Endereço da gravação</label>
+          <input type="text" id="ggEndereco" placeholder="Endereço onde a gravação vai acontecer">
+        </div>
         <div id="ggConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;"></div>
         <button class="btn" id="btnSalvarGravGeral">Salvar</button>
         <p class="success-msg" id="ggMsg"></p>
@@ -1057,6 +1061,7 @@ function carregarGravacaoGeral(uid) {
   if (!uid) {
     document.getElementById('ggData').value = '';
     document.getElementById('ggHorario').value = '';
+    document.getElementById('ggEndereco').value = '';
     document.getElementById('ggConfirmacaoStatus').innerHTML = '';
     return;
   }
@@ -1069,6 +1074,7 @@ function carregarGravacaoGeral(uid) {
     document.getElementById('ggData').value = '';
   }
   document.getElementById('ggHorario').value = c.proximaGravacaoHorario || '';
+  document.getElementById('ggEndereco').value = c.gravacaoEndereco || '';
   renderConfirmacaoStatus(c, 'ggConfirmacaoStatus');
 
   ggUnsub = db.collection('clientes').doc(uid).onSnapshot(docSnap => {
@@ -1081,6 +1087,7 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
   if (!uid) return;
   const data = document.getElementById('ggData').value;
   const horario = document.getElementById('ggHorario').value;
+  const endereco = document.getElementById('ggEndereco').value.trim();
 
   const c = clientesCache[uid] || {};
   const gDataAtual = c.proximaGravacaoData ? (c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData)).toISOString().slice(0,10) : '';
@@ -1089,11 +1096,11 @@ document.getElementById('btnSalvarGravGeral').addEventListener('click', async ()
   const payload = {
     proximaGravacaoStatus: data ? 'marcada' : 'a_agendar',
     proximaGravacaoData: data ? dateInputToTimestamp(data) : null,
-    proximaGravacaoHorario: horario || ''
+    proximaGravacaoHorario: horario || '',
+    gravacaoEndereco: endereco ? endereco : firebase.firestore.FieldValue.delete()
   };
   if (mudouData) {
     payload.confirmacaoGravacao = firebase.firestore.FieldValue.delete();
-    payload.gravacaoEndereco = firebase.firestore.FieldValue.delete();
     payload.gravacaoRoteiroLink = firebase.firestore.FieldValue.delete();
     payload.observacaoGravacao = firebase.firestore.FieldValue.delete();
     payload.ultimoMotivoDesmarque = firebase.firestore.FieldValue.delete();
