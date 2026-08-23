@@ -377,6 +377,12 @@ a{color:var(--purple-light);text-decoration:none;}
 .video-mini-card .meta{margin-top:5px;font-size:0.82rem;}
 .video-mini-comment{color:var(--red);font-size:0.85rem;margin-top:10px;line-height:1.4;}
 .video-mini-when{color:var(--gray);font-size:0.74rem;margin-top:10px;border-top:1px solid var(--border);padding-top:8px;}
+.video-mini-when-strong{color:var(--white);font-weight:700;font-size:0.86rem;}
+
+.vd-data-box{display:flex;align-items:center;gap:12px;background:rgba(155,107,242,0.12);border:1px solid rgba(155,107,242,0.35);border-radius:10px;padding:12px 16px;margin:10px 0 14px;}
+.vd-data-icon{width:24px;height:24px;color:var(--purple-light);flex-shrink:0;}
+.vd-data-label{font-size:0.72rem;color:var(--gray);text-transform:uppercase;letter-spacing:0.03em;}
+.vd-data-valor{font-size:1.2rem;font-weight:700;color:var(--white);margin-top:2px;}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:999;}
 .modal-box{background:var(--black-card);border:1px solid var(--border-strong,#333);border-radius:12px;padding:22px 24px;width:300px;}

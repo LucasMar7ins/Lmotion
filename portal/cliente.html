@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -140,7 +140,7 @@
       <h2>Seus vídeos</h2>
       <p class="page-sub">Clique num vídeo para assistir, aprovar ou pedir alteração.</p>
       <div id="listaVideos">
-        <div class="videos-kanban">
+        <div class="videos-kanban videos-kanban-4">
           <div>
             <div class="videos-col-header"><h4>Para aprovar</h4><span class="videos-col-count" id="vidsCountPendente" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
             <div id="vidsColPendente"><div class="empty-state">Carregando...</div></div>
@@ -152,6 +152,10 @@
           <div>
             <div class="videos-col-header"><h4>Aprovados</h4><span class="videos-col-count" id="vidsCountAprovados" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
             <div id="vidsColAprovados"></div>
+          </div>
+          <div>
+            <div class="videos-col-header"><h4>Postados</h4><span class="videos-col-count" id="vidsCountPostados" style="background:rgba(155,107,242,0.15);color:var(--purple-light);">0</span></div>
+            <div id="vidsColPostados"></div>
           </div>
         </div>
       </div>
@@ -240,7 +244,13 @@
       <h3 id="vdTitulo" style="margin:0;">Vídeo</h3>
       <span class="badge" id="vdBadge"></span>
     </div>
-    <p class="meta" id="vdMeta" style="margin:6px 0 14px;"></p>
+    <div class="vd-data-box" id="vdDataBox">
+      <svg class="vd-data-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <div>
+        <div class="vd-data-label" id="vdDataLabel">Postagem prevista</div>
+        <div class="vd-data-valor" id="vdDataValor"></div>
+      </div>
+    </div>
     <div class="video-embed"><iframe id="vdIframe" src="" allow="autoplay"></iframe></div>
     <div class="caption-box" id="vdLegendaWrap" style="display:none;"><strong style="color:var(--white)">Legenda:</strong><br><span id="vdLegenda"></span></div>
     <div class="caption-box" id="vdComentarioWrap" style="display:none;"><strong style="color:var(--white)">Seu pedido de alteração:</strong><br><span id="vdComentario"></span></div>
@@ -717,7 +727,7 @@ function clienteVideoCardHtml(v) {
   return `
     <div class="video-mini-card" data-abrir-video="${v.id}">
       <h5>${v.titulo || 'Sem título'}</h5>
-      <div class="video-mini-when">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+      <div class="video-mini-when video-mini-when-strong">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
       ${feedback.tipo === 'reprovado' && feedback.comentario ? `<div class="video-mini-comment">"${feedback.comentario}"</div>` : ''}
     </div>
   `;
@@ -726,19 +736,23 @@ function clienteVideoCardHtml(v) {
 function renderVideosBoard() {
   const pendentes = meusVideosCache.filter(v => !(v.feedback && v.feedback.tipo));
   const alteracao = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'reprovado');
-  const aprovados = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'aprovado');
+  const aprovados = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'aprovado' && !isPublicado(v));
+  const postados = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'aprovado' && isPublicado(v));
 
   document.getElementById('vidsCountPendente').textContent = pendentes.length;
   document.getElementById('vidsCountAlteracao').textContent = alteracao.length;
   document.getElementById('vidsCountAprovados').textContent = aprovados.length;
+  document.getElementById('vidsCountPostados').textContent = postados.length;
 
   const colPendente = document.getElementById('vidsColPendente');
   const colAlteracao = document.getElementById('vidsColAlteracao');
   const colAprovados = document.getElementById('vidsColAprovados');
+  const colPostados = document.getElementById('vidsColPostados');
 
   colPendente.innerHTML = pendentes.length ? pendentes.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
   colAlteracao.innerHTML = alteracao.length ? alteracao.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
   colAprovados.innerHTML = aprovados.length ? aprovados.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
+  colPostados.innerHTML = postados.length ? postados.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
 
   document.querySelectorAll('#listaVideos [data-abrir-video]').forEach(el => {
     el.addEventListener('click', () => abrirVideoDetalheCliente(el.dataset.abrirVideo));
@@ -756,12 +770,15 @@ function abrirVideoDetalheCliente(id) {
 
   document.getElementById('vdTitulo').textContent = v.titulo || 'Sem título';
 
+  const publicado = feedback.tipo === 'aprovado' && isPublicado(v);
   const badge = document.getElementById('vdBadge');
-  if (feedback.tipo === 'aprovado') { badge.textContent = 'Aprovado'; badge.className = 'badge badge-approved'; }
+  if (publicado) { badge.textContent = 'Postado'; badge.className = 'badge badge-approved'; }
+  else if (feedback.tipo === 'aprovado') { badge.textContent = 'Aprovado'; badge.className = 'badge badge-approved'; }
   else if (feedback.tipo === 'reprovado') { badge.textContent = 'Em alteração'; badge.className = 'badge badge-rejected'; }
   else { badge.textContent = 'Aguardando avaliação'; badge.className = 'badge badge-pending'; }
 
-  document.getElementById('vdMeta').textContent = 'Postagem prevista: ' + (formatarData(v.dataPostagem) || 'a definir');
+  document.getElementById('vdDataLabel').textContent = publicado ? 'Postado em' : 'Postagem prevista';
+  document.getElementById('vdDataValor').textContent = formatarData(v.dataPostagem) || 'a definir';
   document.getElementById('vdIframe').src = driveEmbedUrl(v.linkDrive);
 
   const legWrap = document.getElementById('vdLegendaWrap');
