@@ -36,8 +36,24 @@
 
     <!-- INÍCIO -->
     <section class="tab-section active" id="tab-inicio">
-      <h1 id="inicioSaudacao" style="font-size:1.6rem;font-weight:700;margin-bottom:8px;">Olá</h1>
-      <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:22px;max-width:560px;">Este é o seu espaço exclusivo com a Lmotion. Aqui você acompanha de perto toda a produção do marketing digital da sua marca: recebe o cronograma completo de conteúdo, com os vídeos e as datas de postagem já definidos, e pode pedir ajustes sempre que sentir necessidade. Tudo em um só lugar, feito pra facilitar o seu dia a dia.</p>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px;">
+        <h1 id="inicioSaudacao" style="font-size:1.6rem;font-weight:700;margin:0;">Olá</h1>
+        <a href="https://wa.me/5532991646261" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:rgba(62,207,106,0.12);border:1px solid rgba(62,207,106,0.35);color:var(--green);font-size:0.82rem;font-weight:600;padding:9px 16px;border-radius:8px;text-decoration:none;white-space:nowrap;">Falar no WhatsApp</a>
+      </div>
+      <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:20px;max-width:560px;">Este é o seu espaço exclusivo com a Lmotion. Aqui você acompanha de perto toda a produção do marketing digital da sua marca: recebe o cronograma completo de conteúdo, com os vídeos e as datas de postagem já definidos, e pode pedir ajustes sempre que sentir necessidade. Tudo em um só lugar, feito pra facilitar o seu dia a dia.</p>
+
+      <div class="card" id="inicioDuvidaCard" style="display:none;background:rgba(155,107,242,0.08);border-color:rgba(155,107,242,0.3);cursor:pointer;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--purple-light);display:inline-block;flex-shrink:0;"></span>
+            <div>
+              <div style="color:var(--white);font-size:0.9rem;font-weight:600;">Sua dúvida foi respondida</div>
+              <div class="meta" style="margin-top:2px;" id="inicioDuvidaResumo"></div>
+            </div>
+          </div>
+          <span style="color:var(--purple-light);font-size:0.8rem;font-weight:600;white-space:nowrap;">Ver resposta &rarr;</span>
+        </div>
+      </div>
 
       <div class="dash-stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;">
         <div class="card" style="margin-bottom:0;border-color:rgba(227,181,85,0.3);">
@@ -210,6 +226,7 @@
 <script>
 let currentUser = null;
 let meusVideosCache = [];
+let minhasDuvidasCache = [];
 
 function saudacaoPorHorario() {
   const h = new Date().getHours();
@@ -376,6 +393,39 @@ function isPublicado(v) {
     d.setHours(23, 59, 59, 999);
   }
   return (Date.now() - d.getTime()) > 24 * 60 * 60 * 1000;
+}
+
+function renderInicioDuvida() {
+  const card = document.getElementById('inicioDuvidaCard');
+  if (!card) return;
+
+  const respondidas = minhasDuvidasCache
+    .filter(d => d.status === 'respondida' && d.dataResposta)
+    .sort((a, b) => {
+      const da = a.dataResposta.toDate ? a.dataResposta.toDate() : new Date(a.dataResposta);
+      const db_ = b.dataResposta.toDate ? b.dataResposta.toDate() : new Date(b.dataResposta);
+      return db_ - da;
+    });
+
+  if (!respondidas.length) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const ultima = respondidas[0];
+  const vistaId = localStorage.getItem('ultimaDuvidaVistaId');
+  if (vistaId === ultima.id) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = 'block';
+  document.getElementById('inicioDuvidaResumo').textContent = '"' + (ultima.pergunta || '') + '"';
+  card.onclick = () => {
+    localStorage.setItem('ultimaDuvidaVistaId', ultima.id);
+    card.style.display = 'none';
+    ativarAba('duvidas');
+  };
 }
 
 function renderInicioResumo() {
@@ -788,6 +838,10 @@ function carregarDuvidas() {
     .where('clienteId', '==', currentUser.uid)
     .orderBy('dataEnvio', 'desc')
     .onSnapshot(snap => {
+      minhasDuvidasCache = [];
+      snap.forEach(docSnap => minhasDuvidasCache.push({ id: docSnap.id, ...docSnap.data() }));
+      renderInicioDuvida();
+
       const box = document.getElementById('listaDuvidas');
       if (snap.empty) {
         box.innerHTML = '';
