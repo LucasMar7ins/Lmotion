@@ -1086,6 +1086,7 @@ function abrirPerfilCliente(uid) {
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-perfil').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('mainArea').classList.add('main-wide');
 
   document.getElementById('perfilAvatar').textContent = (c.nome || '?').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
   document.getElementById('perfilNome').textContent = c.nome || 'Cliente';
@@ -1156,6 +1157,7 @@ document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
   document.getElementById('tab-clientes').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector('[data-tab="clientes"]').classList.add('active');
+  document.getElementById('mainArea').classList.remove('main-wide');
 });
 
 // --- GRAVAÇÃO (geral, qualquer cliente) ---
