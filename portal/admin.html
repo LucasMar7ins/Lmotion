@@ -1796,14 +1796,29 @@ function carregarTutoriaisAdmin() {
     box.innerHTML = '';
     snap.forEach(docSnap => {
       const t = docSnap.data();
+      const id = docSnap.id;
       const card = document.createElement('div');
       card.className = 'card';
+      card.style.position = 'relative';
       card.innerHTML = `
-        <h3>${t.titulo}</h3>
+        <button class="video-del-btn" data-del-tutorial="${id}" data-titulo="${(t.titulo || '').replace(/"/g,'&quot;')}" aria-label="Excluir tutorial">&#10005;</button>
+        <h3 style="padding-right:20px;">${t.titulo}</h3>
         <div class="meta">${formatarData(t.dataPublicacao)}</div>
         <p style="margin-top:8px;">${t.conteudo || ''}</p>
       `;
       box.appendChild(card);
+    });
+
+    box.querySelectorAll('[data-del-tutorial]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.delTutorial;
+        const titulo = btn.dataset.titulo;
+        abrirConfirmModal(
+          'Excluir este tutorial?',
+          `"${titulo}" vai ser removido do portal dos clientes. Essa ação não pode ser desfeita.`,
+          async () => { await db.collection('tutoriais').doc(id).delete(); }
+        );
+      });
     });
   });
 }
