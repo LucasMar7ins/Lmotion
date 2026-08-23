@@ -40,10 +40,30 @@
     <!-- DASHBOARD -->
     <section class="tab-section active" id="tab-dashboard">
       <h2>Dashboard</h2>
-      <p class="page-sub">Visão geral rápida do portal. Mais conteúdo em breve.</p>
-      <div class="card" style="max-width:220px;">
-        <div class="meta">Clientes ativos</div>
-        <h2 id="dashClientesTotal" style="margin-top:6px;">0</h2>
+      <p class="page-sub">Visão geral rápida do portal.</p>
+
+      <div class="dash-stats-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;">
+        <div class="card" style="margin-bottom:0;">
+          <div class="meta">Clientes ativos</div>
+          <h2 id="dashClientesTotal" style="margin-top:6px;">0</h2>
+        </div>
+        <div class="card" style="margin-bottom:0;border-color:rgba(227,181,85,0.3);">
+          <div class="meta">Vídeos em aprovação</div>
+          <h2 id="dashVideosAprovacao" style="margin-top:6px;color:var(--yellow);">0</h2>
+        </div>
+        <div class="card" style="margin-bottom:0;border-color:rgba(227,181,85,0.3);">
+          <div class="meta">Gravações aguardando confirmação</div>
+          <h2 id="dashGravAguardando" style="margin-top:6px;color:var(--yellow);">0</h2>
+        </div>
+        <div class="card" style="margin-bottom:0;border-color:rgba(227,85,85,0.3);">
+          <div class="meta">Dúvidas sem resposta</div>
+          <h2 id="dashDuvidasAbertas" style="margin-top:6px;color:var(--red);">0</h2>
+        </div>
+      </div>
+
+      <div class="card" id="dashAtencaoCard" style="display:none;">
+        <h3 style="margin-bottom:14px;">Precisa da sua atenção</h3>
+        <div id="dashAtencaoLista"></div>
       </div>
 
       <div class="card" style="margin-top:20px;">
@@ -470,6 +490,7 @@ let perfilUid = null;
 let perfilUnsub = null;
 let perfilEntregas = [];
 let todasEntregas = [];
+let duvidasCache = [];
 let calAdminData = new Date();
 let calAdminView = 'mes';
 const NOMES_MES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -580,6 +601,64 @@ auth.onAuthStateChanged(async (user) => {
   carregarTutoriaisAdmin();
   carregarNotasDashboard();
 });
+
+// --- RESUMO DO DASHBOARD ---
+function renderDashResumo() {
+  if (!document.getElementById('dashVideosAprovacao')) return;
+
+  const pendentes = todasEntregas.filter(v => !isPublicado(v) && !(v.feedback && v.feedback.tipo));
+  const alteracao = todasEntregas.filter(v => !isPublicado(v) && v.feedback && v.feedback.tipo === 'reprovado');
+  const gravsAguardando = Object.entries(clientesCache).filter(([uid, c]) => colunaGravacao(c) === 'aguardando');
+  const duvidasAbertas = duvidasCache.filter(d => d.status !== 'respondida');
+
+  document.getElementById('dashVideosAprovacao').textContent = pendentes.length;
+  document.getElementById('dashGravAguardando').textContent = gravsAguardando.length;
+  document.getElementById('dashDuvidasAbertas').textContent = duvidasAbertas.length;
+
+  const itens = [];
+  pendentes.forEach(v => {
+    const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+    itens.push({ cor: 'var(--yellow)', titulo: `${v.titulo} está em aprovação`, sub: nomeCliente, tab: 'entregas' });
+  });
+  alteracao.forEach(v => {
+    const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+    itens.push({ cor: 'var(--red)', titulo: `${v.titulo} recebeu pedido de alteração`, sub: nomeCliente, tab: 'entregas' });
+  });
+  gravsAguardando.forEach(([uid, c]) => {
+    const conf = c.confirmacaoGravacao;
+    const d = c.proximaGravacaoData ? (c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData)) : null;
+    const dataTexto = d ? d.toLocaleDateString('pt-BR') + (c.proximaGravacaoHorario ? ' às ' + c.proximaGravacaoHorario : '') : '';
+    const sub = (conf && conf.status === 'remarcar') ? 'Cliente pediu para desmarcar' : 'Aguardando confirmação do cliente';
+    itens.push({ cor: 'var(--yellow)', titulo: `Gravação de ${c.nome || 'Cliente'}${dataTexto ? ' em ' + dataTexto : ''}`, sub, tab: 'gravacao-geral' });
+  });
+  duvidasAbertas.forEach(d => {
+    const nomeCliente = (clientesCache[d.clienteId] && clientesCache[d.clienteId].nome) || 'Cliente';
+    itens.push({ cor: 'var(--red)', titulo: `Dúvida sem resposta de ${nomeCliente}`, sub: d.pergunta || '', tab: 'duvidas' });
+  });
+
+  const card = document.getElementById('dashAtencaoCard');
+  const lista = document.getElementById('dashAtencaoLista');
+  if (!itens.length) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  lista.innerHTML = itens.map((it, i) => `
+    <div class="dash-atencao-item" data-atencao-idx="${i}">
+      <span class="dash-atencao-dot" style="background:${it.cor};"></span>
+      <div>
+        <div class="dash-atencao-titulo">${it.titulo}</div>
+        <div class="dash-atencao-sub">${it.sub}</div>
+      </div>
+    </div>
+  `).join('');
+  lista.querySelectorAll('[data-atencao-idx]').forEach(el => {
+    el.addEventListener('click', () => {
+      const it = itens[parseInt(el.dataset.atencaoIdx)];
+      ativarAba(it.tab);
+    });
+  });
+}
 
 // --- CALENDÁRIO DE ANOTAÇÕES (compartilhado: Dashboard e aba Calendário) ---
 let dashCalData = new Date();
@@ -1024,6 +1103,7 @@ function carregarClientes() {
     renderCalendarioAdmin();
     renderDashCalendario();
     renderGravBoard();
+    renderDashResumo();
   });
 }
 
@@ -1506,6 +1586,7 @@ function carregarVideosAdmin() {
     snap.forEach(docSnap => todasEntregas.push({ id: docSnap.id, ...docSnap.data() }));
     renderCalendarioAdmin();
     renderEntregasBoard();
+    renderDashResumo();
   });
   setInterval(renderEntregasBoard, 60000);
 }
@@ -1660,6 +1741,9 @@ function carregarMateriaisAdmin() {
 // --- DÚVIDAS ---
 function carregarDuvidasAdmin() {
   db.collection('duvidas').orderBy('dataEnvio', 'desc').onSnapshot(snap => {
+    duvidasCache = [];
+    snap.forEach(docSnap => duvidasCache.push({ id: docSnap.id, ...docSnap.data() }));
+    renderDashResumo();
     const box = document.getElementById('listaDuvidasAdmin');
     if (snap.empty) {
       box.innerHTML = '<div class="empty-state">Nenhuma dúvida enviada ainda.</div>';

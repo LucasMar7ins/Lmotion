@@ -475,4 +475,10 @@ a{color:var(--purple-light);text-decoration:none;}
   .videos-layout{flex-direction:column;}
   .videos-form-card{flex-basis:auto;width:100%;}
   .videos-kanban{grid-template-columns:1fr;}
+  .dash-stats-grid{grid-template-columns:repeat(2,1fr) !important;}
 }
+.dash-atencao-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.dash-atencao-item:last-child{border-bottom:none;}
+.dash-atencao-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dash-atencao-titulo{color:var(--white);font-size:0.9rem;}
+.dash-atencao-sub{color:var(--gray);font-size:0.78rem;margin-top:2px;}
