@@ -107,72 +107,87 @@
         <button class="btn btn-outline" id="btnEditarInfoCliente" style="display:none;">Editar</button>
       </div>
 
-      <div class="card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-          <h3 style="margin:0;">Informações do cliente</h3>
-          <span class="badge badge-approved" id="perfilInfoBadge" style="display:none;">Confirmado</span>
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
+        <div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+              <h3 style="margin:0;">Informações do cliente</h3>
+              <span class="badge badge-approved" id="perfilInfoBadge" style="display:none;">Confirmado</span>
+            </div>
+
+            <div id="perfilInfoView" style="display:none;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-bottom:4px;">
+                <div>
+                  <div class="meta" style="margin-bottom:4px;">Nome</div>
+                  <div id="viewNome" style="color:var(--white);font-size:0.92rem;"></div>
+                </div>
+                <div>
+                  <div class="meta" style="margin-bottom:4px;">Empresa</div>
+                  <div id="viewEmpresa" style="color:var(--white);font-size:0.92rem;"></div>
+                </div>
+                <div>
+                  <div class="meta" style="margin-bottom:4px;">Email</div>
+                  <div id="viewEmail" style="color:var(--white);font-size:0.92rem;"></div>
+                </div>
+                <div>
+                  <div class="meta" style="margin-bottom:4px;">WhatsApp</div>
+                  <div id="viewWhatsapp" style="color:var(--white);font-size:0.92rem;"></div>
+                </div>
+                <div style="grid-column:1 / -1;">
+                  <div class="meta" style="margin-bottom:4px;">Resumo do negócio</div>
+                  <div id="viewResumo" style="color:var(--white);font-size:0.92rem;line-height:1.5;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="perfilInfoForm">
+              <div class="field">
+                <label>Nome</label>
+                <input type="text" id="perfilEditNome">
+              </div>
+              <div class="field">
+                <label>Empresa</label>
+                <input type="text" id="perfilEditEmpresa">
+              </div>
+              <div class="field">
+                <label>Email</label>
+                <input type="text" id="perfilEditEmail">
+              </div>
+              <div class="field">
+                <label>WhatsApp</label>
+                <input type="text" id="perfilEditWhatsapp" placeholder="Ex: (32) 99164-6261">
+              </div>
+              <div class="field">
+                <label>Resumo do negócio</label>
+                <textarea id="perfilEditResumo" rows="3" placeholder="Breve resumo do que o cliente faz"></textarea>
+              </div>
+              <button class="btn" id="btnSalvarInfoCliente">Salvar informações</button>
+              <p class="success-msg" id="perfilInfoMsg"></p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 style="margin-bottom:14px;">Calendário completo</h3>
+            <p class="meta" id="perfilCalMes" style="margin-bottom:12px;"></p>
+            <div id="perfilCalendario"></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+              <span style="width:12px;height:12px;border-radius:3px;background:rgba(110,45,231,0.28);display:inline-block;"></span>
+              <span class="meta">Dia com vídeo programado</span>
+            </div>
+            <div id="perfilCalDetalhe" style="margin-top:14px;"></div>
+          </div>
         </div>
 
-        <div id="perfilInfoView" style="display:none;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;margin-bottom:4px;">
-            <div>
-              <div class="meta" style="margin-bottom:4px;">Nome</div>
-              <div id="viewNome" style="color:var(--white);font-size:0.92rem;"></div>
-            </div>
-            <div>
-              <div class="meta" style="margin-bottom:4px;">Empresa</div>
-              <div id="viewEmpresa" style="color:var(--white);font-size:0.92rem;"></div>
-            </div>
-            <div>
-              <div class="meta" style="margin-bottom:4px;">Email</div>
-              <div id="viewEmail" style="color:var(--white);font-size:0.92rem;"></div>
-            </div>
-            <div>
-              <div class="meta" style="margin-bottom:4px;">WhatsApp</div>
-              <div id="viewWhatsapp" style="color:var(--white);font-size:0.92rem;"></div>
-            </div>
-            <div style="grid-column:1 / -1;">
-              <div class="meta" style="margin-bottom:4px;">Resumo do negócio</div>
-              <div id="viewResumo" style="color:var(--white);font-size:0.92rem;line-height:1.5;"></div>
-            </div>
+        <div class="card">
+          <h3 style="margin:0 0 4px;">Vídeos enviados</h3>
+          <p class="meta" style="margin-bottom:14px;">Tudo que já foi entregue para este cliente.</p>
+          <div class="view-toggle" id="perfilVideosFiltro" style="margin-bottom:16px;">
+            <span class="view-toggle-btn active" data-filtro="pendente" style="flex:1;text-align:center;">Em aprovação</span>
+            <span class="view-toggle-btn" data-filtro="aprovado" style="flex:1;text-align:center;">Aprovados</span>
+            <span class="view-toggle-btn" data-filtro="postado" style="flex:1;text-align:center;">Postados</span>
           </div>
+          <div id="perfilVideosLista"></div>
         </div>
-
-        <div id="perfilInfoForm">
-          <div class="field">
-            <label>Nome</label>
-            <input type="text" id="perfilEditNome">
-          </div>
-          <div class="field">
-            <label>Empresa</label>
-            <input type="text" id="perfilEditEmpresa">
-          </div>
-          <div class="field">
-            <label>Email</label>
-            <input type="text" id="perfilEditEmail">
-          </div>
-          <div class="field">
-            <label>WhatsApp</label>
-            <input type="text" id="perfilEditWhatsapp" placeholder="Ex: (32) 99164-6261">
-          </div>
-          <div class="field">
-            <label>Resumo do negócio</label>
-            <textarea id="perfilEditResumo" rows="3" placeholder="Breve resumo do que o cliente faz"></textarea>
-          </div>
-          <button class="btn" id="btnSalvarInfoCliente">Salvar informações</button>
-          <p class="success-msg" id="perfilInfoMsg"></p>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="margin-bottom:14px;">Calendário completo</h3>
-        <p class="meta" id="perfilCalMes" style="margin-bottom:12px;"></p>
-        <div id="perfilCalendario"></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
-          <span style="width:12px;height:12px;border-radius:3px;background:rgba(110,45,231,0.28);display:inline-block;"></span>
-          <span class="meta">Dia com vídeo programado</span>
-        </div>
-        <div id="perfilCalDetalhe" style="margin-top:14px;"></div>
       </div>
     </section>
 
@@ -1064,6 +1079,10 @@ function abrirPerfilCliente(uid) {
   perfilEditando = false;
   const c = clientesCache[uid] || {};
 
+  perfilVideoFiltro = 'pendente';
+  document.querySelectorAll('#perfilVideosFiltro .view-toggle-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('#perfilVideosFiltro [data-filtro="pendente"]').classList.add('active');
+
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-perfil').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -1084,8 +1103,52 @@ function abrirPerfilCliente(uid) {
     perfilEntregas = [];
     snap.forEach(d => perfilEntregas.push({ id: d.id, ...d.data() }));
     renderPerfilCalendario();
+    renderPerfilVideos();
   });
 }
+
+let perfilVideoFiltro = 'pendente';
+function perfilVideoCardHtml(v) {
+  const feedback = v.feedback || {};
+  const publicado = isPublicado(v);
+  let badgeClass = 'badge-pending', badgeTexto = 'Em aprovação';
+  if (publicado) { badgeClass = 'badge-neutral'; badgeTexto = 'Postado'; }
+  else if (feedback.tipo === 'aprovado') { badgeClass = 'badge-approved'; badgeTexto = 'Aprovado'; }
+  return `
+    <div class="video-mini-card" data-perfil-video="${v.id}" style="padding:14px 16px;margin-bottom:10px;">
+      <h5 style="font-size:0.9rem;">${v.titulo}</h5>
+      <div class="meta">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+      <span class="badge ${badgeClass}" style="margin-top:8px;">${badgeTexto}</span>
+    </div>
+  `;
+}
+function renderPerfilVideos() {
+  const box = document.getElementById('perfilVideosLista');
+  if (!box) return;
+  let lista;
+  if (perfilVideoFiltro === 'postado') {
+    lista = perfilEntregas.filter(v => isPublicado(v));
+  } else if (perfilVideoFiltro === 'aprovado') {
+    lista = perfilEntregas.filter(v => !isPublicado(v) && v.feedback && v.feedback.tipo === 'aprovado');
+  } else {
+    lista = perfilEntregas.filter(v => !isPublicado(v) && !(v.feedback && v.feedback.tipo === 'aprovado'));
+  }
+  box.innerHTML = lista.length ? lista.map(perfilVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
+  box.querySelectorAll('[data-perfil-video]').forEach(card => {
+    card.addEventListener('click', () => {
+      const v = perfilEntregas.find(e => e.id === card.dataset.perfilVideo);
+      if (v) abrirVideoDetalheModal(v);
+    });
+  });
+}
+document.querySelectorAll('#perfilVideosFiltro .view-toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#perfilVideosFiltro .view-toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    perfilVideoFiltro = btn.dataset.filtro;
+    renderPerfilVideos();
+  });
+});
 
 document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
   if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
