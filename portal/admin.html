@@ -365,7 +365,7 @@
   </main>
 </div>
 
-<div class="modal-overlay" id="confirmModal" style="display:none;">
+<div class="modal-overlay" id="confirmModal" style="display:none;z-index:1000;">
   <div class="modal-box">
     <h3 id="confirmModalTitulo">Excluir?</h3>
     <p id="confirmModalTexto"></p>
@@ -753,7 +753,7 @@ let notaDiaEventosAtual = [];
 function eventoCardHtml(ev) {
   return `
     <div class="video-mini-card" style="cursor:default;margin-bottom:10px;padding:14px 16px;">
-      <button class="video-del-btn" data-del-evento="${ev.id}" aria-label="Excluir evento">&#10005;</button>
+      <button class="video-del-btn" data-del-evento="${ev.id}" data-nome-evento="${(ev.nome || '').replace(/"/g,'&quot;')}" aria-label="Excluir evento">&#10005;</button>
       <h5 style="padding-right:20px;font-size:0.92rem;">${ev.nome}</h5>
       <div class="meta" style="margin-top:3px;">${ev.horario || 'Sem horário'}</div>
       ${ev.descricao ? `<div style="color:var(--gray);font-size:0.82rem;margin-top:8px;line-height:1.4;">${ev.descricao}</div>` : ''}
@@ -767,10 +767,18 @@ function renderNotaDiaEventos() {
     ? notaDiaEventosAtual.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||'')).map(eventoCardHtml).join('')
     : '';
   box.querySelectorAll('[data-del-evento]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      notaDiaEventosAtual = notaDiaEventosAtual.filter(ev => ev.id !== btn.dataset.delEvento);
-      await salvarEventosDoDia();
-      renderNotaDiaEventos();
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.delEvento;
+      const nome = btn.dataset.nomeEvento;
+      abrirConfirmModal(
+        'Excluir este evento?',
+        `"${nome}" vai ser removido desse dia. Essa ação não pode ser desfeita.`,
+        async () => {
+          notaDiaEventosAtual = notaDiaEventosAtual.filter(ev => ev.id !== id);
+          await salvarEventosDoDia();
+          renderNotaDiaEventos();
+        }
+      );
     });
   });
 }
