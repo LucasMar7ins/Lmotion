@@ -4,13 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" type="image/jpeg" href="assets/logo-web.jpg">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
 <button class="menu-toggle-mobile" id="menuToggle">☰</button>
+
+<div class="toast-wrap" id="toastWrap"></div>
 
 <div class="app-shell">
   <svg class="shell-grain" aria-hidden="true"><filter id="shellGrainFilter"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#shellGrainFilter)"/></svg>
@@ -493,6 +496,41 @@
 <script>
 let currentUser = null;
 let clientesCache = {};
+
+function showToast(msg, tipo) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (tipo === 'info' ? ' toast-info' : tipo === 'error' ? ' toast-error' : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('toast-show'));
+  setTimeout(() => {
+    el.classList.remove('toast-show');
+    setTimeout(() => el.remove(), 300);
+  }, 2400);
+}
+
+// --- Erro genérico em ações que falharem (ex: sem conexão) ---
+window.addEventListener('unhandledrejection', (e) => {
+  console.error(e.reason);
+  showToast('Não foi possível salvar. Verifique sua conexão e tente novamente.', 'error');
+  e.preventDefault();
+});
+
+// --- Aviso ao sair com formulário não salvo ---
+let formSujo = false;
+document.addEventListener('input', (e) => {
+  if (e.target.matches('input, textarea, select')) formSujo = true;
+});
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.btn')) setTimeout(() => { formSujo = false; }, 300);
+});
+window.addEventListener('beforeunload', (e) => {
+  if (!formSujo) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
+
 let perfilUid = null;
 let perfilUnsub = null;
 let perfilEntregas = [];
@@ -1033,6 +1071,14 @@ document.getElementById('btnAbrirCadastroCliente').addEventListener('click', () 
 });
 document.getElementById('btnFecharCadastroCliente').addEventListener('click', () => {
   document.getElementById('cadastroClienteModal').style.display = 'none';
+});
+
+document.getElementById('clWhatsapp').addEventListener('input', (e) => {
+  const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+  let out = digits;
+  if (digits.length > 2) out = '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+  if (digits.length > 7) out = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
+  e.target.value = out;
 });
 
 document.getElementById('btnAddCliente').addEventListener('click', async () => {

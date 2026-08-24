@@ -4,9 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" type="image/jpeg" href="assets/logo-web.jpg">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 
@@ -299,6 +300,27 @@
 let currentUser = null;
 let meusVideosCache = [];
 let minhasDuvidasCache = [];
+
+// --- Erro genérico em ações que falharem (ex: sem conexão) ---
+window.addEventListener('unhandledrejection', (e) => {
+  console.error(e.reason);
+  showToast('Não foi possível salvar. Verifique sua conexão e tente novamente.', 'error');
+  e.preventDefault();
+});
+
+// --- Aviso ao sair com formulário não salvo ---
+let formSujo = false;
+document.addEventListener('input', (e) => {
+  if (e.target.matches('input, textarea, select')) formSujo = true;
+});
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.btn')) setTimeout(() => { formSujo = false; }, 300);
+});
+window.addEventListener('beforeunload', (e) => {
+  if (!formSujo) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
 
 function saudacaoPorHorario() {
   const h = new Date().getHours();
@@ -763,7 +785,7 @@ function animarNumero(el, valorFinal) {
 function showToast(msg, tipo) {
   const wrap = document.getElementById('toastWrap');
   const el = document.createElement('div');
-  el.className = 'toast' + (tipo === 'info' ? ' toast-info' : '');
+  el.className = 'toast' + (tipo === 'info' ? ' toast-info' : tipo === 'error' ? ' toast-error' : '');
   el.textContent = msg;
   wrap.appendChild(el);
   requestAnimationFrame(() => el.classList.add('toast-show'));

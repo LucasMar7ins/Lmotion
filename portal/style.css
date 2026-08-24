@@ -523,6 +523,7 @@ a{color:var(--purple-light);text-decoration:none;}
 .toast{background:#152a1e;border:1px solid rgba(62,207,106,0.4);color:var(--green);padding:10px 16px;border-radius:8px;font-size:0.85rem;font-weight:600;opacity:0;transform:translateY(-6px);transition:opacity .25s ease,transform .25s ease;box-shadow:0 8px 20px rgba(0,0,0,0.35);}
 .toast.toast-show{opacity:1;transform:translateY(0);}
 .toast.toast-info{background:#1f1830;border-color:rgba(155,107,242,0.4);color:var(--purple-light);}
+.toast.toast-error{background:#2a1414;border-color:rgba(227,85,85,0.4);color:var(--red);}
 
 @keyframes skelPulse{0%,100%{opacity:0.55;}50%{opacity:1;}}
 .skeleton-block{height:64px;border-radius:12px;background:#161616;margin-bottom:10px;animation:skelPulse 1.4s ease-in-out infinite;}
