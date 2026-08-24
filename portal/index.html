@@ -18,21 +18,52 @@
     <div class="login-logo-wrap">
       <img src="assets/logo-web.jpg" alt="Lmotion logo">
     </div>
-    <h1>Portal <span>Lmotion</span></h1>
-    <p class="sub">Entre com o email e senha cadastrados pela Lmotion.</p>
 
-    <form id="loginForm">
-      <div class="field">
-        <label for="email">Email</label>
-        <input type="email" id="email" required autocomplete="username">
+    <div id="viewLogin">
+      <h1>Portal <span>Lmotion</span></h1>
+      <p class="sub">Entre com o email e senha cadastrados pela Lmotion.</p>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="senha">Senha</label>
+          <input type="password" id="senha" required autocomplete="current-password">
+        </div>
+        <p style="text-align:center;margin:-6px 0 16px;">
+          <a href="#" id="linkEsqueci" style="color:var(--purple-light);font-size:0.82rem;text-decoration:none;">Esqueci minha senha</a>
+        </p>
+        <button type="submit" class="btn btn-block" id="btnEntrar">Entrar</button>
+        <p class="error-msg" id="errorMsg"></p>
+      </form>
+    </div>
+
+    <div id="viewReset" style="display:none;">
+      <h1 style="font-size:1.3rem;">Redefinir senha</h1>
+      <p class="sub">Digite o email cadastrado. Vamos enviar um link para você criar uma nova senha.</p>
+
+      <form id="resetForm">
+        <div class="field">
+          <label for="resetEmail">Email</label>
+          <input type="email" id="resetEmail" required autocomplete="username">
+        </div>
+        <button type="submit" class="btn btn-block" id="btnEnviarReset">Enviar link de redefinição</button>
+        <p class="error-msg" id="resetErrorMsg"></p>
+      </form>
+      <p style="text-align:center;margin-top:16px;">
+        <a href="#" id="linkVoltar1" style="color:var(--purple-light);font-size:0.82rem;text-decoration:none;">Voltar para o login</a>
+      </p>
+    </div>
+
+    <div id="viewConfirmacao" style="display:none;text-align:center;">
+      <div style="width:44px;height:44px;border-radius:50%;background:rgba(62,207,106,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
       </div>
-      <div class="field">
-        <label for="senha">Senha</label>
-        <input type="password" id="senha" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn btn-block" id="btnEntrar">Entrar</button>
-      <p class="error-msg" id="errorMsg"></p>
-    </form>
+      <p style="color:var(--white);font-size:0.88rem;line-height:1.6;margin:0 0 20px;">Se esse email estiver cadastrado, você vai receber um link para redefinir a senha.</p>
+      <a href="#" id="linkVoltar2" style="color:var(--purple-light);font-size:0.82rem;text-decoration:none;">Voltar para o login</a>
+    </div>
 
     <p class="login-footer">Lmotion &middot; portal do cliente</p>
   </div>
@@ -91,6 +122,61 @@ async function redirecionar(uid) {
     window.location.href = 'cliente.html';
   }
 }
+
+// --- Esqueci minha senha ---
+const viewLogin = document.getElementById('viewLogin');
+const viewReset = document.getElementById('viewReset');
+const viewConfirmacao = document.getElementById('viewConfirmacao');
+const resetForm = document.getElementById('resetForm');
+const btnEnviarReset = document.getElementById('btnEnviarReset');
+const resetErrorMsg = document.getElementById('resetErrorMsg');
+
+document.getElementById('linkEsqueci').addEventListener('click', (e) => {
+  e.preventDefault();
+  errorMsg.textContent = '';
+  viewLogin.style.display = 'none';
+  viewReset.style.display = 'block';
+});
+
+document.getElementById('linkVoltar1').addEventListener('click', (e) => {
+  e.preventDefault();
+  resetErrorMsg.textContent = '';
+  viewReset.style.display = 'none';
+  viewLogin.style.display = 'block';
+});
+
+document.getElementById('linkVoltar2').addEventListener('click', (e) => {
+  e.preventDefault();
+  viewConfirmacao.style.display = 'none';
+  viewLogin.style.display = 'block';
+});
+
+resetForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  resetErrorMsg.textContent = '';
+  btnEnviarReset.disabled = true;
+  btnEnviarReset.textContent = 'Enviando...';
+
+  const email = document.getElementById('resetEmail').value.trim();
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+  } catch (err) {
+    if (err.code === 'auth/invalid-email') {
+      resetErrorMsg.textContent = 'Digite um email válido.';
+      btnEnviarReset.disabled = false;
+      btnEnviarReset.textContent = 'Enviar link de redefinição';
+      return;
+    }
+    // Outros erros (ex: email não cadastrado) não são exibidos, por segurança.
+  }
+
+  btnEnviarReset.disabled = false;
+  btnEnviarReset.textContent = 'Enviar link de redefinição';
+  document.getElementById('resetEmail').value = '';
+  viewReset.style.display = 'none';
+  viewConfirmacao.style.display = 'block';
+});
 </script>
 
 </body>
