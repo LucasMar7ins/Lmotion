@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -611,9 +611,9 @@ function renderDashResumo() {
   const gravsAguardando = Object.entries(clientesCache).filter(([uid, c]) => colunaGravacao(c) === 'aguardando');
   const duvidasAbertas = duvidasCache.filter(d => d.status !== 'respondida');
 
-  document.getElementById('dashVideosAprovacao').textContent = pendentes.length;
-  document.getElementById('dashGravAguardando').textContent = gravsAguardando.length;
-  document.getElementById('dashDuvidasAbertas').textContent = duvidasAbertas.length;
+  animarNumero(document.getElementById('dashVideosAprovacao'), pendentes.length);
+  animarNumero(document.getElementById('dashGravAguardando'), gravsAguardando.length);
+  animarNumero(document.getElementById('dashDuvidasAbertas'), duvidasAbertas.length);
 
   const itens = [];
   pendentes.forEach(v => {
@@ -998,6 +998,23 @@ function formatarData(ts) {
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
+
+function animarNumero(el, valorFinal) {
+  if (!el) return;
+  const valorAtual = parseInt(el.textContent, 10) || 0;
+  if (valorAtual === valorFinal) { el.textContent = valorFinal; return; }
+  const passos = 12;
+  const incremento = (valorFinal - valorAtual) / passos;
+  let i = 0;
+  clearInterval(el._animTimer);
+  el._animTimer = setInterval(() => {
+    i++;
+    const v = Math.round(valorAtual + incremento * i);
+    el.textContent = i >= passos ? valorFinal : v;
+    if (i >= passos) clearInterval(el._animTimer);
+  }, 22);
+}
+
 function dateInputToTimestamp(value) {
   if (!value) return null;
   return firebase.firestore.Timestamp.fromDate(new Date(value + 'T12:00:00'));
@@ -1050,7 +1067,7 @@ function carregarClientes() {
     clientesCache = {};
     const grid = document.getElementById('gridClientes');
     const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
-    document.getElementById('dashClientesTotal').textContent = snap.size;
+    animarNumero(document.getElementById('dashClientesTotal'), snap.size);
 
     if (snap.empty) {
       grid.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';

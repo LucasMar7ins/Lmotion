@@ -4,11 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
 <button class="menu-toggle-mobile" id="menuToggle">☰</button>
+
+<div class="toast-wrap" id="toastWrap"></div>
 
 <div class="app-shell">
   <svg class="shell-grain" aria-hidden="true"><filter id="shellGrainFilter"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#shellGrainFilter)"/></svg>
@@ -45,7 +47,7 @@
       <div class="card" id="inicioDuvidaCard" style="display:none;background:rgba(155,107,242,0.08);border-color:rgba(155,107,242,0.3);cursor:pointer;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <div style="display:flex;align-items:center;gap:12px;">
-            <span style="width:7px;height:7px;border-radius:50%;background:var(--purple-light);display:inline-block;flex-shrink:0;"></span>
+            <span class="pulse-dot" style="width:7px;height:7px;border-radius:50%;background:var(--purple-light);display:inline-block;flex-shrink:0;"></span>
             <div>
               <div style="color:var(--white);font-size:0.9rem;font-weight:600;">Sua dúvida foi respondida</div>
               <div class="meta" style="margin-top:2px;" id="inicioDuvidaResumo"></div>
@@ -512,8 +514,8 @@ function renderInicioResumo() {
     })
     .sort((a, b) => a.d - b.d);
 
-  statAprovacao.textContent = pendentes.length;
-  document.getElementById('inicioStatNoAr').textContent = noAr.length;
+  animarNumero(statAprovacao, pendentes.length);
+  animarNumero(document.getElementById('inicioStatNoAr'), noAr.length);
 
   const statProximo = document.getElementById('inicioStatProximoPost');
   if (futuros.length) {
@@ -677,6 +679,7 @@ document.getElementById('cpModalCancelar').addEventListener('click', () => {
 document.getElementById('cpModalConfirmar').addEventListener('click', async () => {
   document.getElementById('confirmarPresencaModal').style.display = 'none';
   await salvarConfirmacaoGravacao('confirmada');
+  showToast('Presença confirmada');
 });
 
 function abrirDesmarcarModal() {
@@ -693,6 +696,7 @@ document.getElementById('dgModalConfirmar').addEventListener('click', async () =
   const motivo = document.getElementById('dgModalMotivo').value.trim();
   document.getElementById('desmarcarGravacaoModal').style.display = 'none';
   await salvarConfirmacaoGravacao('remarcar', motivo);
+  showToast('Gravação desmarcada', 'info');
 });
 
 // --- Util: transformar link do Drive em link de preview ---
@@ -707,6 +711,35 @@ function formatarData(ts) {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function animarNumero(el, valorFinal) {
+  if (!el) return;
+  const valorAtual = parseInt(el.textContent, 10) || 0;
+  if (valorAtual === valorFinal) { el.textContent = valorFinal; return; }
+  const passos = 12;
+  const incremento = (valorFinal - valorAtual) / passos;
+  let i = 0;
+  clearInterval(el._animTimer);
+  el._animTimer = setInterval(() => {
+    i++;
+    const v = Math.round(valorAtual + incremento * i);
+    el.textContent = i >= passos ? valorFinal : v;
+    if (i >= passos) clearInterval(el._animTimer);
+  }, 22);
+}
+
+function showToast(msg, tipo) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (tipo === 'info' ? ' toast-info' : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('toast-show'));
+  setTimeout(() => {
+    el.classList.remove('toast-show');
+    setTimeout(() => el.remove(), 300);
+  }, 2400);
 }
 
 // --- VÍDEOS ---
@@ -817,6 +850,7 @@ document.getElementById('vdBtnAprovar').addEventListener('click', async () => {
     feedback: { tipo: 'aprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
   }, { merge: true });
   fecharVideoDetalheCliente();
+  showToast('Vídeo aprovado');
 });
 
 document.getElementById('vdBtnAbrirAlt').addEventListener('click', () => {
@@ -838,6 +872,7 @@ document.getElementById('vdAltOk').addEventListener('click', async () => {
     feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
   }, { merge: true });
   fecharVideoDetalheCliente();
+  showToast('Pedido de alteração enviado', 'info');
 });
 
 // --- CALENDÁRIO ---
