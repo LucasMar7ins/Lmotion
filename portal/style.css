@@ -78,7 +78,16 @@ a{color:var(--purple-light);text-decoration:none;}
   max-width:380px;
   position:relative;
   z-index:1;
+  transition:opacity .3s ease;
 }
+.auth-spinner-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;z-index:1;}
+.auth-spinner-wrap span{color:var(--gray);font-size:0.82rem;}
+.auth-spinner{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--purple-light);animation:authSpin 0.8s linear infinite;}
+@keyframes authSpin{to{transform:rotate(360deg);}}
+.pw-wrap{position:relative;}
+.pw-wrap input{padding-right:42px;}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:var(--gray);cursor:pointer;padding:6px;display:flex;align-items:center;}
+.pw-toggle:hover{color:var(--white);}
 .login-card h1{
   font-size:1.5rem;
   margin-bottom:6px;
