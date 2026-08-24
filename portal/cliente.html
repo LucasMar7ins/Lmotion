@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -752,6 +752,7 @@ function carregarVideos() {
       snap.forEach(docSnap => meusVideosCache.push({ id: docSnap.id, ...docSnap.data() }));
       renderInicioResumo();
       renderVideosBoard();
+      renderCalendarioLista();
     });
 }
 
@@ -876,31 +877,65 @@ document.getElementById('vdAltOk').addEventListener('click', async () => {
 });
 
 // --- CALENDÁRIO ---
-function carregarCalendario() {
-  db.collection('entregas')
-    .where('clienteId', '==', currentUser.uid)
-    .orderBy('dataPostagem', 'asc')
-    .onSnapshot(snap => {
-      const box = document.getElementById('listaCalendario');
-      if (snap.empty) {
-        box.innerHTML = '<div class="empty-state">Nenhuma postagem programada ainda.</div>';
-        return;
-      }
-      box.innerHTML = '';
-      snap.forEach(docSnap => {
-        const v = docSnap.data();
-        if (!v.dataPostagem) return;
-        const item = document.createElement('div');
-        item.className = 'cal-group';
-        item.innerHTML = `
-          <div class="cal-date">${formatarData(v.dataPostagem)}</div>
-          <div class="cal-item">${v.titulo || 'Sem título'}</div>
-        `;
-        box.appendChild(item);
-      });
-    });
+function clienteCalendarCardHtml(v) {
+  const feedback = v.feedback || {};
+  let badgeClass = 'badge-pending', badgeTexto = 'Aguardando avaliação';
+  if (feedback.tipo === 'aprovado') { badgeClass = 'badge-approved'; badgeTexto = 'Aprovado'; }
+  else if (feedback.tipo === 'reprovado') { badgeClass = 'badge-rejected'; badgeTexto = 'Em alteração'; }
+  const horario = v.horarioPostagem || 'Horário não definido';
+  const legendaTexto = v.legenda ? `Legenda: ${v.legenda}` : 'Sem legenda adicionada.';
+  return `
+    <div class="video-mini-card" data-abrir-video="${v.id}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <h5>${v.titulo || 'Sem título'}</h5>
+        <span class="badge ${badgeClass}">${badgeTexto}</span>
+      </div>
+      <div class="cal-horario-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 15"></polyline></svg>
+        <span>${horario}</span>
+      </div>
+      <p class="cal-legenda-preview">${legendaTexto}</p>
+    </div>
+  `;
 }
-document.querySelector('[data-tab="calendario"]').addEventListener('click', carregarCalendario, { once: true });
+
+function renderCalendarioLista() {
+  const box = document.getElementById('listaCalendario');
+  if (!box) return;
+
+  const lista = meusVideosCache.filter(v => v.dataPostagem).slice().sort((a, b) => {
+    const da = a.dataPostagem.toDate ? a.dataPostagem.toDate() : new Date(a.dataPostagem);
+    const db_ = b.dataPostagem.toDate ? b.dataPostagem.toDate() : new Date(b.dataPostagem);
+    return da - db_;
+  });
+
+  if (!lista.length) {
+    box.innerHTML = '<div class="empty-state">Nenhuma postagem programada ainda.</div>';
+    return;
+  }
+
+  const grupos = [];
+  let grupoAtual = null;
+  lista.forEach(v => {
+    const chave = formatarData(v.dataPostagem);
+    if (!grupoAtual || grupoAtual.chave !== chave) {
+      grupoAtual = { chave, itens: [] };
+      grupos.push(grupoAtual);
+    }
+    grupoAtual.itens.push(v);
+  });
+
+  box.innerHTML = grupos.map(g => `
+    <div class="cal-group">
+      <div class="cal-date">${g.chave}</div>
+      ${g.itens.map(clienteCalendarCardHtml).join('')}
+    </div>
+  `).join('');
+
+  box.querySelectorAll('[data-abrir-video]').forEach(el => {
+    el.addEventListener('click', () => abrirVideoDetalheCliente(el.dataset.abrirVideo));
+  });
+}
 
 // --- MATERIAIS ---
 document.getElementById('btnEnviarMaterial').addEventListener('click', async () => {

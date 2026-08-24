@@ -411,6 +411,10 @@ a{color:var(--purple-light);text-decoration:none;}
   margin-bottom:8px;
   font-size:0.9rem;
 }
+.cal-horario-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(155,107,242,0.12);border:1px solid rgba(155,107,242,0.35);border-radius:8px;padding:5px 10px;margin-top:10px;}
+.cal-horario-pill svg{color:var(--purple-light);}
+.cal-horario-pill span{color:#c9b8f5;font-size:0.8rem;font-weight:700;}
+.cal-legenda-preview{color:var(--gray);font-size:0.82rem;line-height:1.5;margin:10px 0 0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 
 .table-list .row{
   display:flex;
