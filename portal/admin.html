@@ -20,7 +20,6 @@
     <div class="role-tag">Administrador</div>
 
     <div class="nav-item active" data-tab="dashboard">Dashboard</div>
-    <div class="nav-item" data-tab="cadastro">Cadastrar cliente</div>
     <div class="nav-item" data-tab="clientes">Clientes</div>
     <div class="nav-item" data-tab="videos">Entregar vídeos</div>
     <div class="nav-item" data-tab="entregas">Entregas</div>
@@ -205,43 +204,14 @@
       </div>
     </section>
 
-    <!-- CADASTRAR CLIENTE -->
-    <section class="tab-section" id="tab-cadastro">
-      <h2>Cadastrar cliente</h2>
-      <p class="page-sub">
-        Para criar o login de um cliente: vá no Firebase Console → Authentication → Add user (email e senha).
-        Depois copie o UID gerado e cadastre os dados dele aqui embaixo.
-      </p>
-      <div class="card">
-        <div class="field">
-          <label>UID (copiado do Firebase Authentication)</label>
-          <input type="text" id="clUid" placeholder="Ex: A1b2C3d4E5...">
-        </div>
-        <div class="field">
-          <label>Nome do cliente</label>
-          <input type="text" id="clNome">
-        </div>
-        <div class="field">
-          <label>Empresa / marca</label>
-          <input type="text" id="clEmpresa">
-        </div>
-        <div class="field">
-          <label>Email de login</label>
-          <input type="email" id="clEmail">
-        </div>
-        <div class="field">
-          <label>WhatsApp</label>
-          <input type="text" id="clWhatsapp" placeholder="Ex: (32) 99164-6261">
-        </div>
-        <button class="btn" id="btnAddCliente">Cadastrar / atualizar cliente</button>
-        <p class="success-msg" id="clienteMsg"></p>
-      </div>
-    </section>
-
     <!-- CLIENTES -->
     <section class="tab-section" id="tab-clientes">
       <h2>Clientes</h2>
       <p class="page-sub">Clique em um cliente para abrir o perfil dele.</p>
+      <button class="btn" id="btnAbrirCadastroCliente" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:22px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Cadastrar cliente
+      </button>
       <div id="gridClientes" class="client-grid"><div class="empty-state">Carregando...</div></div>
     </section>
 
@@ -374,6 +344,41 @@
     </section>
 
   </main>
+</div>
+
+<div class="modal-overlay" id="cadastroClienteModal" style="display:none;">
+  <div class="modal-box" style="width:420px;">
+    <h3 style="margin:0 0 6px;">Cadastrar cliente</h3>
+    <p style="color:var(--gray);font-size:0.82rem;line-height:1.5;margin:0 0 18px;">
+      Para criar o login de um cliente: vá no Firebase Console → Authentication → Add user (email e senha).
+      Depois copie o UID gerado e cadastre os dados dele aqui embaixo.
+    </p>
+    <div class="field">
+      <label>UID (copiado do Firebase Authentication)</label>
+      <input type="text" id="clUid" placeholder="Ex: A1b2C3d4E5...">
+    </div>
+    <div class="field">
+      <label>Nome do cliente</label>
+      <input type="text" id="clNome">
+    </div>
+    <div class="field">
+      <label>Empresa / marca</label>
+      <input type="text" id="clEmpresa">
+    </div>
+    <div class="field">
+      <label>Email de login</label>
+      <input type="email" id="clEmail">
+    </div>
+    <div class="field">
+      <label>WhatsApp</label>
+      <input type="text" id="clWhatsapp" placeholder="Ex: (32) 99164-6261">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btnFecharCadastroCliente">Cancelar</button>
+      <button class="btn" id="btnAddCliente" style="flex:1.4;">Cadastrar / atualizar cliente</button>
+    </div>
+    <p class="success-msg" id="clienteMsg"></p>
+  </div>
 </div>
 
 <div class="modal-overlay" id="confirmModal" style="display:none;z-index:1000;">
@@ -1021,6 +1026,13 @@ function dateInputToTimestamp(value) {
 }
 
 // --- CADASTRAR CLIENTE ---
+document.getElementById('btnAbrirCadastroCliente').addEventListener('click', () => {
+  document.getElementById('cadastroClienteModal').style.display = 'flex';
+});
+document.getElementById('btnFecharCadastroCliente').addEventListener('click', () => {
+  document.getElementById('cadastroClienteModal').style.display = 'none';
+});
+
 document.getElementById('btnAddCliente').addEventListener('click', async () => {
   const uid = document.getElementById('clUid').value.trim();
   const nome = document.getElementById('clNome').value.trim();
@@ -1040,6 +1052,7 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
   document.getElementById('clEmpresa').value = '';
   document.getElementById('clEmail').value = '';
   document.getElementById('clWhatsapp').value = '';
+  document.getElementById('cadastroClienteModal').style.display = 'none';
   const msg = document.getElementById('clienteMsg');
   msg.textContent = 'Cliente cadastrado!';
   setTimeout(() => msg.textContent = '', 3000);
