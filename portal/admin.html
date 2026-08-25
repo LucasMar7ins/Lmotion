@@ -624,7 +624,12 @@ document.getElementById('menuToggle').addEventListener('click', () => {
 });
 
 document.getElementById('btnSair').addEventListener('click', () => {
-  auth.signOut().then(() => window.location.href = 'index.html');
+  abrirConfirmModal(
+    'Sair da conta',
+    'Tem certeza que deseja sair? Você vai precisar entrar novamente com seu email e senha.',
+    () => auth.signOut().then(() => window.location.href = 'index.html'),
+    'Sair'
+  );
 });
 
 auth.onAuthStateChanged(async (user) => {
@@ -1574,9 +1579,10 @@ document.getElementById('btnAddVideo').addEventListener('click', async () => {
 });
 
 let confirmModalAction = null;
-function abrirConfirmModal(titulo, texto, onConfirm) {
+function abrirConfirmModal(titulo, texto, onConfirm, confirmTexto) {
   document.getElementById('confirmModalTitulo').textContent = titulo;
   document.getElementById('confirmModalTexto').textContent = texto;
+  document.getElementById('confirmModalConfirmar').textContent = confirmTexto || 'Excluir';
   confirmModalAction = onConfirm;
   document.getElementById('confirmModal').style.display = 'flex';
 }

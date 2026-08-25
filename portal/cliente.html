@@ -313,6 +313,17 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="sairModal" style="display:none;">
+  <div class="modal-box">
+    <h3>Sair da conta</h3>
+    <p>Tem certeza que deseja sair? Você vai precisar entrar novamente com seu email e senha.</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="sairModalConfirmar">Sair</button>
+      <button class="btn btn-outline" id="sairModalCancelar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -377,6 +388,12 @@ document.getElementById('menuToggle').addEventListener('click', () => {
 });
 
 document.getElementById('btnSair').addEventListener('click', () => {
+  document.getElementById('sairModal').style.display = 'flex';
+});
+document.getElementById('sairModalCancelar').addEventListener('click', () => {
+  document.getElementById('sairModal').style.display = 'none';
+});
+document.getElementById('sairModalConfirmar').addEventListener('click', () => {
   auth.signOut().then(() => window.location.href = 'index.html');
 });
 
