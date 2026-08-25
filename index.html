@@ -324,6 +324,25 @@
     max-width:500px;margin-left:auto;margin-right:auto;
   }
 
+  /* TESTIMONIALS */
+  .testimonials{background:var(--black-soft);}
+  .testimonial-card{
+    max-width:640px;margin:0 auto;background:var(--black);
+    border:1px solid rgba(255,255,255,0.08);border-radius:20px;
+    padding:48px 44px;text-align:center;
+    transition:transform .3s, border-color .3s, box-shadow .3s;
+  }
+  .testimonial-card:hover{
+    transform:translateY(-6px);border-color:var(--purple);
+    box-shadow:0 0 0 1px rgba(110,45,231,0.3), 0 20px 40px rgba(110,45,231,0.15);
+  }
+  .testimonial-quote{color:var(--purple);margin-bottom:20px;}
+  .testimonial-text{color:#e8e8e8;font-size:1.15rem;line-height:1.7;margin:0 0 30px;}
+  .testimonial-author{display:flex;align-items:center;justify-content:center;gap:14px;}
+  .testimonial-author img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+  .testimonial-name{color:#fff;font-weight:700;font-size:0.98rem;text-align:left;}
+  .testimonial-role{color:var(--gray);font-size:0.85rem;text-align:left;}
+
   /* PROCESS */
   .process-grid{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
@@ -461,7 +480,7 @@
       <li><a href="#servicos">Serviços</a></li>
       <li><a href="#diferenciais">Diferenciais</a></li>
       <li><a href="#estudio">Estúdio</a></li>
-      <li><a href="#portfolio">Portfólio</a></li>
+      <li><a href="#depoimentos">Depoimentos</a></li>
       <li><a href="#processo">Processo</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#contato">Contato</a></li>
@@ -480,7 +499,7 @@
   <a href="#servicos">Serviços</a>
   <a href="#diferenciais">Diferenciais</a>
   <a href="#estudio">Estúdio</a>
-  <a href="#portfolio">Portfólio</a>
+  <a href="#depoimentos">Depoimentos</a>
   <a href="#processo">Processo</a>
   <a href="#faq">FAQ</a>
   <a href="#contato">Contato</a>
@@ -496,7 +515,7 @@
   <p>A Lmotion é uma agência especializada em gestão de redes sociais e branding, com processo pensado para devolver tempo à sua rotina e resultado consistente para a sua marca.</p>
   <div class="hero-btns">
     <a href="https://wa.me/5532991646261" target="_blank" rel="noopener" class="btn-primary">Solicitar orçamento<span class="btn-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span></a>
-    <a href="#portfolio" class="btn-secondary">Ver portfólio</a>
+    <a href="#depoimentos" class="btn-secondary">Ver depoimentos</a>
   </div>
 </section>
 
@@ -608,37 +627,20 @@
   </div>
 </section>
 
-<section class="portfolio" id="portfolio">
-  <span class="section-tag">Portfólio</span>
-  <h2 class="section-title">Projetos em movimento</h2>
-  <p class="section-desc">Uma amostra do que criamos para nossos clientes.</p>
-  <div class="portfolio-grid">
-    <div class="case-card">
-      <div class="case-thumb">Case em breve</div>
-      <div class="case-info">
-        <span>Branding</span>
-        <h4>Projeto de identidade visual</h4>
-        <p>Espaço reservado para um case de branding. Em breve.</p>
-      </div>
-    </div>
-    <div class="case-card">
-      <div class="case-thumb">Case em breve</div>
-      <div class="case-info">
-        <span>Social Media</span>
-        <h4>Gestão de redes sociais</h4>
-        <p>Espaço reservado para um case de gestão de redes. Em breve.</p>
-      </div>
-    </div>
-    <div class="case-card">
-      <div class="case-thumb">Case em breve</div>
-      <div class="case-info">
-        <span>Branding + Social</span>
-        <h4>Projeto 360°</h4>
-        <p>Espaço reservado para um case completo. Em breve.</p>
+<section class="testimonials" id="depoimentos">
+  <span class="section-tag">O que dizem sobre a gente</span>
+  <h2 class="section-title">Depoimentos</h2>
+  <div class="testimonial-card">
+    <svg class="testimonial-quote" width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 7C6.5 7 4 9.5 4 12.9c0 3 2.1 5.1 4.7 5.1.4 0 .8-.1 1-.2-.5 1.7-2 3-3.9 3.4l.4 1.8c3.4-.6 6.3-3.4 6.3-7.4C12.5 11.8 11.1 7 9.5 7zm10 0c-3 0-5.5 2.5-5.5 5.9 0 3 2.1 5.1 4.7 5.1.4 0 .8-.1 1-.2-.5 1.7-2 3-3.9 3.4l.4 1.8c3.4-.6 6.3-3.4 6.3-7.4C22.5 11.8 21.1 7 19.5 7z"/></svg>
+    <p class="testimonial-text">Quanta excelência em todo o seu trabalho! Do ambiente à gravação, tudo muito bem pensado e preparado. Todo profissional que quer externar ao público o seu trabalho, independentemente do ramo, deve ter um acompanhamento de altíssima qualidade como o seu.</p>
+    <div class="testimonial-author">
+      <img src="assets/metafisio-logo.png" alt="Metafisio" loading="lazy">
+      <div>
+        <div class="testimonial-name">Guilherme</div>
+        <div class="testimonial-role">Dono da Metafisio</div>
       </div>
     </div>
   </div>
-  <p class="portfolio-note">Esta seção foi criada com espaços reservados. Assim que você tiver seus cases prontos, é só me passar as imagens e resultados que eu atualizo o portfólio.</p>
 </section>
 
 <section id="processo">
