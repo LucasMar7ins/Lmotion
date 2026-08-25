@@ -979,7 +979,8 @@ document.getElementById('vdAltOk').addEventListener('click', async () => {
 function clienteCalendarCardHtml(v) {
   const feedback = v.feedback || {};
   let badgeClass = 'badge-pending', badgeTexto = 'Aguardando avaliação';
-  if (feedback.tipo === 'aprovado') { badgeClass = 'badge-approved'; badgeTexto = 'Aprovado'; }
+  if (feedback.tipo === 'aprovado' && isPublicado(v)) { badgeClass = 'badge-approved'; badgeTexto = 'Publicado'; }
+  else if (feedback.tipo === 'aprovado') { badgeClass = 'badge-approved'; badgeTexto = 'Aprovado'; }
   else if (feedback.tipo === 'reprovado') { badgeClass = 'badge-rejected'; badgeTexto = 'Em alteração'; }
   const horario = v.horarioPostagem || 'Horário não definido';
   const legendaTexto = v.legenda ? `Legenda: ${v.legenda}` : 'Sem legenda adicionada.';
