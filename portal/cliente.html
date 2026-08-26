@@ -852,6 +852,7 @@ function montarNotificacoes() {
     const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
     if (g.status === 'remarcar') {
       itens.push({
+        key: `grav-remarcar-${g.id}`,
         tipo: 'gravacao_remarcar',
         titulo: 'Gravação desmarcada, aguardando novo agendamento',
         sub: g.motivo ? `Motivo: "${g.motivo}"` : 'A Lmotion vai entrar em contato',
@@ -859,6 +860,7 @@ function montarNotificacoes() {
       });
     } else if (ehHoje(d) || ehAmanha(d)) {
       itens.push({
+        key: `grav-${g.id}`,
         tipo: 'gravacao',
         titulo: `Gravação ${ehHoje(d) ? 'hoje' : 'amanhã'} às ${g.horario || 'horário a definir'}`,
         sub: `Local: ${g.endereco || 'a definir'}`,
@@ -872,6 +874,7 @@ function montarNotificacoes() {
     const d = v.dataPostagem.toDate ? v.dataPostagem.toDate() : new Date(v.dataPostagem);
     if (ehHoje(d) || ehAmanha(d)) {
       itens.push({
+        key: `post-${v.id}`,
         tipo: 'post',
         titulo: `Post programado ${ehHoje(d) ? 'hoje' : 'amanhã'}`,
         sub: `"${v.titulo || 'Sem título'}" · ${v.horarioPostagem || 'horário a definir'}`,
@@ -883,6 +886,7 @@ function montarNotificacoes() {
   const pendentesNovos = meusVideosCache.filter(v => !(v.feedback && v.feedback.tipo));
   if (pendentesNovos.length) {
     itens.push({
+      key: `aprov-${pendentesNovos.map(v => v.id).sort().join(',')}`,
       tipo: 'aprovacao',
       titulo: pendentesNovos.length === 1 ? 'Vídeo novo aguardando aprovação' : `${pendentesNovos.length} vídeos aguardando aprovação`,
       sub: 'Dê uma olhada quando puder',
@@ -893,6 +897,26 @@ function montarNotificacoes() {
   return itens;
 }
 
+// --- Estado lido/não lido (salvo no navegador) ---
+function notifLidasSet() {
+  try {
+    const raw = localStorage.getItem('notifLidas_' + (currentUser ? currentUser.uid : 'anon'));
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (e) {
+    return new Set();
+  }
+}
+function salvarNotifLidas(set) {
+  try {
+    localStorage.setItem('notifLidas_' + (currentUser ? currentUser.uid : 'anon'), JSON.stringify([...set]));
+  } catch (e) {}
+}
+function marcarNotifLida(key) {
+  const set = notifLidasSet();
+  set.add(key);
+  salvarNotifLidas(set);
+}
+
 let notifItensAtuais = [];
 
 function renderNotificacoes() {
@@ -900,10 +924,17 @@ function renderNotificacoes() {
   if (!btn) return;
   notifItensAtuais = montarNotificacoes();
 
+  let lidas = notifLidasSet();
+  const chavesAtuais = new Set(notifItensAtuais.map(it => it.key));
+  const lidasPodadas = new Set([...lidas].filter(k => chavesAtuais.has(k)));
+  if (lidasPodadas.size !== lidas.size) { salvarNotifLidas(lidasPodadas); }
+  lidas = lidasPodadas;
+
+  const naoLidas = notifItensAtuais.filter(it => !lidas.has(it.key));
   const count = document.getElementById('notifCount');
-  if (notifItensAtuais.length) {
+  if (naoLidas.length) {
     count.style.display = 'flex';
-    count.textContent = notifItensAtuais.length > 9 ? '9+' : notifItensAtuais.length;
+    count.textContent = naoLidas.length > 9 ? '9+' : naoLidas.length;
   } else {
     count.style.display = 'none';
   }
@@ -912,8 +943,9 @@ function renderNotificacoes() {
   lista.innerHTML = notifItensAtuais.length
     ? notifItensAtuais.map((item, i) => {
         const ic = iconeNotif(item.tipo);
+        const lida = lidas.has(item.key);
         return `
-          <div class="notif-item" data-notif-idx="${i}">
+          <div class="notif-item ${lida ? 'read' : 'unread'}" data-notif-idx="${i}">
             <div class="notif-icon" style="background:${ic.bg};color:${ic.cor};">${ic.svg}</div>
             <div>
               <div class="notif-item-titulo">${item.titulo}</div>
@@ -928,7 +960,11 @@ function renderNotificacoes() {
     el.addEventListener('click', () => {
       const item = notifItensAtuais[Number(el.dataset.notifIdx)];
       document.getElementById('notifDropdown').classList.remove('open');
-      if (item && item.onClick) item.onClick();
+      if (item) {
+        marcarNotifLida(item.key);
+        renderNotificacoes();
+        if (item.onClick) item.onClick();
+      }
     });
   });
 }
