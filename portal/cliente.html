@@ -1226,7 +1226,8 @@ function abrirVideoDetalheCliente(id) {
   atualizarStepperVideo(stepRank);
 
   document.getElementById('vdDataLabel').textContent = publicado ? 'Postado em' : 'Postagem prevista';
-  document.getElementById('vdDataValor').textContent = formatarData(v.dataPostagem) || 'a definir';
+  const dataFormatada = formatarData(v.dataPostagem) || 'a definir';
+  document.getElementById('vdDataValor').textContent = v.horarioPostagem ? `${dataFormatada} · ${v.horarioPostagem}` : dataFormatada;
   document.getElementById('vdIframe').src = driveEmbedUrl(v.linkDrive);
 
   const legWrap = document.getElementById('vdLegendaWrap');
