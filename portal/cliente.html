@@ -95,7 +95,16 @@
       <h2>Gravação</h2>
       <p class="page-sub">Acompanhe suas gravações marcadas e confirme presença.</p>
 
-      <div id="gravLista"><div class="skeleton-block"></div></div>
+      <div class="videos-kanban" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <div class="videos-col-header"><h4>A confirmar</h4><span class="videos-col-count" id="gravCountAConfirmar" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
+          <div id="gravColAConfirmar"><div class="skeleton-block"></div></div>
+        </div>
+        <div>
+          <div class="videos-col-header"><h4>Confirmadas</h4><span class="videos-col-count" id="gravCountConfirmadas" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
+          <div id="gravColConfirmadas"></div>
+        </div>
+      </div>
 
       <div class="card" style="margin-top:16px;">
         <div class="field" style="margin-bottom:10px;">
@@ -183,6 +192,25 @@
     </section>
 
   </main>
+</div>
+
+<div class="modal-overlay" id="gravDetalheModal" style="display:none;">
+  <div class="modal-box" style="width:380px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <h3 style="margin:0;">Gravação</h3>
+      <span class="badge" id="gdcBadge"></span>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 10px;">
+      <div><div class="meta">Dia</div><div id="gdcDia" style="font-weight:600;"></div></div>
+      <div><div class="meta">Horário</div><div id="gdcHorario" style="font-weight:600;"></div></div>
+      <div><div class="meta">Local</div><div id="gdcLocal" style="font-weight:600;"></div></div>
+    </div>
+    <p id="gdcAvisoRemarcar" style="display:none;color:var(--yellow);font-size:0.85rem;margin:0 0 14px;"></p>
+    <div id="gdcAcoes" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-outline" id="gdcFechar" style="flex:1;">Fechar</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="confirmarPresencaModal" style="display:none;">
@@ -644,70 +672,90 @@ function renderInicioResumo() {
 // --- ABA GRAVAÇÃO: lista de gravações + confirmação de presença ---
 let gravDadosAtuais = null;
 
-function gravacaoItemHtml(g) {
+function gravacaoMiniCardHtml(g) {
   const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
   const confirmada = g.status === 'confirmada';
   const remarcar = g.status === 'remarcar';
-  const badgeClass = confirmada ? 'badge-approved' : (remarcar ? 'badge-rejected' : 'badge-pending');
-  const badgeTexto = confirmada ? 'Confirmada' : (remarcar ? 'Desmarcada' : 'Aguardando confirmação');
+  const corDot = confirmada ? 'var(--green)' : (remarcar ? 'var(--yellow)' : '#6b6b6b');
+  const textoStatus = confirmada ? 'Confirmada' : (remarcar ? 'Pediu para desmarcar' : 'Aguardando confirmação');
+  const corTexto = confirmada ? 'var(--green)' : (remarcar ? 'var(--yellow)' : 'var(--gray)');
 
   return `
-    <div class="card" data-gravacao-id="${g.id}" style="${confirmada ? 'background:rgba(62,207,106,0.08);border-color:rgba(62,207,106,0.3);' : ''}">
-      <div class="top-actions" style="margin-bottom:14px;">
-        <div>
-          <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;">Gravação</div>
-          <h3 style="margin-top:4px;">${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</h3>
-        </div>
-        <span class="badge ${badgeClass}">${badgeTexto}</span>
+    <div class="video-mini-card" data-abrir-gravacao="${g.id}" style="${confirmada ? 'border-color:rgba(62,207,106,0.3);' : ''}">
+      <h5>${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}</h5>
+      <div class="video-mini-when video-mini-when-strong">${g.horario || 'horário a definir'}${g.endereco ? ' · ' + g.endereco : ''}</div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:6px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:${corDot};display:inline-block;"></span>
+        <span style="color:${corTexto};font-size:0.76rem;${confirmada ? 'font-weight:600;' : ''}">${textoStatus}</span>
       </div>
-      <div style="display:flex;gap:28px;flex-wrap:wrap;margin-bottom:16px;">
-        <div><div class="meta">Dia</div><div style="font-weight:600;">${d.toLocaleDateString('pt-BR')}</div></div>
-        <div><div class="meta">Horário</div><div style="font-weight:600;">${g.horario || 'a definir'}</div></div>
-        <div><div class="meta">Local</div><div style="font-weight:600;">${g.endereco || 'a definir'}</div></div>
-      </div>
-      ${confirmada
-        ? `<button class="btn btn-outline" data-desmarcar="${g.id}">Quero desmarcar a gravação</button>`
-        : `
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-outline" data-confirmar="${g.id}">Confirmar presença</button>
-            <button class="btn ${remarcar ? 'btn-state-remarcar' : 'btn-outline'}" data-desmarcar="${g.id}">Desmarcar gravação</button>
-          </div>
-          <p style="margin:10px 0 0;font-size:0.85rem;${remarcar ? 'color:var(--yellow);' : 'color:var(--gray);'}">${
-            remarcar
-              ? 'Você pediu para desmarcar essa gravação. A Lmotion vai entrar em contato.' + (g.motivo ? ` Motivo: "${g.motivo}"` : '')
-              : 'Confirme sua presença ou avise se precisar desmarcar.'
-          }</p>
-        `}
     </div>
   `;
 }
 
 function renderGravacaoTab(dados) {
   gravDadosAtuais = dados;
-  const box = document.getElementById('gravLista');
+  const colAConfirmar = document.getElementById('gravColAConfirmar');
+  const colConfirmadas = document.getElementById('gravColConfirmadas');
   const dot = document.getElementById('gravNotifDot');
-  if (!box) return;
+  if (!colAConfirmar) return;
 
   const ativas = gravacoesAtivasOrdenadas(dados);
+  const aConfirmar = ativas.filter(g => g.status !== 'confirmada');
+  const confirmadas = ativas.filter(g => g.status === 'confirmada');
 
-  if (!ativas.length) {
-    box.innerHTML = '<div class="card"><div class="empty-state">Nenhuma gravação marcada no momento.</div></div>';
-    if (dot) dot.style.display = 'none';
-    return;
-  }
+  document.getElementById('gravCountAConfirmar').textContent = aConfirmar.length;
+  document.getElementById('gravCountConfirmadas').textContent = confirmadas.length;
 
-  box.innerHTML = ativas.map(gravacaoItemHtml).join('');
+  colAConfirmar.innerHTML = aConfirmar.length ? aConfirmar.map(gravacaoMiniCardHtml).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
+  colConfirmadas.innerHTML = confirmadas.length ? confirmadas.map(gravacaoMiniCardHtml).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
 
-  box.querySelectorAll('[data-confirmar]').forEach(btn => {
-    btn.addEventListener('click', () => abrirConfirmarPresencaModal(btn.dataset.confirmar));
-  });
-  box.querySelectorAll('[data-desmarcar]').forEach(btn => {
-    btn.addEventListener('click', () => abrirDesmarcarModal(btn.dataset.desmarcar));
+  document.querySelectorAll('#tab-gravacao [data-abrir-gravacao]').forEach(el => {
+    el.addEventListener('click', () => abrirGravacaoDetalheCliente(el.dataset.abrirGravacao));
   });
 
   const pendente = ativas.some(g => !g.status || g.status === 'agendada');
   if (dot) dot.style.display = pendente ? 'block' : 'none';
 }
+
+function abrirGravacaoDetalheCliente(gravacaoId) {
+  const g = gravacoesDoCliente(gravDadosAtuais).find(x => x.id === gravacaoId);
+  if (!g) return;
+  const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
+  const confirmada = g.status === 'confirmada';
+  const remarcar = g.status === 'remarcar';
+
+  const badge = document.getElementById('gdcBadge');
+  badge.textContent = confirmada ? 'Confirmada' : (remarcar ? 'Desmarcada' : 'Aguardando confirmação');
+  badge.className = 'badge ' + (confirmada ? 'badge-approved' : (remarcar ? 'badge-rejected' : 'badge-pending'));
+
+  document.getElementById('gdcDia').textContent = d.toLocaleDateString('pt-BR');
+  document.getElementById('gdcHorario').textContent = g.horario || 'a definir';
+  document.getElementById('gdcLocal').textContent = g.endereco || 'a definir';
+
+  const aviso = document.getElementById('gdcAvisoRemarcar');
+  if (remarcar) {
+    aviso.style.display = 'block';
+    aviso.textContent = 'Você pediu para desmarcar essa gravação. A Lmotion vai entrar em contato.' + (g.motivo ? ` Motivo: "${g.motivo}"` : '');
+  } else {
+    aviso.style.display = 'none';
+  }
+
+  const acoes = document.getElementById('gdcAcoes');
+  acoes.innerHTML = confirmada
+    ? `<button class="btn btn-outline" data-desmarcar="${g.id}" style="flex:1;">Quero desmarcar a gravação</button>`
+    : `
+      <button class="btn" data-confirmar="${g.id}" style="flex:1;">Confirmar presença</button>
+      <button class="btn ${remarcar ? 'btn-state-remarcar' : 'btn-outline'}" data-desmarcar="${g.id}" style="flex:1;">Desmarcar</button>
+    `;
+  const btnConfirmar = acoes.querySelector('[data-confirmar]');
+  if (btnConfirmar) btnConfirmar.addEventListener('click', () => abrirConfirmarPresencaModal(g.id));
+  acoes.querySelector('[data-desmarcar]').addEventListener('click', () => abrirDesmarcarModal(g.id));
+
+  document.getElementById('gravDetalheModal').style.display = 'flex';
+}
+document.getElementById('gdcFechar').addEventListener('click', () => {
+  document.getElementById('gravDetalheModal').style.display = 'none';
+});
 
 async function salvarConfirmacaoGravacao(gravacaoId, status, motivo) {
   const lista = gravacoesDoCliente(gravDadosAtuais).map(g => {
@@ -738,6 +786,7 @@ document.getElementById('cpModalCancelar').addEventListener('click', () => {
 });
 document.getElementById('cpModalConfirmar').addEventListener('click', async () => {
   document.getElementById('confirmarPresencaModal').style.display = 'none';
+  document.getElementById('gravDetalheModal').style.display = 'none';
   await salvarConfirmacaoGravacao(gravModalAlvoId, 'confirmada');
   showToast('Presença confirmada');
 });
@@ -757,6 +806,7 @@ document.getElementById('dgModalCancelar').addEventListener('click', () => {
 document.getElementById('dgModalConfirmar').addEventListener('click', async () => {
   const motivo = document.getElementById('dgModalMotivo').value.trim();
   document.getElementById('desmarcarGravacaoModal').style.display = 'none';
+  document.getElementById('gravDetalheModal').style.display = 'none';
   await salvarConfirmacaoGravacao(gravModalAlvoId, 'remarcar', motivo);
   showToast('Gravação desmarcada', 'info');
 });
