@@ -200,6 +200,17 @@
   </main>
 </div>
 
+<div class="modal-overlay" id="aprovarVideoModal" style="display:none;">
+  <div class="modal-box" style="width:340px;">
+    <h3>Aprovar este vídeo?</h3>
+    <p>Depois de aprovado, não é mais possível pedir alteração por aqui. Se precisar de algum ajuste depois, é só falar com a Lmotion pelo WhatsApp.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="avModalCancelar">Cancelar</button>
+      <button class="btn" id="avModalConfirmar">Aprovar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="gravDetalheModal" style="display:none;">
   <div class="modal-box" style="width:380px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
@@ -287,6 +298,7 @@
       <button class="btn" id="vdBtnAprovar">Aprovar</button>
       <button class="btn btn-outline" id="vdBtnAbrirAlt">Pedir alteração</button>
     </div>
+    <p class="meta" id="vdAprovadoInfo" style="display:none;margin:0;">Vídeo aprovado. Se precisar de algum ajuste depois de aprovado, fale com a Lmotion pelo WhatsApp.</p>
     <div class="alt-panel" id="vdAltPanel" style="display:none;">
       <div class="field" style="margin:12px 0 8px;">
         <textarea rows="3" placeholder="Descreva o que precisa ser ajustado nesse vídeo..." id="vdAltTexto"></textarea>
@@ -1054,7 +1066,10 @@ function abrirVideoDetalheCliente(id) {
 
   document.getElementById('vdAltTexto').value = '';
   document.getElementById('vdAltPanel').style.display = 'none';
-  document.getElementById('vdFeedbackRow').style.display = 'flex';
+
+  const aprovado = feedback.tipo === 'aprovado';
+  document.getElementById('vdFeedbackRow').style.display = aprovado ? 'none' : 'flex';
+  document.getElementById('vdAprovadoInfo').style.display = aprovado ? 'block' : 'none';
 
   document.getElementById('vdModal').style.display = 'flex';
 }
@@ -1066,8 +1081,18 @@ function fecharVideoDetalheCliente() {
 
 document.getElementById('vdFechar').addEventListener('click', fecharVideoDetalheCliente);
 
-document.getElementById('vdBtnAprovar').addEventListener('click', async () => {
+document.getElementById('vdBtnAprovar').addEventListener('click', () => {
   if (!vdModalId) return;
+  document.getElementById('aprovarVideoModal').style.display = 'flex';
+});
+
+document.getElementById('avModalCancelar').addEventListener('click', () => {
+  document.getElementById('aprovarVideoModal').style.display = 'none';
+});
+
+document.getElementById('avModalConfirmar').addEventListener('click', async () => {
+  if (!vdModalId) return;
+  document.getElementById('aprovarVideoModal').style.display = 'none';
   await db.collection('entregas').doc(vdModalId).set({
     feedback: { tipo: 'aprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
   }, { merge: true });
