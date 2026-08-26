@@ -777,12 +777,22 @@ function irParaOrigemNotificacao(n) {
     abrirGravacaoModal(n.clienteId, n.gravacaoId);
     return;
   }
-  if (n.tipo === 'duvida' && n.duvidaId) {
-    irParaAlvoNotificacao('duvidas', 'duvida-' + n.duvidaId);
+  if (n.tipo === 'duvida') {
+    if (n.duvidaId) irParaAlvoNotificacao('duvidas', 'duvida-' + n.duvidaId);
+    else ativarAba('duvidas');
     return;
   }
-  if (n.tipo === 'material' && n.materialId) {
-    irParaAlvoNotificacao('materiais', 'material-' + n.materialId);
+  if (n.tipo === 'material') {
+    if (n.materialId) irParaAlvoNotificacao('materiais', 'material-' + n.materialId);
+    else ativarAba('materiais');
+    return;
+  }
+  if ((n.tipo === 'gravacao_confirmada' || n.tipo === 'gravacao_desmarcada') && n.clienteId) {
+    ativarAba('gravacao-geral');
+    return;
+  }
+  if ((n.tipo === 'aprovacao' || n.tipo === 'alteracao') && n.clienteId) {
+    ativarAba('entregas');
     return;
   }
   if (n.clienteId) abrirPerfilCliente(n.clienteId);
