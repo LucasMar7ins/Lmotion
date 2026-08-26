@@ -309,6 +309,11 @@ a{color:var(--purple-light);text-decoration:none;}
 .notif-item.unread{background:rgba(155,107,242,0.05);position:relative;padding-left:24px;}
 .notif-item.unread::before{content:"";position:absolute;left:8px;top:19px;width:6px;height:6px;border-radius:50%;background:var(--purple-light);}
 .notif-item.read{opacity:0.55;}
+.notif-alvo-highlight{animation:notifAlvoFlash 1.8s ease;}
+@keyframes notifAlvoFlash{
+  0%{box-shadow:0 0 0 2px var(--purple);background:rgba(110,45,231,0.12);}
+  100%{box-shadow:0 0 0 0 transparent;background:transparent;}
+}
 
 .video-embed{
   width:100%;

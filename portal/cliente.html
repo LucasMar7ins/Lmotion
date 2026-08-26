@@ -472,7 +472,7 @@ document.getElementById('sairModalConfirmar').addEventListener('click', () => {
 // --- Auth guard ---
 let clienteNomeAtual = '';
 
-async function registrarNotificacaoAdmin(tipo, titulo) {
+async function registrarNotificacaoAdmin(tipo, titulo, extra) {
   try {
     await db.collection('notificacoes').add({
       tipo,
@@ -480,7 +480,8 @@ async function registrarNotificacaoAdmin(tipo, titulo) {
       clienteId: currentUser.uid,
       clienteNome: clienteNomeAtual || (currentUser.email || 'Cliente'),
       lida: false,
-      data: firebase.firestore.FieldValue.serverTimestamp()
+      data: firebase.firestore.FieldValue.serverTimestamp(),
+      ...(extra || {})
     });
   } catch (e) {}
 }
@@ -993,9 +994,9 @@ async function salvarConfirmacaoGravacao(gravacaoId, status, motivo) {
     const d = original.data.toDate ? original.data.toDate() : new Date(original.data);
     const dataFmt = d.toLocaleDateString('pt-BR');
     if (status === 'confirmada') {
-      registrarNotificacaoAdmin('gravacao_confirmada', `Confirmou presença na gravação de ${dataFmt}`);
+      registrarNotificacaoAdmin('gravacao_confirmada', `Confirmou presença na gravação de ${dataFmt}`, { gravacaoId });
     } else if (status === 'remarcar') {
-      registrarNotificacaoAdmin('gravacao_desmarcada', `Desmarcou a gravação de ${dataFmt}`);
+      registrarNotificacaoAdmin('gravacao_desmarcada', `Desmarcou a gravação de ${dataFmt}`, { gravacaoId });
     }
   }
 }
@@ -1308,7 +1309,7 @@ document.getElementById('avModalConfirmar').addEventListener('click', async () =
   await db.collection('entregas').doc(vdModalId).set({
     feedback: { tipo: 'aprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
   }, { merge: true });
-  registrarNotificacaoAdmin('aprovacao', `Aprovou o vídeo "${vdModalTitulo}"`);
+  registrarNotificacaoAdmin('aprovacao', `Aprovou o vídeo "${vdModalTitulo}"`, { entregaId: vdModalId });
   fecharVideoDetalheCliente();
   showToast('Vídeo aprovado');
 });
@@ -1331,7 +1332,7 @@ document.getElementById('vdAltOk').addEventListener('click', async () => {
   await db.collection('entregas').doc(vdModalId).set({
     feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
   }, { merge: true });
-  registrarNotificacaoAdmin('alteracao', `Pediu alteração no vídeo "${vdModalTitulo}"`);
+  registrarNotificacaoAdmin('alteracao', `Pediu alteração no vídeo "${vdModalTitulo}"`, { entregaId: vdModalId });
   fecharVideoDetalheCliente();
   showToast('Pedido de alteração enviado', 'info');
 });
@@ -1464,12 +1465,12 @@ document.getElementById('btnEnviarMaterial').addEventListener('click', async () 
   const link = document.getElementById('matLink').value.trim();
   if (!tipo || !link) return;
 
-  await db.collection('materiais').add({
+  const refMaterial = await db.collection('materiais').add({
     clienteId: currentUser.uid,
     tipo, link,
     dataUpload: firebase.firestore.FieldValue.serverTimestamp()
   });
-  registrarNotificacaoAdmin('material', `Enviou material da marca: ${tipo}`);
+  registrarNotificacaoAdmin('material', `Enviou material da marca: ${tipo}`, { materialId: refMaterial.id });
 
   document.getElementById('matTipo').value = '';
   document.getElementById('matLink').value = '';
@@ -1518,14 +1519,14 @@ function carregarMateriais() {
 document.getElementById('btnEnviarDuvida').addEventListener('click', async () => {
   const texto = document.getElementById('duvidaTexto').value.trim();
   if (!texto) return;
-  await db.collection('duvidas').add({
+  const refDuvida = await db.collection('duvidas').add({
     clienteId: currentUser.uid,
     pergunta: texto,
     resposta: '',
     status: 'aberta',
     dataEnvio: firebase.firestore.FieldValue.serverTimestamp()
   });
-  registrarNotificacaoAdmin('duvida', 'Enviou uma dúvida');
+  registrarNotificacaoAdmin('duvida', 'Enviou uma dúvida', { duvidaId: refDuvida.id });
   document.getElementById('duvidaTexto').value = '';
   const msg = document.getElementById('duvidaMsg');
   msg.textContent = 'Dúvida enviada!';

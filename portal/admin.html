@@ -749,10 +749,43 @@ function renderNotificacoesAdmin() {
     el.addEventListener('click', () => {
       const n = notifAdminCache.find(x => x.id === el.dataset.notifId);
       document.getElementById('notifDropdownAdmin').classList.remove('open');
-      if (n && !n.lida) db.collection('notificacoes').doc(n.id).set({ lida: true }, { merge: true });
-      if (n && n.clienteId) abrirPerfilCliente(n.clienteId);
+      if (!n) return;
+      if (!n.lida) db.collection('notificacoes').doc(n.id).set({ lida: true }, { merge: true });
+      irParaOrigemNotificacao(n);
     });
   });
+}
+
+function irParaAlvoNotificacao(tab, elId) {
+  ativarAba(tab);
+  setTimeout(() => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('notif-alvo-highlight');
+    void el.offsetWidth;
+    el.classList.add('notif-alvo-highlight');
+  }, 60);
+}
+
+function irParaOrigemNotificacao(n) {
+  if ((n.tipo === 'aprovacao' || n.tipo === 'alteracao') && n.entregaId) {
+    const v = todasEntregas.find(e => e.id === n.entregaId);
+    if (v) { abrirVideoDetalheModal(v); return; }
+  }
+  if ((n.tipo === 'gravacao_confirmada' || n.tipo === 'gravacao_desmarcada') && n.gravacaoId && n.clienteId) {
+    abrirGravacaoModal(n.clienteId, n.gravacaoId);
+    return;
+  }
+  if (n.tipo === 'duvida' && n.duvidaId) {
+    irParaAlvoNotificacao('duvidas', 'duvida-' + n.duvidaId);
+    return;
+  }
+  if (n.tipo === 'material' && n.materialId) {
+    irParaAlvoNotificacao('materiais', 'material-' + n.materialId);
+    return;
+  }
+  if (n.clienteId) abrirPerfilCliente(n.clienteId);
 }
 
 document.getElementById('notifBtnAdmin').addEventListener('click', (e) => {
@@ -1926,6 +1959,7 @@ function carregarMateriaisAdmin() {
       const nomeCliente = (clientesCache[m.clienteId] && clientesCache[m.clienteId].nome) || 'Cliente';
       const row = document.createElement('div');
       row.className = 'row';
+      row.id = 'material-' + docSnap.id;
       row.innerHTML = `
         <div class="info"><strong>${m.tipo}</strong><span>${nomeCliente}</span></div>
         <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
@@ -1957,6 +1991,7 @@ function carregarDuvidasAdmin() {
 
       const card = document.createElement('div');
       card.className = 'card';
+      card.id = 'duvida-' + id;
       card.innerHTML = `
         <div class="top-actions"><div class="meta">${nomeCliente} · ${formatarData(d.dataEnvio)}</div>${badge}</div>
         <p style="margin-bottom:12px;">${d.pergunta}</p>
