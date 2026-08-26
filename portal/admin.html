@@ -266,6 +266,15 @@
         <button class="btn" id="btnAddVideo">Entregar vídeo</button>
         <p class="success-msg" id="videoMsg"></p>
       </div>
+
+      <div class="card" id="entregaWhatsappPrompt" style="display:none;margin-top:14px;border-color:rgba(37,211,102,0.3);background:rgba(37,211,102,0.06);">
+        <div style="color:var(--white);font-size:0.88rem;font-weight:600;margin-bottom:4px;">Avisar <span id="entregaWhatsappNome"></span> agora?</div>
+        <p class="meta" style="margin-bottom:14px;">Abre o WhatsApp com uma mensagem já pronta avisando que o vídeo está no portal.</p>
+        <div style="display:flex;gap:10px;">
+          <a href="#" target="_blank" rel="noopener" class="btn" id="entregaWhatsappBtn" style="flex:1;background:#25D366;color:#0a2e17;text-align:center;text-decoration:none;">Avisar no WhatsApp</a>
+          <button class="btn btn-outline" id="entregaWhatsappFechar">Agora não</button>
+        </div>
+      </div>
     </section>
 
     <!-- ENTREGAS -->
@@ -1706,6 +1715,13 @@ function renderPerfilCalendario() {
 }
 
 // --- VÍDEOS ---
+function formatarNumeroWhatsapp(numero) {
+  let digits = (numero || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length <= 11) digits = '55' + digits;
+  return digits;
+}
+
 document.getElementById('btnAddVideo').addEventListener('click', async () => {
   const clienteId = document.getElementById('vClienteId').value;
   const titulo = document.getElementById('vTitulo').value.trim();
@@ -1732,6 +1748,24 @@ document.getElementById('btnAddVideo').addEventListener('click', async () => {
   const msg = document.getElementById('videoMsg');
   msg.textContent = 'Vídeo entregue!';
   setTimeout(() => msg.textContent = '', 3000);
+
+  const cliente = clientesCache[clienteId] || {};
+  const prompt = document.getElementById('entregaWhatsappPrompt');
+  const numero = formatarNumeroWhatsapp(cliente.whatsapp);
+  if (prompt) {
+    if (numero) {
+      document.getElementById('entregaWhatsappNome').textContent = cliente.nome || 'o cliente';
+      const texto = encodeURIComponent(`Oi ${cliente.nome || ''}! Acabei de subir um vídeo novo pra você no portal 🎬 Dá uma olhada quando puder: https://lmotion.com.br/portal/`);
+      document.getElementById('entregaWhatsappBtn').href = `https://wa.me/${numero}?text=${texto}`;
+      prompt.style.display = 'block';
+    } else {
+      prompt.style.display = 'none';
+    }
+  }
+});
+
+document.getElementById('entregaWhatsappFechar').addEventListener('click', () => {
+  document.getElementById('entregaWhatsappPrompt').style.display = 'none';
 });
 
 let confirmModalAction = null;
