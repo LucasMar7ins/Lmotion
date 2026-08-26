@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
@@ -470,6 +470,21 @@ document.getElementById('sairModalConfirmar').addEventListener('click', () => {
 });
 
 // --- Auth guard ---
+let clienteNomeAtual = '';
+
+async function registrarNotificacaoAdmin(tipo, titulo) {
+  try {
+    await db.collection('notificacoes').add({
+      tipo,
+      titulo,
+      clienteId: currentUser.uid,
+      clienteNome: clienteNomeAtual || (currentUser.email || 'Cliente'),
+      lida: false,
+      data: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {}
+}
+
 auth.onAuthStateChanged(async (user) => {
   if (!user) {
     window.location.href = 'index.html';
@@ -489,6 +504,7 @@ auth.onAuthStateChanged(async (user) => {
       window.location.href = 'admin.html';
       return;
     }
+    clienteNomeAtual = dados.nome || user.email;
     document.getElementById('clienteNome').textContent = dados.nome || user.email;
     document.getElementById('inicioSaudacao').innerHTML = saudacaoPorHorario() + ', <span style="color:var(--purple-light)">' + (dados.nome || 'cliente') + '</span>';
     document.getElementById('gravObservacao').value = dados.observacaoGravacao || '';
@@ -960,6 +976,7 @@ document.getElementById('gdcFechar').addEventListener('click', () => {
 });
 
 async function salvarConfirmacaoGravacao(gravacaoId, status, motivo) {
+  const original = gravacoesDoCliente(gravDadosAtuais).find(g => g.id === gravacaoId);
   const lista = gravacoesDoCliente(gravDadosAtuais).map(g => {
     if (g.id !== gravacaoId) return g;
     const atualizado = { ...g, status };
@@ -971,6 +988,16 @@ async function salvarConfirmacaoGravacao(gravacaoId, status, motivo) {
   gravDadosAtuais.gravacoes = lista;
   renderGravacaoTab(gravDadosAtuais);
   renderGravacao(gravDadosAtuais);
+
+  if (original) {
+    const d = original.data.toDate ? original.data.toDate() : new Date(original.data);
+    const dataFmt = d.toLocaleDateString('pt-BR');
+    if (status === 'confirmada') {
+      registrarNotificacaoAdmin('gravacao_confirmada', `Confirmou presença na gravação de ${dataFmt}`);
+    } else if (status === 'remarcar') {
+      registrarNotificacaoAdmin('gravacao_desmarcada', `Desmarcou a gravação de ${dataFmt}`);
+    }
+  }
 }
 
 let gravModalAlvoId = null;
@@ -1191,6 +1218,7 @@ function renderVideosBoard() {
 
 // --- MODAL DE DETALHE DO VÍDEO ---
 let vdModalId = null;
+let vdModalTitulo = '';
 
 function atualizarStepperVideo(rank) {
   const steps = document.querySelectorAll('#vdStepper .vd-step');
@@ -1209,6 +1237,7 @@ function abrirVideoDetalheCliente(id) {
   const v = meusVideosCache.find(x => x.id === id);
   if (!v) return;
   vdModalId = id;
+  vdModalTitulo = v.titulo || 'Sem título';
   const feedback = v.feedback || {};
 
   document.getElementById('vdTitulo').textContent = v.titulo || 'Sem título';
@@ -1279,6 +1308,7 @@ document.getElementById('avModalConfirmar').addEventListener('click', async () =
   await db.collection('entregas').doc(vdModalId).set({
     feedback: { tipo: 'aprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
   }, { merge: true });
+  registrarNotificacaoAdmin('aprovacao', `Aprovou o vídeo "${vdModalTitulo}"`);
   fecharVideoDetalheCliente();
   showToast('Vídeo aprovado');
 });
@@ -1301,6 +1331,7 @@ document.getElementById('vdAltOk').addEventListener('click', async () => {
   await db.collection('entregas').doc(vdModalId).set({
     feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
   }, { merge: true });
+  registrarNotificacaoAdmin('alteracao', `Pediu alteração no vídeo "${vdModalTitulo}"`);
   fecharVideoDetalheCliente();
   showToast('Pedido de alteração enviado', 'info');
 });
@@ -1438,6 +1469,7 @@ document.getElementById('btnEnviarMaterial').addEventListener('click', async () 
     tipo, link,
     dataUpload: firebase.firestore.FieldValue.serverTimestamp()
   });
+  registrarNotificacaoAdmin('material', `Enviou material da marca: ${tipo}`);
 
   document.getElementById('matTipo').value = '';
   document.getElementById('matLink').value = '';
@@ -1493,6 +1525,7 @@ document.getElementById('btnEnviarDuvida').addEventListener('click', async () =>
     status: 'aberta',
     dataEnvio: firebase.firestore.FieldValue.serverTimestamp()
   });
+  registrarNotificacaoAdmin('duvida', 'Enviou uma dúvida');
   document.getElementById('duvidaTexto').value = '';
   const msg = document.getElementById('duvidaMsg');
   msg.textContent = 'Dúvida enviada!';

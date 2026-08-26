@@ -7,13 +7,27 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 
 <button class="menu-toggle-mobile" id="menuToggle">☰</button>
 
 <div class="toast-wrap" id="toastWrap"></div>
+
+<div class="notif-wrap" id="notifWrapAdmin" style="position:fixed;top:18px;right:24px;z-index:500;">
+  <button type="button" class="notif-btn" id="notifBtnAdmin" aria-label="Notificações">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+    <span class="notif-count" id="notifCountAdmin" style="display:none;"></span>
+  </button>
+  <div class="notif-dropdown" id="notifDropdownAdmin">
+    <div class="notif-dropdown-head" style="display:flex;align-items:center;justify-content:space-between;text-transform:none;">
+      <span>Atividade dos clientes</span>
+      <span id="notifMarcarTudoAdmin" style="color:var(--purple-light);font-size:0.72rem;font-weight:600;cursor:pointer;">Marcar tudo como lido</span>
+    </div>
+    <div id="notifListaAdmin" style="max-height:420px;overflow-y:auto;"></div>
+  </div>
+</div>
 
 <div class="app-shell">
   <svg class="shell-grain" aria-hidden="true"><filter id="shellGrainFilter"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#shellGrainFilter)"/></svg>
@@ -655,6 +669,98 @@ auth.onAuthStateChanged(async (user) => {
   carregarDuvidasAdmin();
   carregarTutoriaisAdmin();
   carregarNotasDashboard();
+  carregarNotificacoesAdmin();
+});
+
+// --- SINO DE NOTIFICAÇÕES (atividade dos clientes) ---
+let notifAdminCache = [];
+
+function carregarNotificacoesAdmin() {
+  db.collection('notificacoes').orderBy('data', 'desc').limit(50).onSnapshot(snap => {
+    notifAdminCache = [];
+    snap.forEach(d => notifAdminCache.push({ id: d.id, ...d.data() }));
+    renderNotificacoesAdmin();
+  });
+}
+
+function tempoRelativoNotif(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const diffMs = Date.now() - d.getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'agora mesmo';
+  if (min < 60) return `há ${min} minuto${min > 1 ? 's' : ''}`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h} hora${h > 1 ? 's' : ''}`;
+  const dias = Math.floor(h / 24);
+  if (dias === 1) return 'ontem';
+  if (dias < 7) return `há ${dias} dias`;
+  return d.toLocaleDateString('pt-BR');
+}
+
+function iconeNotifAdmin(tipo) {
+  if (tipo === 'aprovacao') return { cor: 'var(--green)', bg: 'rgba(62,207,106,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' };
+  if (tipo === 'alteracao') return { cor: 'var(--red)', bg: 'rgba(227,85,85,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>' };
+  if (tipo === 'duvida') return { cor: 'var(--purple-light)', bg: 'rgba(155,107,242,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' };
+  if (tipo === 'gravacao_confirmada') return { cor: 'var(--green)', bg: 'rgba(62,207,106,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><polyline points="9 15 11 17 15 13"></polyline></svg>' };
+  if (tipo === 'gravacao_desmarcada') return { cor: 'var(--yellow)', bg: 'rgba(227,181,85,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>' };
+  return { cor: 'var(--yellow)', bg: 'rgba(227,181,85,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>' };
+}
+
+function renderNotificacoesAdmin() {
+  const btn = document.getElementById('notifBtnAdmin');
+  if (!btn) return;
+
+  const naoLidas = notifAdminCache.filter(n => !n.lida);
+  const count = document.getElementById('notifCountAdmin');
+  if (naoLidas.length) {
+    count.style.display = 'flex';
+    count.textContent = naoLidas.length > 9 ? '9+' : naoLidas.length;
+  } else {
+    count.style.display = 'none';
+  }
+
+  const lista = document.getElementById('notifListaAdmin');
+  lista.innerHTML = notifAdminCache.length
+    ? notifAdminCache.map(n => {
+        const ic = iconeNotifAdmin(n.tipo);
+        return `
+          <div class="notif-item ${n.lida ? 'read' : 'unread'}" data-notif-id="${n.id}">
+            <div class="notif-icon" style="background:${ic.bg};color:${ic.cor};">${ic.svg}</div>
+            <div>
+              <div class="notif-item-titulo">${n.clienteNome || 'Cliente'}</div>
+              <div class="notif-item-sub">${n.titulo || ''} · ${tempoRelativoNotif(n.data)}</div>
+            </div>
+          </div>
+        `;
+      }).join('')
+    : '<div class="notif-empty">Nenhuma atividade ainda.</div>';
+
+  lista.querySelectorAll('[data-notif-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = notifAdminCache.find(x => x.id === el.dataset.notifId);
+      document.getElementById('notifDropdownAdmin').classList.remove('open');
+      if (n && !n.lida) db.collection('notificacoes').doc(n.id).set({ lida: true }, { merge: true });
+      if (n && n.clienteId) abrirPerfilCliente(n.clienteId);
+    });
+  });
+}
+
+document.getElementById('notifBtnAdmin').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('notifDropdownAdmin').classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('notifBtnAdmin') ? document.getElementById('notifBtnAdmin').closest('.notif-wrap') : null;
+  if (wrap && !wrap.contains(e.target)) document.getElementById('notifDropdownAdmin').classList.remove('open');
+});
+document.getElementById('notifMarcarTudoAdmin').addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const naoLidas = notifAdminCache.filter(n => !n.lida);
+  if (!naoLidas.length) return;
+  const batch = db.batch();
+  naoLidas.forEach(n => batch.update(db.collection('notificacoes').doc(n.id), { lida: true }));
+  await batch.commit();
 });
 
 // --- RESUMO DO DASHBOARD ---

@@ -10,6 +10,7 @@ Essas regras garantem que:
 - Cada cliente só lê os próprios dados (nunca de outro cliente).
 - Só o admin pode criar clientes, entregar vídeos, adicionar materiais e publicar tutoriais.
 - O cliente só pode escrever nos campos de feedback do próprio vídeo, enviar pauta e enviar dúvida.
+- O cliente pode registrar notificações de atividade (só criar, nunca ler); só o admin lê e marca como lida.
 
 ---
 
@@ -73,6 +74,12 @@ service cloud.firestore {
       allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+
+    // Notificações de atividade (feed do admin com as ações dos clientes)
+    match /notificacoes/{id} {
+      allow read, update, delete: if isAdmin();
+      allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
     }
 
     // Tutoriais — visíveis a qualquer cliente logado, só o admin publica
