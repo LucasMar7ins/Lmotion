@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
 
@@ -165,7 +165,25 @@
     <section class="tab-section" id="tab-calendario">
       <h2>Calendário de postagens</h2>
       <p class="page-sub">Visualização dos dias previstos para cada vídeo.</p>
-      <div id="listaCalendario"><div class="skeleton-block"></div><div class="skeleton-block"></div><div class="skeleton-block" style="width:70%;"></div></div>
+
+      <div id="calFiltros" style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 20px;">
+        <span class="cal-filtro-chip active" data-cal-filtro="todos">Todos</span>
+        <span class="cal-filtro-chip" data-cal-filtro="pendente">Aguardando avaliação</span>
+        <span class="cal-filtro-chip" data-cal-filtro="alteracao">Em alteração</span>
+        <span class="cal-filtro-chip" data-cal-filtro="aprovado">Aprovado</span>
+      </div>
+
+      <div id="listaCalendarioProximos"><div class="skeleton-block"></div><div class="skeleton-block"></div><div class="skeleton-block" style="width:70%;"></div></div>
+
+      <div id="calSecaoPublicados" style="display:none;margin-top:28px;">
+        <div class="cal-publicados-head">
+          <h3 style="margin:0;font-size:0.95rem;">Publicados</h3>
+        </div>
+        <div id="listaCalendarioPublicados"></div>
+        <div id="calPublicadosToggleWrap" style="display:none;text-align:center;margin-top:14px;">
+          <span class="cal-ver-todos" id="calPublicadosToggle">Ver todos</span>
+        </div>
+      </div>
     </section>
 
     <!-- MATERIAIS -->
@@ -1309,21 +1327,10 @@ function clienteCalendarCardHtml(v) {
   `;
 }
 
-function renderCalendarioLista() {
-  const box = document.getElementById('listaCalendario');
-  if (!box) return;
+let calFiltro = 'todos';
+let calPublicadosExpandido = false;
 
-  const lista = meusVideosCache.filter(v => v.dataPostagem).slice().sort((a, b) => {
-    const da = a.dataPostagem.toDate ? a.dataPostagem.toDate() : new Date(a.dataPostagem);
-    const db_ = b.dataPostagem.toDate ? b.dataPostagem.toDate() : new Date(b.dataPostagem);
-    return da - db_;
-  });
-
-  if (!lista.length) {
-    box.innerHTML = '<div class="empty-state">Nenhuma postagem programada ainda.</div>';
-    return;
-  }
-
+function agruparPorDataCalendario(lista) {
   const grupos = [];
   let grupoAtual = null;
   lista.forEach(v => {
@@ -1334,18 +1341,87 @@ function renderCalendarioLista() {
     }
     grupoAtual.itens.push(v);
   });
+  return grupos;
+}
 
-  box.innerHTML = grupos.map(g => `
+function renderGruposCalendario(grupos) {
+  return grupos.map(g => `
     <div class="cal-group">
       <div class="cal-date">${g.chave}</div>
       ${g.itens.map(clienteCalendarCardHtml).join('')}
     </div>
   `).join('');
+}
 
-  box.querySelectorAll('[data-abrir-video]').forEach(el => {
+function renderCalendarioLista() {
+  const boxProx = document.getElementById('listaCalendarioProximos');
+  const boxPub = document.getElementById('listaCalendarioPublicados');
+  if (!boxProx) return;
+
+  const comData = meusVideosCache.filter(v => v.dataPostagem);
+  const publicadosTodos = comData
+    .filter(v => v.feedback && v.feedback.tipo === 'aprovado' && isPublicado(v))
+    .slice()
+    .sort((a, b) => {
+      const da = a.dataPostagem.toDate ? a.dataPostagem.toDate() : new Date(a.dataPostagem);
+      const db_ = b.dataPostagem.toDate ? b.dataPostagem.toDate() : new Date(b.dataPostagem);
+      return db_ - da;
+    });
+
+  const proximosTodos = comData
+    .filter(v => !(v.feedback && v.feedback.tipo === 'aprovado' && isPublicado(v)))
+    .slice()
+    .sort((a, b) => {
+      const da = a.dataPostagem.toDate ? a.dataPostagem.toDate() : new Date(a.dataPostagem);
+      const db_ = b.dataPostagem.toDate ? b.dataPostagem.toDate() : new Date(b.dataPostagem);
+      return da - db_;
+    });
+
+  const proximosFiltrados = proximosTodos.filter(v => {
+    if (calFiltro === 'pendente') return !(v.feedback && v.feedback.tipo);
+    if (calFiltro === 'alteracao') return v.feedback && v.feedback.tipo === 'reprovado';
+    if (calFiltro === 'aprovado') return v.feedback && v.feedback.tipo === 'aprovado';
+    return true;
+  });
+
+  boxProx.innerHTML = proximosFiltrados.length
+    ? renderGruposCalendario(agruparPorDataCalendario(proximosFiltrados))
+    : '<div class="empty-state">Nenhuma postagem por aqui.</div>';
+
+  const secaoPub = document.getElementById('calSecaoPublicados');
+  if (secaoPub) secaoPub.style.display = publicadosTodos.length ? 'block' : 'none';
+
+  const visiveis = calPublicadosExpandido ? publicadosTodos : publicadosTodos.slice(0, 3);
+  boxPub.innerHTML = renderGruposCalendario(agruparPorDataCalendario(visiveis));
+
+  const toggleWrap = document.getElementById('calPublicadosToggleWrap');
+  if (toggleWrap) {
+    if (publicadosTodos.length > 3) {
+      toggleWrap.style.display = 'block';
+      document.getElementById('calPublicadosToggle').textContent = calPublicadosExpandido ? 'Ver menos' : `Ver todos (${publicadosTodos.length})`;
+    } else {
+      toggleWrap.style.display = 'none';
+    }
+  }
+
+  document.querySelectorAll('#tab-calendario [data-abrir-video]').forEach(el => {
     el.addEventListener('click', () => abrirVideoDetalheCliente(el.dataset.abrirVideo));
   });
 }
+
+document.querySelectorAll('#calFiltros [data-cal-filtro]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    calFiltro = chip.dataset.calFiltro;
+    document.querySelectorAll('#calFiltros [data-cal-filtro]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    renderCalendarioLista();
+  });
+});
+
+document.getElementById('calPublicadosToggle').addEventListener('click', () => {
+  calPublicadosExpandido = !calPublicadosExpandido;
+  renderCalendarioLista();
+});
 
 // --- MATERIAIS ---
 document.getElementById('btnEnviarMaterial').addEventListener('click', async () => {
