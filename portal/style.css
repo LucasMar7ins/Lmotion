@@ -53,6 +53,18 @@ a{color:var(--purple-light);text-decoration:none;}
   width:260px;height:260px;
   background:radial-gradient(circle, rgba(110,45,231,0.12), transparent 70%);
 }
+.login-back-link{
+  position:absolute;top:22px;left:22px;z-index:2;
+  display:inline-flex;align-items:center;gap:8px;
+  color:var(--gray);font-size:0.85rem;text-decoration:none;
+  padding:8px 14px;border:1px solid var(--border);border-radius:8px;
+  background:rgba(255,255,255,0.03);
+  transition:color .2s ease,border-color .2s ease;
+}
+.login-back-link:hover{color:var(--white);border-color:var(--purple);}
+@media(max-width:520px){
+  .login-back-link{top:14px;left:14px;font-size:0.78rem;padding:7px 12px;}
+}
 .login-logo-wrap{
   display:flex;
   justify-content:center;
