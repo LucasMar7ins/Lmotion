@@ -380,13 +380,8 @@
   <div class="modal-box" style="width:420px;">
     <h3 style="margin:0 0 6px;">Cadastrar cliente</h3>
     <p style="color:var(--gray);font-size:0.82rem;line-height:1.5;margin:0 0 18px;">
-      Para criar o login de um cliente: vá no Firebase Console → Authentication → Add user (email e senha).
-      Depois copie o UID gerado e cadastre os dados dele aqui embaixo.
+      Preencha os dados abaixo. O cliente recebe um email para criar a própria senha e acessar o portal.
     </p>
-    <div class="field">
-      <label>UID (copiado do Firebase Authentication)</label>
-      <input type="text" id="clUid" placeholder="Ex: A1b2C3d4E5...">
-    </div>
     <div class="field">
       <label>Nome do cliente</label>
       <input type="text" id="clNome">
@@ -405,7 +400,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" id="btnFecharCadastroCliente">Cancelar</button>
-      <button class="btn" id="btnAddCliente" style="flex:1.4;">Cadastrar / atualizar cliente</button>
+      <button class="btn" id="btnAddCliente" style="flex:1.4;">Cadastrar cliente</button>
     </div>
     <p class="success-msg" id="clienteMsg"></p>
   </div>
@@ -1257,29 +1252,55 @@ document.getElementById('clWhatsapp').addEventListener('input', (e) => {
   e.target.value = out;
 });
 
+function gerarSenhaTemporaria() {
+  return Math.random().toString(36).slice(-10) + 'Aa1!';
+}
+
 document.getElementById('btnAddCliente').addEventListener('click', async () => {
-  const uid = document.getElementById('clUid').value.trim();
   const nome = document.getElementById('clNome').value.trim();
   const empresa = document.getElementById('clEmpresa').value.trim();
   const email = document.getElementById('clEmail').value.trim();
   const whatsapp = document.getElementById('clWhatsapp').value.trim();
-  if (!uid || !nome) return;
+  if (!nome || !email) return;
 
-  await db.collection('clientes').doc(uid).set({
-    nome, empresa, email, whatsapp,
-    isAdmin: false,
-    dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true });
-
-  document.getElementById('clUid').value = '';
-  document.getElementById('clNome').value = '';
-  document.getElementById('clEmpresa').value = '';
-  document.getElementById('clEmail').value = '';
-  document.getElementById('clWhatsapp').value = '';
-  document.getElementById('cadastroClienteModal').style.display = 'none';
+  const btn = document.getElementById('btnAddCliente');
   const msg = document.getElementById('clienteMsg');
-  msg.textContent = 'Cliente cadastrado!';
-  setTimeout(() => msg.textContent = '', 3000);
+  btn.disabled = true;
+  btn.textContent = 'Cadastrando...';
+  msg.textContent = '';
+
+  try {
+    const appSecundario = firebase.apps.find(a => a.name === 'ClienteSecundario') || firebase.initializeApp(firebaseConfig, 'ClienteSecundario');
+    const authSecundario = appSecundario.auth();
+    const cred = await authSecundario.createUserWithEmailAndPassword(email, gerarSenhaTemporaria());
+    const uid = cred.user.uid;
+    await authSecundario.signOut();
+
+    await db.collection('clientes').doc(uid).set({
+      nome, empresa, email, whatsapp,
+      isAdmin: false,
+      dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await auth.sendPasswordResetEmail(email);
+
+    document.getElementById('clNome').value = '';
+    document.getElementById('clEmpresa').value = '';
+    document.getElementById('clEmail').value = '';
+    document.getElementById('clWhatsapp').value = '';
+    document.getElementById('cadastroClienteModal').style.display = 'none';
+    msg.className = 'success-msg';
+    msg.textContent = 'Cliente cadastrado! Email de acesso enviado.';
+    setTimeout(() => msg.textContent = '', 4000);
+  } catch (err) {
+    msg.className = 'error-msg';
+    if (err.code === 'auth/email-already-in-use') msg.textContent = 'Já existe uma conta com esse email.';
+    else if (err.code === 'auth/invalid-email') msg.textContent = 'Digite um email válido.';
+    else msg.textContent = 'Não foi possível cadastrar. Tente novamente.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Cadastrar cliente';
+  }
 });
 
 // --- CLIENTES (grid de cards) ---
