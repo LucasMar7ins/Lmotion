@@ -698,6 +698,15 @@ function tempoRelativoNotif(ts) {
   return d.toLocaleDateString('pt-BR');
 }
 
+function horaExataNotif(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const hoje = new Date();
+  const horaFmt = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === hoje.toDateString()) return horaFmt;
+  return `${d.toLocaleDateString('pt-BR')} às ${horaFmt}`;
+}
+
 function iconeNotifAdmin(tipo) {
   if (tipo === 'aprovacao') return { cor: 'var(--green)', bg: 'rgba(62,207,106,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' };
   if (tipo === 'alteracao') return { cor: 'var(--red)', bg: 'rgba(227,85,85,0.15)', svg: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>' };
@@ -729,7 +738,7 @@ function renderNotificacoesAdmin() {
             <div class="notif-icon" style="background:${ic.bg};color:${ic.cor};">${ic.svg}</div>
             <div>
               <div class="notif-item-titulo">${n.clienteNome || 'Cliente'}</div>
-              <div class="notif-item-sub">${n.titulo || ''} · ${tempoRelativoNotif(n.data)}</div>
+              <div class="notif-item-sub">${n.titulo || ''} · ${tempoRelativoNotif(n.data)}${n.data ? ` (${horaExataNotif(n.data)})` : ''}</div>
             </div>
           </div>
         `;
