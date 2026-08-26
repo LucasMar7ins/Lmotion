@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
@@ -392,6 +392,17 @@
     <div class="modal-actions">
       <button class="btn btn-danger" id="sairModalConfirmar">Sair</button>
       <button class="btn btn-outline" id="sairModalCancelar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="removerMaterialModal" style="display:none;">
+  <div class="modal-box" style="width:320px;">
+    <h3>Remover material</h3>
+    <p>Tem certeza que deseja apagar esse material? Essa ação não pode ser desfeita.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="rmModalCancelar">Cancelar</button>
+      <button class="btn btn-danger" id="rmModalConfirmar">Apagar</button>
     </div>
   </div>
 </div>
@@ -1493,12 +1504,17 @@ function materialIconeSvg(tipo) {
 function materialCardHtml(m) {
   return `
     <a href="${m.link}" target="_blank" rel="noopener" class="material-card">
+      <button type="button" class="material-remove" data-remover-material="${m.id}" aria-label="Remover material" title="Remover">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
       <div class="material-icon">${materialIconeSvg(m.tipo)}</div>
       <div class="material-titulo">${m.tipo || 'Material'}</div>
       <div class="material-meta">Enviado em ${formatarData(m.dataUpload) || '-'}</div>
     </a>
   `;
 }
+
+let materialRemoverAlvoId = null;
 
 function carregarMateriais() {
   db.collection('materiais')
@@ -1510,10 +1526,29 @@ function carregarMateriais() {
         return;
       }
       const itens = [];
-      snap.forEach(docSnap => itens.push(docSnap.data()));
+      snap.forEach(docSnap => itens.push({ id: docSnap.id, ...docSnap.data() }));
       box.innerHTML = `<div class="materiais-grid">${itens.map(materialCardHtml).join('')}</div>`;
+
+      box.querySelectorAll('[data-remover-material]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          materialRemoverAlvoId = btn.dataset.removerMaterial;
+          document.getElementById('removerMaterialModal').style.display = 'flex';
+        });
+      });
     });
 }
+
+document.getElementById('rmModalCancelar').addEventListener('click', () => {
+  document.getElementById('removerMaterialModal').style.display = 'none';
+});
+document.getElementById('rmModalConfirmar').addEventListener('click', async () => {
+  if (!materialRemoverAlvoId) return;
+  await db.collection('materiais').doc(materialRemoverAlvoId).delete();
+  document.getElementById('removerMaterialModal').style.display = 'none';
+  showToast('Material removido', 'info');
+});
 
 // --- DÚVIDAS ---
 document.getElementById('btnEnviarDuvida').addEventListener('click', async () => {

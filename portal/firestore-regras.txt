@@ -11,6 +11,7 @@ Essas regras garantem que:
 - Só o admin pode criar clientes, entregar vídeos, adicionar materiais e publicar tutoriais.
 - O cliente só pode escrever nos campos de feedback do próprio vídeo, enviar pauta e enviar dúvida.
 - O cliente pode registrar notificações de atividade (só criar, nunca ler); só o admin lê e marca como lida.
+- O cliente pode apagar os próprios materiais enviados (caso tenha subido algo por engano).
 
 ---
 
@@ -61,11 +62,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
-    // Materiais de marca (o cliente envia, o admin só visualiza)
+    // Materiais de marca (o cliente envia e pode apagar os próprios; admin também pode)
     match /materiais/{id} {
       allow read: if logado() && (resource.data.clienteId == request.auth.uid || isAdmin());
       allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow delete: if isAdmin() || (logado() && resource.data.clienteId == request.auth.uid);
+      allow update: if isAdmin();
     }
 
     // Dúvidas
