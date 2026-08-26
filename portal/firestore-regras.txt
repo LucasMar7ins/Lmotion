@@ -1,0 +1,89 @@
+Regras de segurança do Firestore — Portal Lmotion
+
+Como aplicar:
+1. No Firebase Console, entre no projeto "Lmotion".
+2. Vá em Firestore Database > aba "Regras".
+3. Apague o conteúdo atual e cole o texto abaixo.
+4. Clique em "Publicar".
+
+Essas regras garantem que:
+- Cada cliente só lê os próprios dados (nunca de outro cliente).
+- Só o admin pode criar clientes, entregar vídeos, adicionar materiais e publicar tutoriais.
+- O cliente só pode escrever nos campos de feedback do próprio vídeo, enviar pauta e enviar dúvida.
+
+---
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return logado() &&
+        exists(/databases/$(database)/documents/clientes/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/clientes/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Cada cliente lê o próprio cadastro; admin lê e escreve tudo.
+    // O cliente também pode confirmar presença / pedir remarcação nas próprias gravações
+    // (lista "gravacoes") e salvar a observação geral.
+    match /clientes/{uid} {
+      allow read: if logado() && (request.auth.uid == uid || isAdmin());
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        logado() &&
+        request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gravacoes', 'observacaoGravacao'])
+      );
+    }
+
+    // Vídeos / entregas
+    match /entregas/{id} {
+      allow read: if logado() && (resource.data.clienteId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        logado() &&
+        resource.data.clienteId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['feedback'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Pautas / sugestões de tema
+    match /pautas/{id} {
+      allow read: if logado() && (resource.data.clienteId == request.auth.uid || isAdmin());
+      allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Materiais de marca (o cliente envia, o admin só visualiza)
+    match /materiais/{id} {
+      allow read: if logado() && (resource.data.clienteId == request.auth.uid || isAdmin());
+      allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Dúvidas
+    match /duvidas/{id} {
+      allow read: if logado() && (resource.data.clienteId == request.auth.uid || isAdmin());
+      allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Tutoriais — visíveis a qualquer cliente logado, só o admin publica
+    match /tutoriais/{id} {
+      allow read: if logado();
+      allow write: if isAdmin();
+    }
+
+    // Anotações do calendário do Dashboard — cada admin só vê e escreve as próprias
+    match /notasDashboard/{uid}/dias/{id} {
+      allow read, write: if logado() && request.auth.uid == uid && isAdmin();
+    }
+  }
+}

@@ -268,12 +268,15 @@
     <!-- GRAVAÇÃO GERAL -->
     <section class="tab-section" id="tab-gravacao-geral">
       <h2>Gravação</h2>
-      <p class="page-sub">Marque, acompanhe e veja o que já foi concluído. O status é calculado sozinho a partir da data e do horário.</p>
+      <p class="page-sub">Marque, acompanhe e veja o que já foi concluído. Um cliente pode ter mais de uma gravação marcada ao mesmo tempo.</p>
       <div class="card">
         <div class="field">
           <label>Cliente</label>
           <select id="ggClienteId"></select>
         </div>
+        <div id="ggListaCliente"></div>
+        <div id="ggAvisoConflito" style="display:none;background:rgba(227,181,85,0.1);border:1px solid rgba(227,181,85,0.35);border-radius:10px;padding:12px 14px;margin-bottom:16px;color:#f0d9a3;font-size:0.85rem;line-height:1.5;"></div>
+        <div class="meta" style="text-transform:uppercase;letter-spacing:0.03em;margin-bottom:10px;">Marcar nova gravação</div>
         <div class="field">
           <label>Data</label>
           <input type="date" id="ggData">
@@ -286,8 +289,7 @@
           <label>Endereço da gravação</label>
           <input type="text" id="ggEndereco" placeholder="Endereço onde a gravação vai acontecer">
         </div>
-        <div id="ggConfirmacaoStatus" style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;"></div>
-        <button class="btn" id="btnSalvarGravGeral">Salvar</button>
+        <button class="btn" id="btnSalvarGravGeral">Marcar gravação</button>
         <p class="success-msg" id="ggMsg"></p>
       </div>
 
@@ -549,53 +551,56 @@ function entregasDoDia(data) {
   });
 }
 
-function estadoGravacao(c) {
-  if (!c || c.proximaGravacaoStatus !== 'marcada' || !c.proximaGravacaoData) return 'a_agendar';
-  const d = c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData);
-  if (c.proximaGravacaoHorario) {
-    const [h, m] = c.proximaGravacaoHorario.split(':').map(Number);
+// --- Gravações: array de itens por cliente ---
+function gravacoesDoCliente(c) {
+  return (c && Array.isArray(c.gravacoes)) ? c.gravacoes : [];
+}
+
+function gravacaoConcluida(g) {
+  if (!g || !g.data) return false;
+  const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
+  if (g.horario) {
+    const [h, m] = g.horario.split(':').map(Number);
     d.setHours(h || 0, m || 0, 0, 0);
   } else {
     d.setHours(23, 59, 0, 0);
   }
   const fim = new Date(d.getTime() + 2 * 60 * 60 * 1000);
-  return new Date() > fim ? 'concluida' : 'marcada';
+  return new Date() > fim;
+}
+
+function gravacoesAtivas(c) {
+  return gravacoesDoCliente(c)
+    .filter(g => !gravacaoConcluida(g))
+    .sort((a, b) => {
+      const da = a.data.toDate ? a.data.toDate() : new Date(a.data);
+      const db_ = b.data.toDate ? b.data.toDate() : new Date(b.data);
+      return da - db_;
+    });
+}
+
+function todasGravacoesItens() {
+  const itens = [];
+  Object.keys(clientesCache).forEach(uid => {
+    const c = clientesCache[uid];
+    gravacoesDoCliente(c).forEach(g => itens.push({ uid, c, g }));
+  });
+  return itens;
 }
 
 function eventosDoDia(data) {
   const eventos = entregasDoDia(data).map(v => ({
     tipo: 'video', clienteId: v.clienteId, titulo: v.titulo, horario: v.horarioPostagem || ''
   }));
-  Object.keys(clientesCache).forEach(uid => {
-    const c = clientesCache[uid];
-    if (estadoGravacao(c) === 'marcada' && c.confirmacaoGravacao && c.confirmacaoGravacao.status === 'confirmada' && c.proximaGravacaoData) {
-      const d = c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData);
+  todasGravacoesItens().forEach(({ uid, g }) => {
+    if (g.status === 'confirmada' && !gravacaoConcluida(g)) {
+      const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
       if (mesmoDia(d, data)) {
-        eventos.push({ tipo: 'gravacao', clienteId: uid, titulo: 'Gravação', horario: c.proximaGravacaoHorario || '' });
+        eventos.push({ tipo: 'gravacao', clienteId: uid, titulo: 'Gravação', horario: g.horario || '' });
       }
     }
   });
   return eventos;
-}
-
-function renderConfirmacaoStatus(dados, elId) {
-  const el = document.getElementById(elId || 'perfilConfirmacaoStatus');
-  const conf = dados.confirmacaoGravacao;
-  if (estadoGravacao(dados) === 'a_agendar') {
-    el.innerHTML = '';
-    return;
-  }
-  if (conf && conf.status === 'confirmada') {
-    el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.85rem;font-weight:600;">Cliente confirmou presença</span>';
-  } else if (conf && conf.status === 'remarcar') {
-    el.innerHTML = `
-      <span style="width:8px;height:8px;border-radius:50%;background:var(--yellow);display:inline-block;"></span>
-      <span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para desmarcar</span>
-      ${conf.motivo ? `<div style="flex-basis:100%;color:var(--gray);font-size:0.82rem;">Motivo: "${conf.motivo}"</div>` : ''}
-    `;
-  } else {
-    el.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#6b6b6b;display:inline-block;"></span><span class="meta">Aguardando resposta do cliente</span>';
-  }
 }
 
 function ativarAba(tab) {
@@ -658,7 +663,7 @@ function renderDashResumo() {
 
   const pendentes = todasEntregas.filter(v => !isPublicado(v) && !(v.feedback && v.feedback.tipo));
   const alteracao = todasEntregas.filter(v => !isPublicado(v) && v.feedback && v.feedback.tipo === 'reprovado');
-  const gravsAguardando = Object.entries(clientesCache).filter(([uid, c]) => colunaGravacao(c) === 'aguardando');
+  const gravsAguardando = todasGravacoesItens().filter(({ g }) => !gravacaoConcluida(g) && (!g.status || g.status === 'agendada' || g.status === 'remarcar'));
   const duvidasAbertas = duvidasCache.filter(d => d.status !== 'respondida');
 
   animarNumero(document.getElementById('dashVideosAprovacao'), pendentes.length);
@@ -674,11 +679,10 @@ function renderDashResumo() {
     const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
     itens.push({ cor: 'var(--red)', titulo: `${v.titulo} recebeu pedido de alteração`, sub: nomeCliente, tab: 'entregas' });
   });
-  gravsAguardando.forEach(([uid, c]) => {
-    const conf = c.confirmacaoGravacao;
-    const d = c.proximaGravacaoData ? (c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData)) : null;
-    const dataTexto = d ? d.toLocaleDateString('pt-BR') + (c.proximaGravacaoHorario ? ' às ' + c.proximaGravacaoHorario : '') : '';
-    const sub = (conf && conf.status === 'remarcar') ? 'Cliente pediu para desmarcar' : 'Aguardando confirmação do cliente';
+  gravsAguardando.forEach(({ c, g }) => {
+    const d = g.data ? (g.data.toDate ? g.data.toDate() : new Date(g.data)) : null;
+    const dataTexto = d ? d.toLocaleDateString('pt-BR') + (g.horario ? ' às ' + g.horario : '') : '';
+    const sub = g.status === 'remarcar' ? 'Cliente pediu para desmarcar' : 'Aguardando confirmação do cliente';
     itens.push({ cor: 'var(--yellow)', titulo: `Gravação de ${c.nome || 'Cliente'}${dataTexto ? ' em ' + dataTexto : ''}`, sub, tab: 'gravacao-geral' });
   });
   duvidasAbertas.forEach(d => {
@@ -734,12 +738,11 @@ function renderDashCalendario() {
 
 function gravacoesDoDia(data) {
   const lista = [];
-  Object.keys(clientesCache).forEach(uid => {
-    const c = clientesCache[uid];
-    if (estadoGravacao(c) === 'marcada' && c.confirmacaoGravacao && c.confirmacaoGravacao.status === 'confirmada' && c.proximaGravacaoData) {
-      const d = c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData);
+  todasGravacoesItens().forEach(({ uid, c, g }) => {
+    if (g.status === 'confirmada' && !gravacaoConcluida(g)) {
+      const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
       if (mesmoDia(d, data)) {
-        lista.push({ clienteId: uid, nome: c.nome || 'Cliente', horario: c.proximaGravacaoHorario || '' });
+        lista.push({ clienteId: uid, gravacaoId: g.id, nome: c.nome || 'Cliente', horario: g.horario || '' });
       }
     }
   });
@@ -767,7 +770,7 @@ function renderNotasCalMes(gridId, mesId, dataRef) {
     let cls = (eventos.length || gravs.length) ? 'cal-big-cell has-video' : 'cal-big-cell';
     let extraStyle = 'cursor:pointer;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
     let conteudo = `<div class="cal-big-daynum">${dia}</div>`;
-    gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
+    gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}" data-grav-id="${g.gravacaoId}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
     const eventosOrdenados = eventos.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||''));
     eventosOrdenados.slice(0, 2).forEach(ev => conteudo += `<div class="cal-big-chip">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
     if (eventosOrdenados.length > 2) conteudo += `<div class="cal-big-more">+${eventosOrdenados.length - 2} mais</div>`;
@@ -783,8 +786,7 @@ function renderNotasCalMes(gridId, mesId, dataRef) {
   gridEl.querySelectorAll('[data-grav-uid]').forEach(el => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      const dia = parseInt(el.closest('[data-dia]').dataset.dia);
-      abrirGravacaoModal(el.dataset.gravUid, new Date(ano, mes, dia));
+      abrirGravacaoModal(el.dataset.gravUid, el.dataset.gravId);
     });
   });
 }
@@ -816,7 +818,7 @@ function renderNotasCalSemana(gridId, mesId, dataRef) {
     let cls = (eventos.length || gravs.length) ? 'cal-big-cell has-video' : 'cal-big-cell';
     let extraStyle = 'cursor:pointer;min-height:140px;' + (isToday ? 'border-color:var(--purple);border-width:2px;' : '');
     let conteudo = '';
-    gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}" data-idx="${i}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
+    gravs.forEach(g => conteudo += `<div class="cal-big-chip cal-chip-gravacao" data-grav-uid="${g.clienteId}" data-grav-id="${g.gravacaoId}" data-idx="${i}">${g.nome}: Gravação${g.horario ? ' · ' + g.horario : ''}</div>`);
     const eventosOrdenados = eventos.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||''));
     eventosOrdenados.slice(0, 3).forEach(ev => conteudo += `<div class="cal-big-chip" data-idx="${i}">${ev.nome}${ev.horario ? ' · ' + ev.horario : ''}</div>`);
     if (eventosOrdenados.length > 3) conteudo += `<div class="cal-big-more">+${eventosOrdenados.length - 3} mais</div>`;
@@ -833,9 +835,7 @@ function renderNotasCalSemana(gridId, mesId, dataRef) {
   gridEl.querySelectorAll('.cal-big-chip[data-grav-uid]').forEach(el => {
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      const i = parseInt(el.dataset.idx);
-      const d = new Date(inicio); d.setDate(d.getDate() + i);
-      abrirGravacaoModal(el.dataset.gravUid, d);
+      abrirGravacaoModal(el.dataset.gravUid, el.dataset.gravId);
     });
   });
 }
@@ -849,7 +849,7 @@ function renderNotasCalDia(gridId, mesId, dataRef) {
   const gravs = gravacoesDoDia(d);
   let html = '';
   gravs.forEach(g => {
-    html += `<div class="cal-item cal-item-gravacao" data-grav-uid="${g.clienteId}"><strong>${g.nome}</strong> · Gravação${g.horario ? ' · ' + g.horario : ''}</div>`;
+    html += `<div class="cal-item cal-item-gravacao" data-grav-uid="${g.clienteId}" data-grav-id="${g.gravacaoId}"><strong>${g.nome}</strong> · Gravação${g.horario ? ' · ' + g.horario : ''}</div>`;
   });
   if (eventos.length) {
     eventos.slice().sort((a,b) => (a.horario||'').localeCompare(b.horario||'')).forEach(ev => {
@@ -863,25 +863,30 @@ function renderNotasCalDia(gridId, mesId, dataRef) {
     el.addEventListener('click', () => abrirNotaDia(key, d.getDate(), d.getMonth(), d.getFullYear()));
   });
   gridEl.querySelectorAll('[data-grav-uid]').forEach(el => {
-    el.addEventListener('click', () => abrirGravacaoModal(el.dataset.gravUid, d));
+    el.addEventListener('click', () => abrirGravacaoModal(el.dataset.gravUid, el.dataset.gravId));
   });
 }
 
 let gravModalUid = null;
-function abrirGravacaoModal(uid, data) {
-  gravModalUid = uid;
+let gravModalGravacaoId = null;
+function abrirGravacaoModal(uid, gravacaoId) {
   const c = clientesCache[uid] || {};
-  document.getElementById('gdTitulo').textContent = 'Gravação — ' + (c.nome || 'Cliente');
-  document.getElementById('gdData').textContent = data.getDate() + ' de ' + NOMES_MES[data.getMonth()] + ' de ' + data.getFullYear() + (c.proximaGravacaoHorario ? ' às ' + c.proximaGravacaoHorario : '');
+  const g = gravacoesDoCliente(c).find(x => x.id === gravacaoId);
+  if (!g) return;
+  gravModalUid = uid;
+  gravModalGravacaoId = gravacaoId;
+  const data = g.data.toDate ? g.data.toDate() : new Date(g.data);
 
-  const conf = c.confirmacaoGravacao;
+  document.getElementById('gdTitulo').textContent = 'Gravação — ' + (c.nome || 'Cliente');
+  document.getElementById('gdData').textContent = data.getDate() + ' de ' + NOMES_MES[data.getMonth()] + ' de ' + data.getFullYear() + (g.horario ? ' às ' + g.horario : '');
+
   const statusEl = document.getElementById('gdStatusConfirmacao');
-  if (conf && conf.status === 'confirmada') {
+  if (g.status === 'confirmada') {
     statusEl.style.background = 'rgba(62,207,106,0.08)';
     statusEl.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.85rem;font-weight:600;">Cliente confirmou presença</span>';
-  } else if (conf && conf.status === 'remarcar') {
+  } else if (g.status === 'remarcar') {
     statusEl.style.background = 'rgba(227,181,85,0.08)';
-    statusEl.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;"></span><span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para desmarcar</span>${conf.motivo ? `<div style="flex-basis:100%;color:var(--gray);font-size:0.82rem;margin-top:2px;">Motivo: "${conf.motivo}"</div>` : ''}`;
+    statusEl.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;"></span><span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para desmarcar</span>${g.motivo ? `<div style="flex-basis:100%;color:var(--gray);font-size:0.82rem;margin-top:2px;">Motivo: "${g.motivo}"</div>` : ''}`;
   } else {
     statusEl.style.background = 'rgba(255,255,255,0.04)';
     statusEl.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;"></span><span class="meta">Aguardando resposta do cliente</span>';
@@ -889,9 +894,9 @@ function abrirGravacaoModal(uid, data) {
 
   document.getElementById('gdObservacao').textContent = c.observacaoGravacao || 'Cliente não registrou nenhuma observação.';
 
-  gdSetCampoModo('gdEndereco', 'gdEnderecoDisplay', 'gdEnderecoHint', c.gravacaoEndereco || '');
-  gdSetCampoModo('gdRoteiroLink', 'gdRoteiroLinkDisplay', 'gdRoteiroLinkHint', c.gravacaoRoteiroLink || '');
-  document.getElementById('gdRoteiroAbrir').href = c.gravacaoRoteiroLink || '#';
+  gdSetCampoModo('gdEndereco', 'gdEnderecoDisplay', 'gdEnderecoHint', g.endereco || '');
+  gdSetCampoModo('gdRoteiroLink', 'gdRoteiroLinkDisplay', 'gdRoteiroLinkHint', g.roteiroLink || '');
+  document.getElementById('gdRoteiroAbrir').href = g.roteiroLink || '#';
 
   document.getElementById('gravacaoDetalheModal').style.display = 'flex';
 }
@@ -935,13 +940,12 @@ document.getElementById('gdCancelar').addEventListener('click', () => {
   document.getElementById('gravacaoDetalheModal').style.display = 'none';
 });
 document.getElementById('gdSalvar').addEventListener('click', async () => {
-  if (!gravModalUid) return;
+  if (!gravModalUid || !gravModalGravacaoId) return;
   const endereco = document.getElementById('gdEndereco').value.trim();
   const roteiroLink = document.getElementById('gdRoteiroLink').value.trim();
-  await db.collection('clientes').doc(gravModalUid).set({
-    gravacaoEndereco: endereco,
-    gravacaoRoteiroLink: roteiroLink
-  }, { merge: true });
+  const c = clientesCache[gravModalUid] || {};
+  const lista = gravacoesDoCliente(c).map(g => g.id === gravModalGravacaoId ? { ...g, endereco, roteiroLink } : g);
+  await db.collection('clientes').doc(gravModalUid).set({ gravacoes: lista }, { merge: true });
   document.getElementById('gravacaoDetalheModal').style.display = 'none';
 });
 
@@ -1112,22 +1116,6 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
 });
 
 // --- CLIENTES (grid de cards) ---
-let gravAutoClearEmAndamento = new Set();
-function autoClearDesmarque(uid, c) {
-  if (gravAutoClearEmAndamento.has(uid)) return;
-  gravAutoClearEmAndamento.add(uid);
-  db.collection('clientes').doc(uid).set({
-    proximaGravacaoStatus: 'a_agendar',
-    proximaGravacaoData: null,
-    proximaGravacaoHorario: '',
-    confirmacaoGravacao: firebase.firestore.FieldValue.delete(),
-    gravacaoEndereco: firebase.firestore.FieldValue.delete(),
-    gravacaoRoteiroLink: firebase.firestore.FieldValue.delete(),
-    observacaoGravacao: firebase.firestore.FieldValue.delete(),
-    ultimoMotivoDesmarque: (c.confirmacaoGravacao && c.confirmacaoGravacao.motivo) || null
-  }, { merge: true }).finally(() => gravAutoClearEmAndamento.delete(uid));
-}
-
 function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
@@ -1152,10 +1140,6 @@ function carregarClientes() {
     snap.forEach(docSnap => {
       const c = docSnap.data();
       clientesCache[docSnap.id] = c;
-
-      if (c.confirmacaoGravacao && c.confirmacaoGravacao.status === 'remarcar' && c.proximaGravacaoStatus === 'marcada') {
-        autoClearDesmarque(docSnap.id, c);
-      }
 
       const card = document.createElement('div');
       card.className = 'client-card';
@@ -1304,103 +1288,119 @@ document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
 });
 
 // --- GRAVAÇÃO (geral, qualquer cliente) ---
-let ggUnsub = null;
 document.getElementById('ggClienteId').addEventListener('change', (e) => {
   carregarGravacaoGeral(e.target.value);
 });
 
+function gerarIdGravacao() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function ggItemResumoHtml(g) {
+  const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
+  const badgeClass = g.status === 'confirmada' ? 'badge-approved' : (g.status === 'remarcar' ? 'badge-rejected' : 'badge-pending');
+  const badgeTexto = g.status === 'confirmada' ? 'Confirmada' : (g.status === 'remarcar' ? 'Cliente pediu desmarcar' : 'Aguardando confirmação');
+  return `
+    <div class="client-row" data-ver-gravacao="${g.id}" style="cursor:pointer;">
+      <div class="top-actions" style="margin-bottom:0;">
+        <div>
+          <strong style="font-size:0.9rem;">${d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}${g.horario ? ' às ' + g.horario : ''}</strong>
+          <div class="meta">${g.endereco || 'Endereço não definido'}</div>
+        </div>
+        <span class="badge ${badgeClass}">${badgeTexto}</span>
+      </div>
+    </div>
+  `;
+}
+
 function carregarGravacaoGeral(uid) {
-  if (ggUnsub) { ggUnsub(); ggUnsub = null; }
+  document.getElementById('ggData').value = '';
+  document.getElementById('ggHorario').value = '';
+  document.getElementById('ggEndereco').value = '';
+  const listaBox = document.getElementById('ggListaCliente');
+  const avisoBox = document.getElementById('ggAvisoConflito');
+
   if (!uid) {
-    document.getElementById('ggData').value = '';
-    document.getElementById('ggHorario').value = '';
-    document.getElementById('ggEndereco').value = '';
-    document.getElementById('ggConfirmacaoStatus').innerHTML = '';
+    listaBox.innerHTML = '';
+    avisoBox.style.display = 'none';
     return;
   }
-  const c = clientesCache[uid] || {};
-  const gData = c.proximaGravacaoData;
-  if (gData) {
-    const d = gData.toDate ? gData.toDate() : new Date(gData);
-    document.getElementById('ggData').value = d.toISOString().slice(0,10);
-  } else {
-    document.getElementById('ggData').value = '';
-  }
-  document.getElementById('ggHorario').value = c.proximaGravacaoHorario || '';
-  document.getElementById('ggEndereco').value = c.gravacaoEndereco || '';
-  renderConfirmacaoStatus(c, 'ggConfirmacaoStatus');
 
-  ggUnsub = db.collection('clientes').doc(uid).onSnapshot(docSnap => {
-    if (docSnap.exists) renderConfirmacaoStatus(docSnap.data(), 'ggConfirmacaoStatus');
-  });
+  const c = clientesCache[uid] || {};
+  const ativas = gravacoesAtivas(c);
+
+  if (!ativas.length) {
+    listaBox.innerHTML = '';
+    avisoBox.style.display = 'none';
+  } else {
+    listaBox.innerHTML = `<div class="meta" style="margin-bottom:8px;">Gravações marcadas de ${c.nome || 'cliente'}</div>` + ativas.map(ggItemResumoHtml).join('');
+    listaBox.querySelectorAll('[data-ver-gravacao]').forEach(el => {
+      el.addEventListener('click', () => abrirGravacaoModal(uid, el.dataset.verGravacao));
+    });
+
+    const proxima = ativas[0];
+    const d = proxima.data.toDate ? proxima.data.toDate() : new Date(proxima.data);
+    avisoBox.style.display = 'block';
+    avisoBox.innerHTML = `⚠️ ${c.nome || 'Esse cliente'} já tem ${ativas.length > 1 ? ativas.length + ' gravações marcadas' : 'uma gravação marcada'}, a mais próxima em <strong>${d.toLocaleDateString('pt-BR')}${proxima.horario ? ' às ' + proxima.horario : ''}</strong>. Confirme que essa nova data não é duplicada antes de continuar.`;
+  }
 }
 
 document.getElementById('btnSalvarGravGeral').addEventListener('click', async () => {
   const uid = document.getElementById('ggClienteId').value;
   if (!uid) return;
   const data = document.getElementById('ggData').value;
+  if (!data) return;
   const horario = document.getElementById('ggHorario').value;
   const endereco = document.getElementById('ggEndereco').value.trim();
 
   const c = clientesCache[uid] || {};
-  const gDataAtual = c.proximaGravacaoData ? (c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData)).toISOString().slice(0,10) : '';
-  const mudouData = data !== gDataAtual || horario !== (c.proximaGravacaoHorario || '');
-
-  const payload = {
-    proximaGravacaoStatus: data ? 'marcada' : 'a_agendar',
-    proximaGravacaoData: data ? dateInputToTimestamp(data) : null,
-    proximaGravacaoHorario: horario || '',
-    gravacaoEndereco: endereco ? endereco : firebase.firestore.FieldValue.delete()
+  const novoItem = {
+    id: gerarIdGravacao(),
+    data: dateInputToTimestamp(data),
+    horario: horario || '',
+    endereco: endereco || '',
+    status: 'agendada'
   };
-  if (mudouData) {
-    payload.confirmacaoGravacao = firebase.firestore.FieldValue.delete();
-    payload.gravacaoRoteiroLink = firebase.firestore.FieldValue.delete();
-    payload.observacaoGravacao = firebase.firestore.FieldValue.delete();
-    payload.ultimoMotivoDesmarque = firebase.firestore.FieldValue.delete();
-  }
-  await db.collection('clientes').doc(uid).set(payload, { merge: true });
+  const lista = [...gravacoesDoCliente(c), novoItem];
+  await db.collection('clientes').doc(uid).set({ gravacoes: lista }, { merge: true });
 
-  document.getElementById('ggClienteId').value = '';
-  carregarGravacaoGeral('');
+  document.getElementById('ggData').value = '';
+  document.getElementById('ggHorario').value = '';
+  document.getElementById('ggEndereco').value = '';
 
   const msg = document.getElementById('ggMsg');
-  msg.textContent = 'Salvo!';
+  msg.textContent = 'Gravação marcada!';
   setTimeout(() => msg.textContent = '', 3000);
 });
 
-function colunaGravacao(c) {
-  const estado = estadoGravacao(c);
-  if (estado !== 'marcada') return estado;
-  const conf = c.confirmacaoGravacao;
-  return (conf && conf.status === 'confirmada') ? 'marcada' : 'aguardando';
+function gravCardHtmlClient(uid, c) {
+  return `
+    <div class="video-mini-card" data-grav-card-cliente="${uid}">
+      <h5>${c.nome || 'Cliente'}</h5>
+      <div class="meta">Sem gravação marcada</div>
+    </div>
+  `;
 }
 
-function gravCardHtml(uid, c, coluna) {
-  const d = c.proximaGravacaoData ? (c.proximaGravacaoData.toDate ? c.proximaGravacaoData.toDate() : new Date(c.proximaGravacaoData)) : null;
-  const sub = d ? d.toLocaleDateString('pt-BR') + (c.proximaGravacaoHorario ? ' às ' + c.proximaGravacaoHorario : '') : 'Sem data definida';
+function gravCardHtmlItem(uid, c, g, coluna) {
+  const d = g.data.toDate ? g.data.toDate() : new Date(g.data);
+  const sub = d.toLocaleDateString('pt-BR') + (g.horario ? ' às ' + g.horario : '');
   let statusLine = '';
   if (coluna === 'marcada' || coluna === 'aguardando') {
-    const conf = c.confirmacaoGravacao;
-    if (conf && conf.status === 'confirmada') {
+    if (g.status === 'confirmada') {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;"></span><span style="color:var(--green);">Confirmou presença</span></div>';
-    } else if (conf && conf.status === 'remarcar') {
-      statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;margin-right:6px;"></span><span style="color:var(--yellow);">Pediu para desmarcar</span></div>';
+    } else if (g.status === 'remarcar') {
+      statusLine = `<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;margin-right:6px;"></span><span style="color:var(--yellow);">Pediu para desmarcar</span></div>${g.motivo ? `<div class="meta" style="margin-top:4px;">Motivo: "${g.motivo}"</div>` : ''}`;
     } else {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;margin-right:6px;"></span><span class="meta">Aguardando resposta</span></div>';
     }
   }
-  let avisoDesmarque = '';
-  if (coluna === 'a_agendar' && c.ultimoMotivoDesmarque) {
-    avisoDesmarque = `<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;color:var(--yellow);">Pediu para desmarcar: "${c.ultimoMotivoDesmarque}"</div>`;
-  }
-  const delBtn = coluna !== 'a_agendar' ? `<button class="video-del-btn" data-del-grav="${uid}" data-nome="${(c.nome || 'Cliente').replace(/"/g,'&quot;')}" aria-label="Desmarcar gravação">&#10005;</button>` : '';
   return `
-    <div class="video-mini-card" data-grav-card="${uid}" data-grav-coluna="${coluna}">
-      ${delBtn}
+    <div class="video-mini-card" data-grav-card="${uid}" data-grav-id="${g.id}" data-grav-coluna="${coluna}">
+      <button class="video-del-btn" data-del-grav="${uid}" data-del-grav-id="${g.id}" data-nome="${(c.nome || 'Cliente').replace(/"/g,'&quot;')}" aria-label="Excluir gravação">&#10005;</button>
       <h5>${c.nome || 'Cliente'}</h5>
       <div class="meta">${sub}</div>
       ${statusLine}
-      ${avisoDesmarque}
     </div>
   `;
 }
@@ -1409,7 +1409,12 @@ function renderGravBoard() {
   const cols = { a_agendar: [], aguardando: [], marcada: [], concluida: [] };
   Object.keys(clientesCache).forEach(uid => {
     const c = clientesCache[uid];
-    cols[colunaGravacao(c)].push({ uid, c });
+    if (!gravacoesAtivas(c).length && !gravacoesDoCliente(c).some(gravacaoConcluida)) cols.a_agendar.push({ uid, c });
+  });
+  todasGravacoesItens().forEach(({ uid, c, g }) => {
+    if (gravacaoConcluida(g)) cols.concluida.push({ uid, c, g });
+    else if (g.status === 'confirmada') cols.marcada.push({ uid, c, g });
+    else cols.aguardando.push({ uid, c, g });
   });
 
   const colAgendar = document.getElementById('gravColAgendar');
@@ -1418,28 +1423,27 @@ function renderGravBoard() {
   const colConcluidas = document.getElementById('gravColConcluidas');
   if (!colAgendar) return;
 
-  colAgendar.innerHTML = cols.a_agendar.length ? cols.a_agendar.map(x => gravCardHtml(x.uid, x.c, 'a_agendar')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
-  colAguardando.innerHTML = cols.aguardando.length ? cols.aguardando.map(x => gravCardHtml(x.uid, x.c, 'aguardando')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
-  colMarcadas.innerHTML = cols.marcada.length ? cols.marcada.map(x => gravCardHtml(x.uid, x.c, 'marcada')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
-  colConcluidas.innerHTML = cols.concluida.length ? cols.concluida.map(x => gravCardHtml(x.uid, x.c, 'concluida')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
+  colAgendar.innerHTML = cols.a_agendar.length ? cols.a_agendar.map(x => gravCardHtmlClient(x.uid, x.c)).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
+  colAguardando.innerHTML = cols.aguardando.length ? cols.aguardando.map(x => gravCardHtmlItem(x.uid, x.c, x.g, 'aguardando')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
+  colMarcadas.innerHTML = cols.marcada.length ? cols.marcada.map(x => gravCardHtmlItem(x.uid, x.c, x.g, 'marcada')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
+  colConcluidas.innerHTML = cols.concluida.length ? cols.concluida.map(x => gravCardHtmlItem(x.uid, x.c, x.g, 'concluida')).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
 
   document.getElementById('gravCountAgendar').textContent = cols.a_agendar.length;
   document.getElementById('gravCountAguardando').textContent = cols.aguardando.length;
   document.getElementById('gravCountMarcadas').textContent = cols.marcada.length;
   document.getElementById('gravCountConcluidas').textContent = cols.concluida.length;
 
+  document.querySelectorAll('#tab-gravacao-geral [data-grav-card-cliente]').forEach(el => {
+    el.addEventListener('click', () => {
+      const uid = el.dataset.gravCardCliente;
+      document.getElementById('ggClienteId').value = uid;
+      carregarGravacaoGeral(uid);
+    });
+  });
+
   document.querySelectorAll('#tab-gravacao-geral [data-grav-card]').forEach(el => {
     el.addEventListener('click', () => {
-      const uid = el.dataset.gravCard;
-      if (el.dataset.gravColuna === 'a_agendar') {
-        document.getElementById('ggClienteId').value = uid;
-        carregarGravacaoGeral(uid);
-      } else {
-        const c = clientesCache[uid] || {};
-        const gData = c.proximaGravacaoData;
-        const d = gData ? (gData.toDate ? gData.toDate() : new Date(gData)) : new Date();
-        abrirGravacaoModal(uid, d);
-      }
+      abrirGravacaoModal(el.dataset.gravCard, el.dataset.gravId);
     });
   });
 
@@ -1447,21 +1451,15 @@ function renderGravBoard() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const uid = btn.dataset.delGrav;
+      const gravacaoId = btn.dataset.delGravId;
       const nome = btn.dataset.nome;
       abrirConfirmModal(
-        'Desmarcar gravação?',
-        `A gravação de "${nome}" vai ser removida e ela volta para "Precisam ser marcadas". Essa ação não pode ser desfeita.`,
+        'Excluir gravação?',
+        `A gravação de "${nome}" vai ser removida da lista. Essa ação não pode ser desfeita.`,
         async () => {
-          await db.collection('clientes').doc(uid).set({
-            proximaGravacaoStatus: 'a_agendar',
-            proximaGravacaoData: null,
-            proximaGravacaoHorario: '',
-            confirmacaoGravacao: firebase.firestore.FieldValue.delete(),
-            gravacaoEndereco: firebase.firestore.FieldValue.delete(),
-            gravacaoRoteiroLink: firebase.firestore.FieldValue.delete(),
-            observacaoGravacao: firebase.firestore.FieldValue.delete(),
-            ultimoMotivoDesmarque: firebase.firestore.FieldValue.delete()
-          }, { merge: true });
+          const c = clientesCache[uid] || {};
+          const lista = gravacoesDoCliente(c).filter(g => g.id !== gravacaoId);
+          await db.collection('clientes').doc(uid).set({ gravacoes: lista }, { merge: true });
           if (document.getElementById('ggClienteId').value === uid) carregarGravacaoGeral(uid);
         }
       );
