@@ -1390,7 +1390,7 @@ function renderCalendarioLista() {
     : '<div class="empty-state">Nenhuma postagem por aqui.</div>';
 
   const secaoPub = document.getElementById('calSecaoPublicados');
-  if (secaoPub) secaoPub.style.display = publicadosTodos.length ? 'block' : 'none';
+  if (secaoPub) secaoPub.style.display = (calFiltro === 'todos' && publicadosTodos.length) ? 'block' : 'none';
 
   const visiveis = calPublicadosExpandido ? publicadosTodos : publicadosTodos.slice(0, 3);
   boxPub.innerHTML = renderGruposCalendario(agruparPorDataCalendario(visiveis));
