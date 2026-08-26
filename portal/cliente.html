@@ -97,11 +97,11 @@
 
       <div class="videos-kanban" style="grid-template-columns:1fr 1fr;">
         <div>
-          <div class="videos-col-header"><h4>A confirmar</h4><span class="videos-col-count" id="gravCountAConfirmar" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
+          <div class="videos-col-header" id="gravHeadAConfirmar"><h4>A confirmar</h4><span class="videos-col-count" id="gravCountAConfirmar" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
           <div id="gravColAConfirmar"><div class="skeleton-block"></div></div>
         </div>
         <div>
-          <div class="videos-col-header"><h4>Confirmadas</h4><span class="videos-col-count" id="gravCountConfirmadas" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
+          <div class="videos-col-header" id="gravHeadConfirmadas"><h4>Confirmadas</h4><span class="videos-col-count" id="gravCountConfirmadas" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
           <div id="gravColConfirmadas"></div>
         </div>
       </div>
@@ -124,19 +124,19 @@
       <div id="listaVideos">
         <div class="videos-kanban videos-kanban-4">
           <div>
-            <div class="videos-col-header"><h4>Para aprovar</h4><span class="videos-col-count" id="vidsCountPendente" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
+            <div class="videos-col-header" id="vidsHeadPendente"><h4>Para aprovar</h4><span class="videos-col-count" id="vidsCountPendente" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
             <div id="vidsColPendente"><div class="skeleton-block"></div><div class="skeleton-block"></div></div>
           </div>
           <div>
-            <div class="videos-col-header"><h4>Em alteração</h4><span class="videos-col-count" id="vidsCountAlteracao" style="background:rgba(227,85,85,0.15);color:var(--red);">0</span></div>
+            <div class="videos-col-header" id="vidsHeadAlteracao"><h4>Em alteração</h4><span class="videos-col-count" id="vidsCountAlteracao" style="background:rgba(227,85,85,0.15);color:var(--red);">0</span></div>
             <div id="vidsColAlteracao"></div>
           </div>
           <div>
-            <div class="videos-col-header"><h4>Aprovados</h4><span class="videos-col-count" id="vidsCountAprovados" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
+            <div class="videos-col-header" id="vidsHeadAprovados"><h4>Aprovados</h4><span class="videos-col-count" id="vidsCountAprovados" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
             <div id="vidsColAprovados"></div>
           </div>
           <div>
-            <div class="videos-col-header"><h4>Postados</h4><span class="videos-col-count" id="vidsCountPostados" style="background:rgba(155,107,242,0.15);color:var(--purple-light);">0</span></div>
+            <div class="videos-col-header" id="vidsHeadPostados"><h4>Postados</h4><span class="videos-col-count" id="vidsCountPostados" style="background:rgba(155,107,242,0.15);color:var(--purple-light);">0</span></div>
             <div id="vidsColPostados"></div>
           </div>
         </div>
@@ -705,6 +705,8 @@ function renderGravacaoTab(dados) {
 
   document.getElementById('gravCountAConfirmar').textContent = aConfirmar.length;
   document.getElementById('gravCountConfirmadas').textContent = confirmadas.length;
+  marcarColunaVazia('gravHeadAConfirmar', !aConfirmar.length);
+  marcarColunaVazia('gravHeadConfirmadas', !confirmadas.length);
 
   colAConfirmar.innerHTML = aConfirmar.length ? aConfirmar.map(gravacaoMiniCardHtml).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
   colConfirmadas.innerHTML = confirmadas.length ? confirmadas.map(gravacaoMiniCardHtml).join('') : '<div class="empty-state">Nenhuma aqui.</div>';
@@ -888,6 +890,11 @@ function clienteVideoCardHtml(v) {
   `;
 }
 
+function marcarColunaVazia(headId, vazio) {
+  const el = document.getElementById(headId);
+  if (el) el.classList.toggle('is-empty', vazio);
+}
+
 function renderVideosBoard() {
   const pendentes = meusVideosCache.filter(v => !(v.feedback && v.feedback.tipo));
   const alteracao = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'reprovado');
@@ -898,6 +905,11 @@ function renderVideosBoard() {
   document.getElementById('vidsCountAlteracao').textContent = alteracao.length;
   document.getElementById('vidsCountAprovados').textContent = aprovados.length;
   document.getElementById('vidsCountPostados').textContent = postados.length;
+
+  marcarColunaVazia('vidsHeadPendente', !pendentes.length);
+  marcarColunaVazia('vidsHeadAlteracao', !alteracao.length);
+  marcarColunaVazia('vidsHeadAprovados', !aprovados.length);
+  marcarColunaVazia('vidsHeadPostados', !postados.length);
 
   const navBadge = document.getElementById('videosNavBadge');
   if (navBadge) {
