@@ -128,12 +128,15 @@
     <section class="tab-section" id="tab-perfil">
       <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarPerfil">&larr; Voltar para clientes</div>
 
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
-        <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
-        <div>
-          <h2 style="margin:0;" id="perfilNome">Cliente</h2>
-          <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
+          <div>
+            <h2 style="margin:0;" id="perfilNome">Cliente</h2>
+            <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
+          </div>
         </div>
+        <button class="btn btn-outline" id="btnExcluirCliente" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);white-space:nowrap;">Excluir cliente</button>
       </div>
 
       <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start;">
@@ -1800,6 +1803,38 @@ function abrirConfirmModal(titulo, texto, onConfirm, confirmTexto) {
 document.getElementById('confirmModalCancelar').addEventListener('click', () => {
   document.getElementById('confirmModal').style.display = 'none';
   confirmModalAction = null;
+});
+
+async function excluirClienteCompleto(uid) {
+  const colecoes = ['entregas', 'materiais', 'duvidas', 'pautas', 'notificacoes'];
+  for (const col of colecoes) {
+    const snap = await db.collection(col).where('clienteId', '==', uid).get();
+    if (!snap.empty) {
+      const batch = db.batch();
+      snap.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
+  }
+  await db.collection('clientes').doc(uid).delete();
+}
+
+document.getElementById('btnExcluirCliente').addEventListener('click', () => {
+  const c = clientesCache[perfilUid] || {};
+  abrirConfirmModal(
+    'Excluir cliente?',
+    `Isso apaga o cadastro de ${c.nome || 'este cliente'} e todos os vídeos, materiais, dúvidas e pautas vinculados a ele. Essa ação não pode ser desfeita. Depois, lembre de excluir a conta dele também no Firebase Console (Authentication).`,
+    async () => {
+      const uidExcluir = perfilUid;
+      await excluirClienteCompleto(uidExcluir);
+      if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
+      document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+      document.getElementById('tab-clientes').classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelector('[data-tab="clientes"]').classList.add('active');
+      document.getElementById('mainArea').classList.remove('main-wide');
+    },
+    'Excluir cliente'
+  );
 });
 function abrirVideoDetalheModal(v) {
   const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
