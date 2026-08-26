@@ -171,6 +171,7 @@
         <span class="cal-filtro-chip" data-cal-filtro="pendente">Aguardando avaliação</span>
         <span class="cal-filtro-chip" data-cal-filtro="alteracao">Em alteração</span>
         <span class="cal-filtro-chip" data-cal-filtro="aprovado">Aprovado</span>
+        <span class="cal-filtro-chip" data-cal-filtro="publicado">Publicado</span>
       </div>
 
       <div id="listaCalendarioProximos"><div class="skeleton-block"></div><div class="skeleton-block"></div><div class="skeleton-block" style="width:70%;"></div></div>
@@ -1378,19 +1379,21 @@ function renderCalendarioLista() {
       return da - db_;
     });
 
-  const proximosFiltrados = proximosTodos.filter(v => {
+  const proximosFiltrados = calFiltro === 'publicado' ? [] : proximosTodos.filter(v => {
     if (calFiltro === 'pendente') return !(v.feedback && v.feedback.tipo);
     if (calFiltro === 'alteracao') return v.feedback && v.feedback.tipo === 'reprovado';
     if (calFiltro === 'aprovado') return v.feedback && v.feedback.tipo === 'aprovado';
     return true;
   });
 
+  boxProx.style.display = calFiltro === 'publicado' ? 'none' : 'block';
   boxProx.innerHTML = proximosFiltrados.length
     ? renderGruposCalendario(agruparPorDataCalendario(proximosFiltrados))
     : '<div class="empty-state">Nenhuma postagem por aqui.</div>';
 
+  const mostrarPublicados = calFiltro === 'todos' || calFiltro === 'publicado';
   const secaoPub = document.getElementById('calSecaoPublicados');
-  if (secaoPub) secaoPub.style.display = (calFiltro === 'todos' && publicadosTodos.length) ? 'block' : 'none';
+  if (secaoPub) secaoPub.style.display = (mostrarPublicados && publicadosTodos.length) ? 'block' : 'none';
 
   const visiveis = calPublicadosExpandido ? publicadosTodos : publicadosTodos.slice(0, 3);
   boxPub.innerHTML = renderGruposCalendario(agruparPorDataCalendario(visiveis));
