@@ -138,16 +138,12 @@
     <!-- VÍDEOS -->
     <section class="tab-section" id="tab-videos">
       <h2>Seus vídeos</h2>
-      <p class="page-sub">Clique num vídeo para assistir, aprovar ou pedir alteração.</p>
+      <p class="page-sub">Clique num vídeo para assistir ou aprovar.</p>
       <div id="listaVideos">
-        <div class="videos-kanban videos-kanban-4">
+        <div class="videos-kanban">
           <div>
             <div class="videos-col-header" id="vidsHeadPendente"><h4>Para aprovar</h4><span class="videos-col-count" id="vidsCountPendente" style="background:rgba(227,181,85,0.15);color:var(--yellow);">0</span></div>
             <div id="vidsColPendente"><div class="skeleton-block"></div><div class="skeleton-block"></div></div>
-          </div>
-          <div>
-            <div class="videos-col-header" id="vidsHeadAlteracao"><h4>Em alteração</h4><span class="videos-col-count" id="vidsCountAlteracao" style="background:rgba(227,85,85,0.15);color:var(--red);">0</span></div>
-            <div id="vidsColAlteracao"></div>
           </div>
           <div>
             <div class="videos-col-header" id="vidsHeadAprovados"><h4>Aprovados</h4><span class="videos-col-count" id="vidsCountAprovados" style="background:rgba(62,207,106,0.15);color:var(--green);">0</span></div>
@@ -353,19 +349,10 @@
     <div class="caption-box" id="vdComentarioWrap" style="display:none;"><strong style="color:var(--white)">Seu pedido de alteração:</strong><br><span id="vdComentario"></span></div>
 
     <div class="feedback-row" id="vdFeedbackRow">
-      <button class="btn" id="vdBtnAprovar">Aprovar</button>
-      <button class="btn btn-outline" id="vdBtnAbrirAlt">Pedir alteração</button>
+      <button class="btn" id="vdBtnAprovar" style="flex:1;">Aprovar</button>
     </div>
+    <p class="meta" id="vdAjusteInfo" style="display:none;margin:10px 0 0;">Precisa de algum ajuste antes de aprovar? Fale com a Lmotion pelo WhatsApp.</p>
     <p class="meta" id="vdAprovadoInfo" style="display:none;margin:0;">Vídeo aprovado. Se precisar de algum ajuste depois de aprovado, fale com a Lmotion pelo WhatsApp.</p>
-    <div class="alt-panel" id="vdAltPanel" style="display:none;">
-      <div class="field" style="margin:12px 0 8px;">
-        <textarea rows="3" placeholder="Descreva o que precisa ser ajustado nesse vídeo..." id="vdAltTexto"></textarea>
-      </div>
-      <div class="alt-panel-actions">
-        <button class="btn" id="vdAltOk">OK</button>
-        <button class="btn btn-outline" id="vdAltCancelar">Cancelar</button>
-      </div>
-    </div>
 
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-outline" id="vdFechar" style="flex:1;">Fechar</button>
@@ -1228,18 +1215,15 @@ function marcarColunaVazia(headId, vazio) {
 }
 
 function renderVideosBoard() {
-  const pendentes = meusVideosCache.filter(v => !(v.feedback && v.feedback.tipo));
-  const alteracao = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'reprovado');
+  const pendentes = meusVideosCache.filter(v => !(v.feedback && v.feedback.tipo === 'aprovado'));
   const aprovados = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'aprovado' && !isPublicado(v));
   const postados = meusVideosCache.filter(v => v.feedback && v.feedback.tipo === 'aprovado' && isPublicado(v));
 
   document.getElementById('vidsCountPendente').textContent = pendentes.length;
-  document.getElementById('vidsCountAlteracao').textContent = alteracao.length;
   document.getElementById('vidsCountAprovados').textContent = aprovados.length;
   document.getElementById('vidsCountPostados').textContent = postados.length;
 
   marcarColunaVazia('vidsHeadPendente', !pendentes.length);
-  marcarColunaVazia('vidsHeadAlteracao', !alteracao.length);
   marcarColunaVazia('vidsHeadAprovados', !aprovados.length);
   marcarColunaVazia('vidsHeadPostados', !postados.length);
 
@@ -1250,12 +1234,10 @@ function renderVideosBoard() {
   }
 
   const colPendente = document.getElementById('vidsColPendente');
-  const colAlteracao = document.getElementById('vidsColAlteracao');
   const colAprovados = document.getElementById('vidsColAprovados');
   const colPostados = document.getElementById('vidsColPostados');
 
   colPendente.innerHTML = pendentes.length ? pendentes.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
-  colAlteracao.innerHTML = alteracao.length ? alteracao.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
   colAprovados.innerHTML = aprovados.length ? aprovados.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
   colPostados.innerHTML = postados.length ? postados.map(clienteVideoCardHtml).join('') : '<div class="empty-state">Nenhum vídeo aqui.</div>';
 
@@ -1324,11 +1306,9 @@ function abrirVideoDetalheCliente(id) {
     comWrap.style.display = 'none';
   }
 
-  document.getElementById('vdAltTexto').value = '';
-  document.getElementById('vdAltPanel').style.display = 'none';
-
   const aprovado = feedback.tipo === 'aprovado';
   document.getElementById('vdFeedbackRow').style.display = aprovado ? 'none' : 'flex';
+  document.getElementById('vdAjusteInfo').style.display = aprovado ? 'none' : 'block';
   document.getElementById('vdAprovadoInfo').style.display = aprovado ? 'block' : 'none';
 
   document.getElementById('vdModal').style.display = 'flex';
@@ -1359,29 +1339,6 @@ document.getElementById('avModalConfirmar').addEventListener('click', async () =
   registrarNotificacaoAdmin('aprovacao', `Aprovou o vídeo "${vdModalTitulo}"`, { entregaId: vdModalId });
   fecharVideoDetalheCliente();
   showToast('Vídeo aprovado');
-});
-
-document.getElementById('vdBtnAbrirAlt').addEventListener('click', () => {
-  document.getElementById('vdFeedbackRow').style.display = 'none';
-  document.getElementById('vdAltPanel').style.display = 'block';
-  document.getElementById('vdAltTexto').focus();
-});
-
-document.getElementById('vdAltCancelar').addEventListener('click', () => {
-  document.getElementById('vdAltPanel').style.display = 'none';
-  document.getElementById('vdFeedbackRow').style.display = 'flex';
-});
-
-document.getElementById('vdAltOk').addEventListener('click', async () => {
-  if (!vdModalId) return;
-  const texto = document.getElementById('vdAltTexto').value.trim();
-  if (!texto) return;
-  await db.collection('entregas').doc(vdModalId).set({
-    feedback: { comentario: texto, tipo: 'reprovado', data: firebase.firestore.FieldValue.serverTimestamp() }
-  }, { merge: true });
-  registrarNotificacaoAdmin('alteracao', `Pediu alteração no vídeo "${vdModalTitulo}"`, { entregaId: vdModalId });
-  fecharVideoDetalheCliente();
-  showToast('Pedido de alteração enviado', 'info');
 });
 
 // --- CALENDÁRIO ---
