@@ -7,11 +7,12 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
-<button class="menu-toggle-mobile" id="menuToggle">☰</button>
+<button class="menu-toggle-mobile" id="menuToggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
 <div class="toast-wrap" id="toastWrap"></div>
 
@@ -128,7 +129,7 @@
     <section class="tab-section" id="tab-perfil">
       <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarPerfil">&larr; Voltar para clientes</div>
 
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap;">
         <div style="display:flex;align-items:center;gap:14px;">
           <div style="width:52px;height:52px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1.1rem;" id="perfilAvatar">--</div>
           <div>
@@ -633,6 +634,7 @@ function ativarAba(tab) {
   navItem.classList.add('active');
   tabSection.classList.add('active');
   document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
   document.getElementById('mainArea').classList.toggle('main-wide', tab === 'calendario' || tab === 'entregas' || tab === 'dashboard' || tab === 'gravacao-geral');
   localStorage.setItem('adminAbaAtiva', tab);
   return true;
@@ -647,6 +649,11 @@ if (abaSalvaAdmin) ativarAba(abaSalvaAdmin);
 
 document.getElementById('menuToggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarBackdrop').classList.toggle('open');
+});
+document.getElementById('sidebarBackdrop').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
 });
 
 document.getElementById('btnSair').addEventListener('click', () => {

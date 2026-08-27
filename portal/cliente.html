@@ -7,11 +7,12 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
 
-<button class="menu-toggle-mobile" id="menuToggle">☰</button>
+<button class="menu-toggle-mobile" id="menuToggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
 <div class="toast-wrap" id="toastWrap"></div>
 
@@ -441,6 +442,7 @@ function ativarAba(tab) {
   navItem.classList.add('active');
   tabSection.classList.add('active');
   document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
   localStorage.setItem('clienteAbaAtiva', tab);
   if (tab === 'duvidas' && typeof marcarUltimaDuvidaVista === 'function') marcarUltimaDuvidaVista();
   return true;
@@ -455,6 +457,11 @@ if (abaSalvaCliente) ativarAba(abaSalvaCliente);
 
 document.getElementById('menuToggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarBackdrop').classList.toggle('open');
+});
+document.getElementById('sidebarBackdrop').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
 });
 
 document.getElementById('btnSair').addEventListener('click', () => {
