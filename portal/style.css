@@ -574,6 +574,7 @@ a{color:var(--purple-light);text-decoration:none;}
     z-index:1000;
   }
   .sidebar.open{left:0;}
+  .sidebar{padding-top:76px;}
   .main{margin-left:0;padding:24px 20px 24px;padding-top:76px;}
   .menu-toggle-mobile{display:flex;}
   .videos-layout{flex-direction:column;}
