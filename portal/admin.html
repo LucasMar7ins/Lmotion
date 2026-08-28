@@ -1348,7 +1348,10 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
 function diasDesdeAcesso(ultimoAcesso) {
   if (!ultimoAcesso) return null;
   const d = ultimoAcesso.toDate ? ultimoAcesso.toDate() : new Date(ultimoAcesso);
-  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+  const dZero = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const hojeZero = new Date();
+  hojeZero.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((hojeZero.getTime() - dZero.getTime()) / 86400000));
 }
 function corAcessoPorDias(dias) {
   if (dias === null) return '#5a5a5a';
