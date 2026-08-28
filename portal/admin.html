@@ -224,6 +224,10 @@
             <span class="view-toggle-btn" data-filtro="postado" style="flex:1;text-align:center;">Postados</span>
           </div>
           <div id="perfilVideosLista"></div>
+          <a href="#" id="btnVerMateriaisCliente" style="display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(110,45,231,0.4);color:var(--purple-light);font-weight:600;font-size:0.88rem;padding:11px;border-radius:8px;text-decoration:none;margin-top:14px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+            Ver materiais da marca
+          </a>
         </div>
       </div>
     </section>
@@ -350,6 +354,10 @@
     <section class="tab-section" id="tab-materiais">
       <h2>Materiais da marca</h2>
       <p class="page-sub">Logo, guia de marca e referências enviados pelos próprios clientes.</p>
+      <div class="field" style="max-width:280px;">
+        <label>Filtrar por cliente</label>
+        <select id="materiaisFiltroCliente"><option value="">Todos os clientes</option></select>
+      </div>
       <div id="listaMateriaisAdmin"><div class="empty-state">Carregando...</div></div>
     </section>
 
@@ -1409,6 +1417,9 @@ function carregarClientes() {
     const filtroEntregas = document.getElementById('entregasFiltroCliente');
     const filtroEntregasAtual = filtroEntregas.value;
     filtroEntregas.innerHTML = '<option value="">Todos os clientes</option>';
+    const filtroMateriais = document.getElementById('materiaisFiltroCliente');
+    const filtroMateriaisAtual = filtroMateriais.value;
+    filtroMateriais.innerHTML = '<option value="">Todos os clientes</option>';
 
     snap.forEach(docSnap => {
       const c = docSnap.data();
@@ -1426,12 +1437,19 @@ function carregarClientes() {
       optFiltro.value = docSnap.id;
       optFiltro.textContent = c.nome;
       filtroEntregas.appendChild(optFiltro);
+
+      const optFiltroMat = document.createElement('option');
+      optFiltroMat.value = docSnap.id;
+      optFiltroMat.textContent = c.nome;
+      filtroMateriais.appendChild(optFiltroMat);
     });
 
     clientesTodos.sort((a, b) => (a.empresa || a.nome || '').localeCompare(b.empresa || b.nome || ''));
     renderListaClientes(document.getElementById('buscaClientes').value);
 
     filtroEntregas.value = filtroEntregasAtual;
+    filtroMateriais.value = filtroMateriaisAtual;
+    if (typeof renderMateriaisAdmin === 'function') renderMateriaisAdmin(filtroMateriais.value);
     document.getElementById('ggClienteId').value = ggAtual;
 
     if (document.getElementById('ggClienteId').value) {
@@ -2134,27 +2152,54 @@ document.querySelectorAll('#calAdminViewToggle .view-toggle-btn').forEach(btn =>
 });
 
 // --- MATERIAIS (enviados pelos clientes) ---
+let materiaisTodos = [];
+
+function renderMateriaisAdmin(filtroClienteId) {
+  const box = document.getElementById('listaMateriaisAdmin');
+  const filtrados = filtroClienteId ? materiaisTodos.filter(m => m.clienteId === filtroClienteId) : materiaisTodos;
+
+  if (materiaisTodos.length === 0) {
+    box.innerHTML = '<div class="empty-state">Nenhum material adicionado ainda.</div>';
+    return;
+  }
+  if (filtrados.length === 0) {
+    box.innerHTML = '<div class="empty-state">Nenhum material desse cliente ainda.</div>';
+    return;
+  }
+
+  box.innerHTML = '<div class="card table-list"></div>';
+  const list = box.querySelector('.table-list');
+  filtrados.forEach(m => {
+    const nomeCliente = (clientesCache[m.clienteId] && clientesCache[m.clienteId].nome) || 'Cliente';
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.id = 'material-' + m.id;
+    row.innerHTML = `
+      <div class="info"><strong>${m.tipo}</strong><span>${nomeCliente}</span></div>
+      <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
+    `;
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('materiaisFiltroCliente').addEventListener('change', (e) => {
+  renderMateriaisAdmin(e.target.value);
+});
+
+document.getElementById('btnVerMateriaisCliente').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!perfilUid) return;
+  ativarAba('materiais');
+  const filtro = document.getElementById('materiaisFiltroCliente');
+  filtro.value = perfilUid;
+  renderMateriaisAdmin(perfilUid);
+});
+
 function carregarMateriaisAdmin() {
   db.collection('materiais').orderBy('dataUpload', 'desc').onSnapshot(snap => {
-    const box = document.getElementById('listaMateriaisAdmin');
-    if (snap.empty) {
-      box.innerHTML = '<div class="empty-state">Nenhum material adicionado ainda.</div>';
-      return;
-    }
-    box.innerHTML = '<div class="card table-list"></div>';
-    const list = box.querySelector('.table-list');
-    snap.forEach(docSnap => {
-      const m = docSnap.data();
-      const nomeCliente = (clientesCache[m.clienteId] && clientesCache[m.clienteId].nome) || 'Cliente';
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.id = 'material-' + docSnap.id;
-      row.innerHTML = `
-        <div class="info"><strong>${m.tipo}</strong><span>${nomeCliente}</span></div>
-        <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
-      `;
-      list.appendChild(row);
-    });
+    materiaisTodos = [];
+    snap.forEach(docSnap => materiaisTodos.push({ id: docSnap.id, ...docSnap.data() }));
+    renderMateriaisAdmin(document.getElementById('materiaisFiltroCliente').value);
   });
 }
 
