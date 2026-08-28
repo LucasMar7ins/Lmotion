@@ -45,7 +45,6 @@
     <div class="nav-item" data-tab="entregas">Entregas</div>
     <div class="nav-item" data-tab="gravacao-geral">Gravação</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
-    <div class="nav-item" data-tab="materiais">Materiais</div>
     <div class="nav-item" data-tab="duvidas">Dúvidas</div>
     <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
 
@@ -350,37 +349,6 @@
           </div>
         </div>
       </div>
-    </section>
-
-    <!-- MATERIAIS -->
-    <section class="tab-section" id="tab-materiais">
-      <h2>Materiais da marca</h2>
-      <p class="page-sub">Logo, guia de marca e referências enviados pelos próprios clientes.</p>
-
-      <div class="card" style="max-width:520px;">
-        <h3 style="margin-bottom:4px;">Adicionar material</h3>
-        <p class="meta" style="margin-bottom:16px;">Pra quando o cliente manda o arquivo direto pra você (WhatsApp, email etc).</p>
-        <div class="field">
-          <label>Cliente</label>
-          <select id="matAdminCliente"></select>
-        </div>
-        <div class="field">
-          <label>Tipo de material</label>
-          <input type="text" id="matAdminTipo" placeholder="Ex: Logo, Guia de marca, Referência visual">
-        </div>
-        <div class="field">
-          <label>Link do arquivo (Drive, etc.)</label>
-          <input type="text" id="matAdminLink">
-        </div>
-        <button class="btn" id="btnAdminAdicionarMaterial">Adicionar material</button>
-        <p class="success-msg" id="matAdminMsg"></p>
-      </div>
-
-      <div class="field" style="max-width:280px;">
-        <label>Filtrar por cliente</label>
-        <select id="materiaisFiltroCliente"><option value="">Todos os clientes</option></select>
-      </div>
-      <div id="listaMateriaisAdmin"><div class="empty-state">Carregando...</div></div>
     </section>
 
     <!-- MATERIAIS DE UM CLIENTE ESPECÍFICO -->
@@ -861,8 +829,7 @@ function irParaOrigemNotificacao(n) {
     return;
   }
   if (n.tipo === 'material') {
-    if (n.materialId) irParaAlvoNotificacao('materiais', 'material-' + n.materialId);
-    else ativarAba('materiais');
+    if (n.clienteId) abrirMateriaisCliente(n.clienteId);
     return;
   }
   if ((n.tipo === 'gravacao_confirmada' || n.tipo === 'gravacao_desmarcada') && n.clienteId) {
@@ -1454,7 +1421,7 @@ function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
     clientesTodos = [];
-    const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId'), document.getElementById('matAdminCliente')];
+    const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
     animarNumero(document.getElementById('dashClientesTotal'), snap.size);
 
     if (snap.empty) {
@@ -1469,9 +1436,6 @@ function carregarClientes() {
     const filtroEntregas = document.getElementById('entregasFiltroCliente');
     const filtroEntregasAtual = filtroEntregas.value;
     filtroEntregas.innerHTML = '<option value="">Todos os clientes</option>';
-    const filtroMateriais = document.getElementById('materiaisFiltroCliente');
-    const filtroMateriaisAtual = filtroMateriais.value;
-    filtroMateriais.innerHTML = '<option value="">Todos os clientes</option>';
 
     snap.forEach(docSnap => {
       const c = docSnap.data();
@@ -1489,19 +1453,12 @@ function carregarClientes() {
       optFiltro.value = docSnap.id;
       optFiltro.textContent = c.empresa || c.nome;
       filtroEntregas.appendChild(optFiltro);
-
-      const optFiltroMat = document.createElement('option');
-      optFiltroMat.value = docSnap.id;
-      optFiltroMat.textContent = c.empresa || c.nome;
-      filtroMateriais.appendChild(optFiltroMat);
     });
 
     clientesTodos.sort((a, b) => (a.empresa || a.nome || '').localeCompare(b.empresa || b.nome || ''));
     renderListaClientes(document.getElementById('buscaClientes').value);
 
     filtroEntregas.value = filtroEntregasAtual;
-    filtroMateriais.value = filtroMateriaisAtual;
-    if (typeof renderMateriaisAdmin === 'function') renderMateriaisAdmin(filtroMateriais.value);
     document.getElementById('ggClienteId').value = ggAtual;
 
     if (document.getElementById('ggClienteId').value) {
@@ -2279,82 +2236,16 @@ document.getElementById('btnMcAdicionarMaterial').addEventListener('click', asyn
   setTimeout(() => msg.textContent = '', 3000);
 });
 
-function renderMateriaisAdmin(filtroClienteId) {
-  const box = document.getElementById('listaMateriaisAdmin');
-  const filtrados = filtroClienteId ? materiaisTodos.filter(m => m.clienteId === filtroClienteId) : materiaisTodos;
-
-  if (materiaisTodos.length === 0) {
-    box.innerHTML = '<div class="empty-state">Nenhum material adicionado ainda.</div>';
-    return;
-  }
-  if (filtrados.length === 0) {
-    box.innerHTML = '<div class="empty-state">Nenhum material desse cliente ainda.</div>';
-    return;
-  }
-
-  box.innerHTML = '<div class="card table-list"></div>';
-  const list = box.querySelector('.table-list');
-  filtrados.forEach(m => {
-    const nomeCliente = (clientesCache[m.clienteId] && clientesCache[m.clienteId].nome) || 'Cliente';
-    const row = document.createElement('div');
-    row.className = 'row';
-    row.id = 'material-' + m.id;
-    row.innerHTML = `
-      <div class="info"><strong>${m.tipo}</strong><span>${nomeCliente}</span></div>
-      <div style="display:flex;gap:8px;">
-        <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
-        <button type="button" class="btn btn-outline" data-del-material="${m.id}" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);" aria-label="Excluir material">Excluir</button>
-      </div>
-    `;
-    list.appendChild(row);
-  });
-
-  list.querySelectorAll('[data-del-material]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.delMaterial;
-      abrirConfirmModal(
-        'Excluir material?',
-        'Essa ação não pode ser desfeita.',
-        async () => { await db.collection('materiais').doc(id).delete(); },
-        'Excluir'
-      );
-    });
-  });
-}
-
-document.getElementById('materiaisFiltroCliente').addEventListener('change', (e) => {
-  renderMateriaisAdmin(e.target.value);
-});
-
 document.getElementById('btnVerMateriaisCliente').addEventListener('click', (e) => {
   e.preventDefault();
   if (!perfilUid) return;
   abrirMateriaisCliente(perfilUid);
 });
 
-document.getElementById('btnAdminAdicionarMaterial').addEventListener('click', async () => {
-  const clienteId = document.getElementById('matAdminCliente').value;
-  const tipo = document.getElementById('matAdminTipo').value.trim();
-  const link = document.getElementById('matAdminLink').value.trim();
-  const msg = document.getElementById('matAdminMsg');
-  if (!clienteId || !tipo || !link) return;
-
-  await db.collection('materiais').add({
-    clienteId, tipo, link,
-    dataUpload: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  document.getElementById('matAdminTipo').value = '';
-  document.getElementById('matAdminLink').value = '';
-  msg.textContent = 'Material adicionado!';
-  setTimeout(() => msg.textContent = '', 3000);
-});
-
 function carregarMateriaisAdmin() {
   db.collection('materiais').orderBy('dataUpload', 'desc').onSnapshot(snap => {
     materiaisTodos = [];
     snap.forEach(docSnap => materiaisTodos.push({ id: docSnap.id, ...docSnap.data() }));
-    renderMateriaisAdmin(document.getElementById('materiaisFiltroCliente').value);
     if (mcClienteId) renderMateriaisCliente();
   });
 }
