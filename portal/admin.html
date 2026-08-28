@@ -1451,18 +1451,18 @@ function carregarClientes() {
       selects.forEach(s => {
         const opt = document.createElement('option');
         opt.value = docSnap.id;
-        opt.textContent = c.nome;
+        opt.textContent = c.empresa || c.nome;
         s.appendChild(opt.cloneNode(true));
       });
 
       const optFiltro = document.createElement('option');
       optFiltro.value = docSnap.id;
-      optFiltro.textContent = c.nome;
+      optFiltro.textContent = c.empresa || c.nome;
       filtroEntregas.appendChild(optFiltro);
 
       const optFiltroMat = document.createElement('option');
       optFiltroMat.value = docSnap.id;
-      optFiltroMat.textContent = c.nome;
+      optFiltroMat.textContent = c.empresa || c.nome;
       filtroMateriais.appendChild(optFiltroMat);
     });
 
