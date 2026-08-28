@@ -2198,9 +2198,24 @@ function renderMateriaisAdmin(filtroClienteId) {
     row.id = 'material-' + m.id;
     row.innerHTML = `
       <div class="info"><strong>${m.tipo}</strong><span>${nomeCliente}</span></div>
-      <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
+      <div style="display:flex;gap:8px;">
+        <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
+        <button type="button" class="btn btn-outline" data-del-material="${m.id}" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);" aria-label="Excluir material">Excluir</button>
+      </div>
     `;
     list.appendChild(row);
+  });
+
+  list.querySelectorAll('[data-del-material]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.delMaterial;
+      abrirConfirmModal(
+        'Excluir material?',
+        'Essa ação não pode ser desfeita.',
+        async () => { await db.collection('materiais').doc(id).delete(); },
+        'Excluir'
+      );
+    });
   });
 }
 
