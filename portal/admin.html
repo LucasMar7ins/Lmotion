@@ -552,6 +552,7 @@
 <script>
 let currentUser = null;
 let clientesCache = {};
+let primeiraCargaClientes = true;
 
 function showToast(msg, tipo) {
   const wrap = document.getElementById('toastWrap');
@@ -1474,6 +1475,16 @@ function carregarClientes() {
     renderDashCalendario();
     renderGravBoard();
     renderDashResumo();
+
+    if (primeiraCargaClientes) {
+      primeiraCargaClientes = false;
+      const abaSalva = localStorage.getItem('adminAbaAtiva');
+      const uidSalvo = localStorage.getItem('adminPerfilUid');
+      if (uidSalvo && clientesCache[uidSalvo]) {
+        if (abaSalva === 'perfil') abrirPerfilCliente(uidSalvo);
+        else if (abaSalva === 'materiais-cliente') abrirMateriaisCliente(uidSalvo);
+      }
+    }
   });
 }
 
@@ -1508,6 +1519,9 @@ function abrirPerfilCliente(uid) {
   perfilUid = uid;
   perfilEditando = false;
   const c = clientesCache[uid] || {};
+
+  localStorage.setItem('adminAbaAtiva', 'perfil');
+  localStorage.setItem('adminPerfilUid', uid);
 
   perfilVideoFiltro = 'pendente';
   document.querySelectorAll('#perfilVideosFiltro .view-toggle-btn').forEach(b => b.classList.remove('active'));
@@ -1592,11 +1606,13 @@ document.querySelectorAll('#perfilVideosFiltro .view-toggle-btn').forEach(btn =>
 
 document.getElementById('btnVoltarPerfil').addEventListener('click', () => {
   if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
+  localStorage.removeItem('adminPerfilUid');
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-clientes').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector('[data-tab="clientes"]').classList.add('active');
   document.getElementById('mainArea').classList.remove('main-wide');
+  localStorage.setItem('adminAbaAtiva', 'clientes');
 });
 
 // --- GRAVAÇÃO (geral, qualquer cliente) ---
@@ -1948,6 +1964,8 @@ document.getElementById('btnExcluirCliente').addEventListener('click', () => {
       const uidExcluir = perfilUid;
       await excluirClienteCompleto(uidExcluir);
       if (perfilUnsub) { perfilUnsub(); perfilUnsub = null; }
+      localStorage.removeItem('adminPerfilUid');
+      localStorage.setItem('adminAbaAtiva', 'clientes');
       document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
       document.getElementById('tab-clientes').classList.add('active');
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
@@ -2172,6 +2190,9 @@ let mcClienteId = null;
 function abrirMateriaisCliente(uid) {
   mcClienteId = uid;
   const c = clientesCache[uid] || {};
+
+  localStorage.setItem('adminAbaAtiva', 'materiais-cliente');
+  localStorage.setItem('adminPerfilUid', uid);
   document.getElementById('mcVoltarNome').textContent = c.empresa || c.nome || 'cliente';
   document.getElementById('mcAvatar').textContent = iniciaisCliente(c);
   document.getElementById('mcSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ');
