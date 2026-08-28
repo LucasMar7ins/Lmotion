@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -232,11 +232,14 @@
     <section class="tab-section" id="tab-clientes">
       <h2>Clientes</h2>
       <p class="page-sub">Clique em um cliente para abrir o perfil dele.</p>
-      <button class="btn" id="btnAbrirCadastroCliente" style="display:inline-flex;align-items:center;gap:8px;margin-bottom:22px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        Cadastrar cliente
-      </button>
-      <div id="gridClientes" class="client-grid"><div class="empty-state">Carregando...</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;">
+        <button class="btn" id="btnAbrirCadastroCliente" style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Cadastrar cliente
+        </button>
+        <input type="text" id="buscaClientes" placeholder="Buscar por nome ou empresa..." style="flex:1;min-width:200px;background:var(--black-card);border:1px solid var(--border);border-radius:8px;padding:0 14px;color:var(--white);font-size:0.9rem;font-family:inherit;">
+      </div>
+      <div id="gridClientes" class="client-list"><div class="empty-state">Carregando...</div></div>
     </section>
 
     <!-- VÍDEOS -->
@@ -1332,22 +1335,74 @@ function textoAcessoPorDias(dias) {
   if (dias === 1) return 'Acessou ontem';
   return `Último acesso há ${dias} dias`;
 }
+function textoAcessoCurto(dias) {
+  if (dias === null) return 'nunca acessou';
+  if (dias === 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  return `há ${dias} dias`;
+}
+function iniciaisCliente(c) {
+  return ((c.nome || '?').split(' ').map(p => p[0]).slice(0, 2).join('') || '?').toUpperCase();
+}
 
-// --- CLIENTES (grid de cards) ---
+// --- CLIENTES (lista com busca) ---
+let clientesTodos = [];
+
+function renderListaClientes(filtro) {
+  const grid = document.getElementById('gridClientes');
+  const termo = (filtro || '').toLowerCase().trim();
+  const filtrados = clientesTodos.filter(c =>
+    (c.empresa || '').toLowerCase().includes(termo) || (c.nome || '').toLowerCase().includes(termo)
+  );
+
+  if (clientesTodos.length === 0) {
+    grid.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
+    return;
+  }
+  if (filtrados.length === 0) {
+    grid.innerHTML = '<div class="empty-state">Nenhum cliente encontrado.</div>';
+    return;
+  }
+
+  grid.innerHTML = '';
+  filtrados.forEach(c => {
+    const diasAcesso = diasDesdeAcesso(c.ultimoAcesso);
+    const corDot = corAcessoPorDias(diasAcesso);
+    const row = document.createElement('div');
+    row.className = 'client-list-item';
+    row.innerHTML = `
+      <div class="client-list-avatar">${iniciaisCliente(c)}</div>
+      <div class="client-list-info">
+        <div class="client-list-empresa">${c.empresa || c.nome}</div>
+        <div class="client-list-nome">${c.nome}</div>
+      </div>
+      <span class="client-list-status" style="background:color-mix(in srgb, ${corDot} 15%, transparent);border:1px solid color-mix(in srgb, ${corDot} 35%, transparent);color:${corDot};">
+        <span style="width:5px;height:5px;border-radius:50%;background:${corDot};display:inline-block;"></span>${textoAcessoCurto(diasAcesso)}
+      </span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    `;
+    row.addEventListener('click', () => abrirPerfilCliente(c.id));
+    grid.appendChild(row);
+  });
+}
+
+document.getElementById('buscaClientes').addEventListener('input', (e) => {
+  renderListaClientes(e.target.value);
+});
+
 function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
-    const grid = document.getElementById('gridClientes');
+    clientesTodos = [];
     const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
     animarNumero(document.getElementById('dashClientesTotal'), snap.size);
 
     if (snap.empty) {
-      grid.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>';
+      renderListaClientes('');
       selects.forEach(s => s.innerHTML = '<option value="">Nenhum cliente cadastrado</option>');
       return;
     }
 
-    grid.innerHTML = '';
     const ggAtual = document.getElementById('ggClienteId').value;
     selects.forEach(s => s.innerHTML = '');
     document.getElementById('ggClienteId').innerHTML = '<option value="">Selecione um cliente</option>';
@@ -1358,16 +1413,7 @@ function carregarClientes() {
     snap.forEach(docSnap => {
       const c = docSnap.data();
       clientesCache[docSnap.id] = c;
-
-      const card = document.createElement('div');
-      card.className = 'client-card';
-      const diasAcesso = diasDesdeAcesso(c.ultimoAcesso);
-      const corDot = corAcessoPorDias(diasAcesso);
-      const tituloDot = textoAcessoPorDias(diasAcesso);
-      card.innerHTML = `<span title="${tituloDot}" style="position:absolute;top:12px;right:12px;width:9px;height:9px;border-radius:50%;background:${corDot};"></span>${c.empresa || c.nome}`;
-      card.style.position = 'relative';
-      card.addEventListener('click', () => abrirPerfilCliente(docSnap.id));
-      grid.appendChild(card);
+      clientesTodos.push({ id: docSnap.id, ...c });
 
       selects.forEach(s => {
         const opt = document.createElement('option');
@@ -1381,6 +1427,9 @@ function carregarClientes() {
       optFiltro.textContent = c.nome;
       filtroEntregas.appendChild(optFiltro);
     });
+
+    clientesTodos.sort((a, b) => (a.empresa || a.nome || '').localeCompare(b.empresa || b.nome || ''));
+    renderListaClientes(document.getElementById('buscaClientes').value);
 
     filtroEntregas.value = filtroEntregasAtual;
     document.getElementById('ggClienteId').value = ggAtual;
