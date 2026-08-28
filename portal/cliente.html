@@ -511,6 +511,7 @@ auth.onAuthStateChanged(async (user) => {
       return;
     }
     clienteNomeAtual = dados.nome || user.email;
+    db.collection('clientes').doc(user.uid).update({ ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
     document.getElementById('clienteNome').textContent = dados.nome || user.email;
     document.getElementById('inicioSaudacao').innerHTML = saudacaoPorHorario() + ', <span style="color:var(--purple-light)">' + (dados.nome || 'cliente') + '</span>';
     document.getElementById('gravObservacao').value = dados.observacaoGravacao || '';

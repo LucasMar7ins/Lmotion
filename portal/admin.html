@@ -135,6 +135,7 @@
           <div>
             <h2 style="margin:0;" id="perfilNome">Cliente</h2>
             <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
+            <span id="perfilUltimoAcesso" style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:0.76rem;font-weight:600;padding:4px 10px;border-radius:20px;"></span>
           </div>
         </div>
         <button class="btn btn-outline" id="btnExcluirCliente" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);white-space:nowrap;">Excluir cliente</button>
@@ -1313,6 +1314,25 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
   }
 });
 
+// --- Último acesso do cliente ---
+function diasDesdeAcesso(ultimoAcesso) {
+  if (!ultimoAcesso) return null;
+  const d = ultimoAcesso.toDate ? ultimoAcesso.toDate() : new Date(ultimoAcesso);
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
+function corAcessoPorDias(dias) {
+  if (dias === null) return '#5a5a5a';
+  if (dias <= 5) return 'var(--green)';
+  if (dias <= 14) return 'var(--yellow)';
+  return 'var(--red)';
+}
+function textoAcessoPorDias(dias) {
+  if (dias === null) return 'Nunca acessou o portal';
+  if (dias === 0) return 'Acessou hoje';
+  if (dias === 1) return 'Acessou ontem';
+  return `Último acesso há ${dias} dias`;
+}
+
 // --- CLIENTES (grid de cards) ---
 function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
@@ -1341,7 +1361,11 @@ function carregarClientes() {
 
       const card = document.createElement('div');
       card.className = 'client-card';
-      card.textContent = c.nome;
+      const diasAcesso = diasDesdeAcesso(c.ultimoAcesso);
+      const corDot = corAcessoPorDias(diasAcesso);
+      const tituloDot = textoAcessoPorDias(diasAcesso);
+      card.innerHTML = `<span title="${tituloDot}" style="position:absolute;top:12px;right:12px;width:9px;height:9px;border-radius:50%;background:${corDot};"></span>${c.nome}`;
+      card.style.position = 'relative';
       card.addEventListener('click', () => abrirPerfilCliente(docSnap.id));
       grid.appendChild(card);
 
@@ -1416,6 +1440,15 @@ function abrirPerfilCliente(uid) {
   document.getElementById('perfilAvatar').textContent = (c.nome || '?').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
   document.getElementById('perfilNome').textContent = c.nome || 'Cliente';
   document.getElementById('perfilSub').textContent = [c.empresa, c.email].filter(Boolean).join(' · ');
+
+  const diasAcessoPerfil = diasDesdeAcesso(c.ultimoAcesso);
+  const corAcessoPerfil = corAcessoPorDias(diasAcessoPerfil);
+  const badgeAcesso = document.getElementById('perfilUltimoAcesso');
+  badgeAcesso.style.display = 'inline-flex';
+  badgeAcesso.style.background = 'color-mix(in srgb, ' + corAcessoPerfil + ' 15%, transparent)';
+  badgeAcesso.style.border = '1px solid color-mix(in srgb, ' + corAcessoPerfil + ' 35%, transparent)';
+  badgeAcesso.style.color = corAcessoPerfil;
+  badgeAcesso.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:' + corAcessoPerfil + ';"></span>' + textoAcessoPorDias(diasAcessoPerfil);
 
   document.getElementById('perfilEditNome').value = c.nome || '';
   document.getElementById('perfilEditEmpresa').value = c.empresa || '';

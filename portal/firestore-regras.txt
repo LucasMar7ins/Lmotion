@@ -12,6 +12,7 @@ Essas regras garantem que:
 - O cliente só pode escrever nos campos de feedback do próprio vídeo, enviar pauta e enviar dúvida.
 - O cliente pode registrar notificações de atividade (só criar, nunca ler); só o admin lê e marca como lida.
 - O cliente pode apagar os próprios materiais enviados (caso tenha subido algo por engano).
+- O portal registra automaticamente o último acesso do cliente (só esse campo, sem acesso a mais nada).
 
 ---
 
@@ -39,7 +40,7 @@ service cloud.firestore {
       allow update: if isAdmin() || (
         logado() &&
         request.auth.uid == uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gravacoes', 'observacaoGravacao'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gravacoes', 'observacaoGravacao', 'ultimoAcesso'])
       );
     }
 
