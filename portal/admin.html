@@ -383,6 +383,36 @@
       <div id="listaMateriaisAdmin"><div class="empty-state">Carregando...</div></div>
     </section>
 
+    <!-- MATERIAIS DE UM CLIENTE ESPECÍFICO -->
+    <section class="tab-section" id="tab-materiais-cliente">
+      <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarMateriaisCliente">&larr; Voltar para <span id="mcVoltarNome">cliente</span></div>
+
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1rem;" id="mcAvatar">--</div>
+        <div>
+          <h2 style="margin:0;">Materiais da marca</h2>
+          <p class="meta" id="mcSub" style="margin-top:2px;"></p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:520px;">
+        <h3 style="margin-bottom:4px;">Adicionar material</h3>
+        <p class="meta" style="margin-bottom:16px;">Pra quando o cliente manda o arquivo direto pra você (WhatsApp, email etc).</p>
+        <div class="field">
+          <label>Tipo de material</label>
+          <input type="text" id="mcTipo" placeholder="Ex: Logo, Guia de marca, Referência visual">
+        </div>
+        <div class="field">
+          <label>Link do arquivo (Drive, etc.)</label>
+          <input type="text" id="mcLink">
+        </div>
+        <button class="btn" id="btnMcAdicionarMaterial">Adicionar material</button>
+        <p class="success-msg" id="mcMsg"></p>
+      </div>
+
+      <div id="listaMateriaisCliente"></div>
+    </section>
+
     <!-- DÚVIDAS -->
     <section class="tab-section" id="tab-duvidas">
       <h2>Dúvidas dos clientes</h2>
@@ -2175,6 +2205,79 @@ document.querySelectorAll('#calAdminViewToggle .view-toggle-btn').forEach(btn =>
 
 // --- MATERIAIS (enviados pelos clientes) ---
 let materiaisTodos = [];
+let mcClienteId = null;
+
+function abrirMateriaisCliente(uid) {
+  mcClienteId = uid;
+  const c = clientesCache[uid] || {};
+  document.getElementById('mcVoltarNome').textContent = c.empresa || c.nome || 'cliente';
+  document.getElementById('mcAvatar').textContent = iniciaisCliente(c);
+  document.getElementById('mcSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ');
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-materiais-cliente').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  renderMateriaisCliente();
+}
+
+function renderMateriaisCliente() {
+  const box = document.getElementById('listaMateriaisCliente');
+  if (!mcClienteId) return;
+  const filtrados = materiaisTodos.filter(m => m.clienteId === mcClienteId);
+
+  if (filtrados.length === 0) {
+    box.innerHTML = '<div class="empty-state">Nenhum material adicionado ainda.</div>';
+    return;
+  }
+
+  box.innerHTML = '<div class="card table-list"></div>';
+  const list = box.querySelector('.table-list');
+  filtrados.forEach(m => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.id = 'material-cliente-' + m.id;
+    row.innerHTML = `
+      <div class="info"><strong>${m.tipo}</strong></div>
+      <div style="display:flex;gap:8px;">
+        <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
+        <button type="button" class="btn btn-outline" data-del-material-c="${m.id}" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);" aria-label="Excluir material">Excluir</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('[data-del-material-c]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.delMaterialC;
+      abrirConfirmModal(
+        'Excluir material?',
+        'Essa ação não pode ser desfeita.',
+        async () => { await db.collection('materiais').doc(id).delete(); },
+        'Excluir'
+      );
+    });
+  });
+}
+
+document.getElementById('btnVoltarMateriaisCliente').addEventListener('click', () => {
+  if (mcClienteId) abrirPerfilCliente(mcClienteId);
+});
+
+document.getElementById('btnMcAdicionarMaterial').addEventListener('click', async () => {
+  const tipo = document.getElementById('mcTipo').value.trim();
+  const link = document.getElementById('mcLink').value.trim();
+  const msg = document.getElementById('mcMsg');
+  if (!mcClienteId || !tipo || !link) return;
+
+  await db.collection('materiais').add({
+    clienteId: mcClienteId, tipo, link,
+    dataUpload: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('mcTipo').value = '';
+  document.getElementById('mcLink').value = '';
+  msg.textContent = 'Material adicionado!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
 
 function renderMateriaisAdmin(filtroClienteId) {
   const box = document.getElementById('listaMateriaisAdmin');
@@ -2226,12 +2329,7 @@ document.getElementById('materiaisFiltroCliente').addEventListener('change', (e)
 document.getElementById('btnVerMateriaisCliente').addEventListener('click', (e) => {
   e.preventDefault();
   if (!perfilUid) return;
-  ativarAba('materiais');
-  const filtro = document.getElementById('materiaisFiltroCliente');
-  filtro.value = perfilUid;
-  renderMateriaisAdmin(perfilUid);
-  const selectAdicionar = document.getElementById('matAdminCliente');
-  if (selectAdicionar) selectAdicionar.value = perfilUid;
+  abrirMateriaisCliente(perfilUid);
 });
 
 document.getElementById('btnAdminAdicionarMaterial').addEventListener('click', async () => {
@@ -2257,6 +2355,7 @@ function carregarMateriaisAdmin() {
     materiaisTodos = [];
     snap.forEach(docSnap => materiaisTodos.push({ id: docSnap.id, ...docSnap.data() }));
     renderMateriaisAdmin(document.getElementById('materiaisFiltroCliente').value);
+    if (mcClienteId) renderMateriaisCliente();
   });
 }
 
