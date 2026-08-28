@@ -678,7 +678,12 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 const abaSalvaAdmin = localStorage.getItem('adminAbaAtiva');
-if (abaSalvaAdmin) ativarAba(abaSalvaAdmin);
+if (abaSalvaAdmin === 'perfil' || abaSalvaAdmin === 'materiais-cliente') {
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+} else if (abaSalvaAdmin) {
+  ativarAba(abaSalvaAdmin);
+}
 
 document.getElementById('menuToggle').addEventListener('click', () => {
   document.getElementById('sidebar').classList.toggle('open');
