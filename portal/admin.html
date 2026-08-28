@@ -1356,9 +1356,13 @@ function corAcessoPorDias(dias) {
   if (dias <= 14) return 'var(--yellow)';
   return 'var(--red)';
 }
-function textoAcessoPorDias(dias) {
+function textoAcessoPorDias(dias, ultimoAcesso) {
   if (dias === null) return 'Nunca acessou o portal';
-  if (dias === 0) return 'Acessou hoje';
+  if (dias === 0) {
+    const d = ultimoAcesso && ultimoAcesso.toDate ? ultimoAcesso.toDate() : (ultimoAcesso ? new Date(ultimoAcesso) : null);
+    const hora = d ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+    return hora ? `Acessou hoje às ${hora}` : 'Acessou hoje';
+  }
   if (dias === 1) return 'Acessou ontem';
   return `Último acesso há ${dias} dias`;
 }
@@ -1524,7 +1528,7 @@ function abrirPerfilCliente(uid) {
   badgeAcesso.style.background = 'color-mix(in srgb, ' + corAcessoPerfil + ' 15%, transparent)';
   badgeAcesso.style.border = '1px solid color-mix(in srgb, ' + corAcessoPerfil + ' 35%, transparent)';
   badgeAcesso.style.color = corAcessoPerfil;
-  badgeAcesso.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:' + corAcessoPerfil + ';"></span>' + textoAcessoPorDias(diasAcessoPerfil);
+  badgeAcesso.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:' + corAcessoPerfil + ';"></span>' + textoAcessoPorDias(diasAcessoPerfil, c.ultimoAcesso);
 
   document.getElementById('perfilEditNome').value = c.nome || '';
   document.getElementById('perfilEditEmpresa').value = c.empresa || '';
