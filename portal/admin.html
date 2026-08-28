@@ -356,6 +356,26 @@
     <section class="tab-section" id="tab-materiais">
       <h2>Materiais da marca</h2>
       <p class="page-sub">Logo, guia de marca e referências enviados pelos próprios clientes.</p>
+
+      <div class="card" style="max-width:520px;">
+        <h3 style="margin-bottom:4px;">Adicionar material</h3>
+        <p class="meta" style="margin-bottom:16px;">Pra quando o cliente manda o arquivo direto pra você (WhatsApp, email etc).</p>
+        <div class="field">
+          <label>Cliente</label>
+          <select id="matAdminCliente"></select>
+        </div>
+        <div class="field">
+          <label>Tipo de material</label>
+          <input type="text" id="matAdminTipo" placeholder="Ex: Logo, Guia de marca, Referência visual">
+        </div>
+        <div class="field">
+          <label>Link do arquivo (Drive, etc.)</label>
+          <input type="text" id="matAdminLink">
+        </div>
+        <button class="btn" id="btnAdminAdicionarMaterial">Adicionar material</button>
+        <p class="success-msg" id="matAdminMsg"></p>
+      </div>
+
       <div class="field" style="max-width:280px;">
         <label>Filtrar por cliente</label>
         <select id="materiaisFiltroCliente"><option value="">Todos os clientes</option></select>
@@ -1404,7 +1424,7 @@ function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
     clientesTodos = [];
-    const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
+    const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId'), document.getElementById('matAdminCliente')];
     animarNumero(document.getElementById('dashClientesTotal'), snap.size);
 
     if (snap.empty) {
@@ -2195,6 +2215,26 @@ document.getElementById('btnVerMateriaisCliente').addEventListener('click', (e) 
   const filtro = document.getElementById('materiaisFiltroCliente');
   filtro.value = perfilUid;
   renderMateriaisAdmin(perfilUid);
+  const selectAdicionar = document.getElementById('matAdminCliente');
+  if (selectAdicionar) selectAdicionar.value = perfilUid;
+});
+
+document.getElementById('btnAdminAdicionarMaterial').addEventListener('click', async () => {
+  const clienteId = document.getElementById('matAdminCliente').value;
+  const tipo = document.getElementById('matAdminTipo').value.trim();
+  const link = document.getElementById('matAdminLink').value.trim();
+  const msg = document.getElementById('matAdminMsg');
+  if (!clienteId || !tipo || !link) return;
+
+  await db.collection('materiais').add({
+    clienteId, tipo, link,
+    dataUpload: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('matAdminTipo').value = '';
+  document.getElementById('matAdminLink').value = '';
+  msg.textContent = 'Material adicionado!';
+  setTimeout(() => msg.textContent = '', 3000);
 });
 
 function carregarMateriaisAdmin() {

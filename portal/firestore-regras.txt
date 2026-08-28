@@ -13,6 +13,7 @@ Essas regras garantem que:
 - O cliente pode registrar notificações de atividade (só criar, nunca ler); só o admin lê e marca como lida.
 - O cliente pode apagar os próprios materiais enviados (caso tenha subido algo por engano).
 - O portal registra automaticamente o último acesso do cliente (só esse campo, sem acesso a mais nada).
+- O admin também pode adicionar materiais em nome de um cliente (ex: quando ele manda pelo WhatsApp).
 
 ---
 
@@ -66,7 +67,7 @@ service cloud.firestore {
     // Materiais de marca (o cliente envia e pode apagar os próprios; admin também pode)
     match /materiais/{id} {
       allow read: if logado() && (resource.data.clienteId == request.auth.uid || isAdmin());
-      allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
+      allow create: if isAdmin() || (logado() && request.resource.data.clienteId == request.auth.uid);
       allow delete: if isAdmin() || (logado() && resource.data.clienteId == request.auth.uid);
       allow update: if isAdmin();
     }
