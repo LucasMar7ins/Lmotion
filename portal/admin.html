@@ -1364,7 +1364,7 @@ function carregarClientes() {
       const diasAcesso = diasDesdeAcesso(c.ultimoAcesso);
       const corDot = corAcessoPorDias(diasAcesso);
       const tituloDot = textoAcessoPorDias(diasAcesso);
-      card.innerHTML = `<span title="${tituloDot}" style="position:absolute;top:12px;right:12px;width:9px;height:9px;border-radius:50%;background:${corDot};"></span><span>${c.nome}</span>${c.empresa ? `<span style="display:block;color:var(--gray);font-size:0.76rem;font-weight:500;margin-top:4px;">${c.empresa}</span>` : ''}`;
+      card.innerHTML = `<span title="${tituloDot}" style="position:absolute;top:12px;right:12px;width:9px;height:9px;border-radius:50%;background:${corDot};"></span>${c.empresa || c.nome}`;
       card.style.position = 'relative';
       card.addEventListener('click', () => abrirPerfilCliente(docSnap.id));
       grid.appendChild(card);
