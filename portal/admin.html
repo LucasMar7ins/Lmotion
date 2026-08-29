@@ -403,8 +403,9 @@
           <select id="pgCliente"></select>
         </div>
         <div class="field">
-          <label>Vencimento</label>
-          <input type="date" id="pgVencimento">
+          <label>Dia do vencimento</label>
+          <select id="pgDiaVencimento"></select>
+          <p class="meta" id="pgVencimentoPreview" style="margin-top:6px;"></p>
         </div>
         <button class="btn" id="btnLancarPagamento">Lançar vencimento</button>
         <p class="success-msg" id="pgMsg"></p>
@@ -2519,22 +2520,54 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
   });
 }
 
+(function popularDiasVencimento() {
+  const sel = document.getElementById('pgDiaVencimento');
+  for (let d = 1; d <= 31; d++) {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = 'Dia ' + d;
+    sel.appendChild(opt);
+  }
+})();
+
+function proximaDataPorDia(dia) {
+  const hoje = new Date();
+  let ano = hoje.getFullYear();
+  let mes = hoje.getMonth();
+  if (dia < hoje.getDate()) {
+    mes += 1;
+    if (mes > 11) { mes = 0; ano += 1; }
+  }
+  const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+  const diaFinal = Math.min(dia, ultimoDiaMes);
+  return new Date(ano, mes, diaFinal, 12, 0, 0);
+}
+
+function atualizarPreviewVencimento() {
+  const dia = parseInt(document.getElementById('pgDiaVencimento').value, 10);
+  const preview = document.getElementById('pgVencimentoPreview');
+  if (!dia) { preview.textContent = ''; return; }
+  const data = proximaDataPorDia(dia);
+  preview.textContent = 'Vai cair como ' + data.toLocaleDateString('pt-BR') + ' (próxima ocorrência)';
+}
+document.getElementById('pgDiaVencimento').addEventListener('change', atualizarPreviewVencimento);
+atualizarPreviewVencimento();
+
 document.getElementById('btnLancarPagamento').addEventListener('click', async () => {
   const clienteId = document.getElementById('pgCliente').value;
-  const vencimento = document.getElementById('pgVencimento').value;
+  const dia = parseInt(document.getElementById('pgDiaVencimento').value, 10);
   const msg = document.getElementById('pgMsg');
-  if (!clienteId || !vencimento) return;
+  if (!clienteId || !dia) return;
 
   await db.collection('pagamentos').add({
     clienteId,
-    vencimento: dateInputToTimestamp(vencimento),
+    vencimento: firebase.firestore.Timestamp.fromDate(proximaDataPorDia(dia)),
     valor: null,
     referencia: '',
     status: 'pendente',
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  document.getElementById('pgVencimento').value = '';
   msg.textContent = 'Vencimento lançado!';
   setTimeout(() => msg.textContent = '', 3000);
 });
