@@ -2667,14 +2667,13 @@ function imprimirRecibo(p) {
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#ffffff; display:flex; justify-content:center; padding:32px 16px; }
   .recibo { width:420px; border-radius:4px; overflow:hidden; }
-  .header { background:#0a0a0a; padding:22px 28px; display:flex; justify-content:space-between; align-items:center; }
+  .header { background:#0a0a0a; padding:22px 28px 19px; border-bottom:3px solid #6e2de7; display:flex; justify-content:space-between; align-items:center; }
   .header-left { display:flex; align-items:center; gap:10px; }
   .header-left img { width:36px; height:36px; border-radius:50%; display:block; }
   .header-left .nome { color:#ffffff; font-size:18px; font-weight:600; }
   .header-right { text-align:right; }
   .header-right .tag { color:#9b6bf2; font-size:12px; font-weight:600; }
   .header-right .ref { color:#a0a0a0; font-size:11px; margin-top:2px; }
-  .faixa { height:3px; background:#6e2de7; }
   .corpo { padding:26px 28px 22px; }
   .label { font-size:11px; color:#a0a0a0; margin-bottom:4px; }
   .cliente { font-size:15px; color:#0a0a0a; font-weight:600; margin-bottom:22px; }
@@ -2685,7 +2684,7 @@ function imprimirRecibo(p) {
   td { padding:7px 0; border-top:0.5px solid #e5e5e5; }
   td.k { color:#a0a0a0; }
   td.v { text-align:right; color:#0a0a0a; }
-  .footer { background:#0a0a0a; padding:16px 28px; text-align:center; }
+  .footer { background:#0a0a0a; padding:19px 28px 16px; border-top:3px solid #6e2de7; text-align:center; }
   .footer .msg { color:#ffffff; font-size:12.5px; font-weight:600; }
   .footer .marca { color:#a0a0a0; font-size:11px; margin-top:4px; }
   @media print { body { padding:0; } }
@@ -2703,7 +2702,6 @@ function imprimirRecibo(p) {
         <div class="ref">${p.referencia || ''}</div>
       </div>
     </div>
-    <div class="faixa"></div>
     <div class="corpo">
       <div class="label">Recebemos de</div>
       <div class="cliente">${nomeCliente || 'Cliente'}</div>
@@ -2717,7 +2715,6 @@ function imprimirRecibo(p) {
         <tr><td class="k">Emitido em</td><td class="v">${dataEmissao}</td></tr>
       </table>
     </div>
-    <div class="faixa"></div>
     <div class="footer">
       <div class="msg">Obrigado pela confiança!</div>
       <div class="marca">Lmotion &nbsp;|&nbsp; Agência de Marketing</div>
