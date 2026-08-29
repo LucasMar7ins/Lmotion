@@ -2547,7 +2547,7 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
     if (!registrado) {
       acoes += `<button type="button" class="btn" data-registrar-pagamento="${p.id}" style="font-size:0.72rem;padding:7px 12px;">Registrar pagamento</button>`;
     } else {
-      acoes += `<button type="button" class="btn btn-outline" data-gerar-recibo="${p.id}" style="font-size:0.72rem;padding:6px 10px;">Gerar recibo</button>`;
+      acoes += `<button type="button" class="btn btn-outline" data-gerar-recibo="${p.id}" style="font-size:0.72rem;padding:6px 10px;">Imprimir recibo</button>`;
     }
     acoes += `<button type="button" class="btn btn-outline" data-excluir-pagamento="${p.id}" aria-label="Excluir pagamento" style="font-size:0.72rem;padding:6px 10px;color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);">Excluir</button>`;
 
@@ -2683,10 +2683,12 @@ function gerarReciboPdf(p) {
   doc.setFontSize(9);
   doc.text('Documento sem valor fiscal, emitido apenas como comprovante informal.', 20, y);
 
-  const removerAcentos = (txt) => (txt || '').normalize('NFD').replace(new RegExp(String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f), 'g'), '');
-  const slug = (txt) => removerAcentos(txt).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  const nomeArquivo = 'recibo-' + slug(cliente.empresa || cliente.nome || 'cliente') + '-' + slug(p.referencia) + '.pdf';
-  doc.save(nomeArquivo);
+  doc.autoPrint();
+  const blobUrl = doc.output('bloburl');
+  const janela = window.open(blobUrl, '_blank');
+  if (!janela) {
+    showToast('Permita pop-ups para imprimir o recibo.', 'error');
+  }
 }
 
 function carregarPagamentosAdmin() {
