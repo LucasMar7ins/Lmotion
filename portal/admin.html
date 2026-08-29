@@ -45,6 +45,7 @@
     <div class="nav-item" data-tab="entregas">Entregas</div>
     <div class="nav-item" data-tab="gravacao-geral">Gravação</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
+    <div class="nav-item" data-tab="pagamentos">Pagamentos</div>
     <div class="nav-item" data-tab="duvidas">Dúvidas</div>
     <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
 
@@ -381,6 +382,53 @@
       <div id="listaMateriaisCliente"></div>
     </section>
 
+    <!-- PAGAMENTOS -->
+    <section class="tab-section" id="tab-pagamentos">
+      <h2>Pagamentos</h2>
+      <p class="page-sub">Controle de valores, vencimentos e recibos de cada cliente. Visível só pra você.</p>
+
+      <div class="card" style="max-width:560px;">
+        <h3 style="margin-bottom:4px;">Lançar pagamento</h3>
+        <p class="meta" style="margin-bottom:16px;">Cadastre o valor combinado pra esse mês ou período.</p>
+        <div class="field">
+          <label>Cliente</label>
+          <select id="pgCliente"></select>
+        </div>
+        <div class="field">
+          <label>Valor (R$)</label>
+          <input type="number" id="pgValor" step="0.01" min="0" placeholder="Ex: 800.00">
+        </div>
+        <div class="field">
+          <label>Referência</label>
+          <input type="text" id="pgReferencia" placeholder="Ex: Setembro/2026, Pacote institucional">
+        </div>
+        <div class="field">
+          <label>Vencimento</label>
+          <input type="date" id="pgVencimento">
+        </div>
+        <button class="btn" id="btnLancarPagamento">Lançar pagamento</button>
+        <p class="success-msg" id="pgMsg"></p>
+      </div>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+        <div class="field" style="max-width:260px;">
+          <label>Filtrar por cliente</label>
+          <select id="pgFiltroCliente"><option value="">Todos os clientes</option></select>
+        </div>
+        <div class="field" style="max-width:220px;">
+          <label>Filtrar por status</label>
+          <select id="pgFiltroStatus">
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="pago">Pago</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="listaPagamentosAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
     <!-- DÚVIDAS -->
     <section class="tab-section" id="tab-duvidas">
       <h2>Dúvidas dos clientes</h2>
@@ -548,6 +596,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="firebase-config.js"></script>
 <script>
 let currentUser = null;
@@ -718,6 +767,7 @@ auth.onAuthStateChanged(async (user) => {
   carregarClientes();
   carregarVideosAdmin();
   carregarMateriaisAdmin();
+  carregarPagamentosAdmin();
   carregarDuvidasAdmin();
   carregarTutoriaisAdmin();
   carregarNotasDashboard();
@@ -1432,7 +1482,7 @@ function carregarClientes() {
   db.collection('clientes').where('isAdmin', '==', false).onSnapshot(snap => {
     clientesCache = {};
     clientesTodos = [];
-    const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
+    const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId'), document.getElementById('pgCliente')];
     animarNumero(document.getElementById('dashClientesTotal'), snap.size);
 
     if (snap.empty) {
@@ -1447,6 +1497,9 @@ function carregarClientes() {
     const filtroEntregas = document.getElementById('entregasFiltroCliente');
     const filtroEntregasAtual = filtroEntregas.value;
     filtroEntregas.innerHTML = '<option value="">Todos os clientes</option>';
+    const filtroPagamentos = document.getElementById('pgFiltroCliente');
+    const filtroPagamentosAtual = filtroPagamentos.value;
+    filtroPagamentos.innerHTML = '<option value="">Todos os clientes</option>';
 
     snap.forEach(docSnap => {
       const c = docSnap.data();
@@ -1464,12 +1517,18 @@ function carregarClientes() {
       optFiltro.value = docSnap.id;
       optFiltro.textContent = c.empresa || c.nome;
       filtroEntregas.appendChild(optFiltro);
+
+      const optFiltroPg = document.createElement('option');
+      optFiltroPg.value = docSnap.id;
+      optFiltroPg.textContent = c.empresa || c.nome;
+      filtroPagamentos.appendChild(optFiltroPg);
     });
 
     clientesTodos.sort((a, b) => (a.empresa || a.nome || '').localeCompare(b.empresa || b.nome || ''));
     renderListaClientes(document.getElementById('buscaClientes').value);
 
     filtroEntregas.value = filtroEntregasAtual;
+    filtroPagamentos.value = filtroPagamentosAtual;
     document.getElementById('ggClienteId').value = ggAtual;
 
     if (document.getElementById('ggClienteId').value) {
@@ -1480,6 +1539,9 @@ function carregarClientes() {
     renderDashCalendario();
     renderGravBoard();
     renderDashResumo();
+    if (typeof renderPagamentos === 'function') {
+      renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
+    }
 
     if (primeiraCargaClientes) {
       primeiraCargaClientes = false;
@@ -1975,7 +2037,7 @@ document.getElementById('confirmModalCancelar').addEventListener('click', () => 
 });
 
 async function excluirClienteCompleto(uid) {
-  const colecoes = ['entregas', 'materiais', 'duvidas', 'pautas', 'notificacoes'];
+  const colecoes = ['entregas', 'materiais', 'duvidas', 'pautas', 'notificacoes', 'pagamentos'];
   for (const col of colecoes) {
     const snap = await db.collection(col).where('clienteId', '==', uid).get();
     if (!snap.empty) {
@@ -2305,6 +2367,203 @@ function carregarMateriaisAdmin() {
     materiaisTodos = [];
     snap.forEach(docSnap => materiaisTodos.push({ id: docSnap.id, ...docSnap.data() }));
     if (mcClienteId) renderMateriaisCliente();
+  });
+}
+
+// --- PAGAMENTOS ---
+let pagamentosTodos = [];
+
+function statusRealPagamento(p) {
+  if (p.status === 'pago') return 'pago';
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const venc = p.vencimento && p.vencimento.toDate ? p.vencimento.toDate() : (p.vencimento ? new Date(p.vencimento) : null);
+  if (venc) venc.setHours(0, 0, 0, 0);
+  if (venc && venc.getTime() < hoje.getTime()) return 'atrasado';
+  return 'pendente';
+}
+function corStatusPagamento(status) {
+  if (status === 'pago') return 'var(--green)';
+  if (status === 'atrasado') return 'var(--red)';
+  return 'var(--yellow)';
+}
+function textoStatusPagamento(status) {
+  if (status === 'pago') return 'Pago';
+  if (status === 'atrasado') return 'Atrasado';
+  return 'Pendente';
+}
+function formatarMoeda(valor) {
+  return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function renderPagamentos(filtroClienteId, filtroStatus) {
+  const box = document.getElementById('listaPagamentosAdmin');
+  if (!box) return;
+  let lista = pagamentosTodos;
+  if (filtroClienteId) lista = lista.filter(p => p.clienteId === filtroClienteId);
+  if (filtroStatus) lista = lista.filter(p => statusRealPagamento(p) === filtroStatus);
+
+  if (pagamentosTodos.length === 0) {
+    box.innerHTML = '<div class="empty-state">Nenhum pagamento lançado ainda.</div>';
+    return;
+  }
+  if (lista.length === 0) {
+    box.innerHTML = '<div class="empty-state">Nenhum pagamento encontrado com esse filtro.</div>';
+    return;
+  }
+
+  box.innerHTML = '';
+  lista.forEach(p => {
+    const cliente = clientesCache[p.clienteId] || {};
+    const status = statusRealPagamento(p);
+    const cor = corStatusPagamento(status);
+    const nomeExibido = cliente.empresa || cliente.nome || 'Cliente';
+
+    const infoData = status === 'pago'
+      ? 'Pago em ' + (formatarData(p.dataPagamento) || '-')
+      : 'Vencimento ' + (formatarData(p.vencimento) || 'sem data');
+
+    let acoes = '';
+    if (status === 'atrasado') {
+      const numero = formatarNumeroWhatsapp(cliente.whatsapp);
+      if (numero) {
+        const dataVencTexto = formatarData(p.vencimento) || 'já passado';
+        const texto = `Oi ${cliente.nome || ''}! Só passando pra lembrar que o pagamento referente a "${p.referencia}" no valor de ${formatarMoeda(p.valor)} venceu dia ${dataVencTexto}. Qualquer coisa me chama!`;
+        acoes += `<a href="https://wa.me/${numero}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.35);color:#25D366;font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:8px;white-space:nowrap;text-decoration:none;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"/></svg>
+          Cobrar
+        </a>`;
+      }
+    }
+    if (status !== 'pago') {
+      acoes += `<button type="button" class="btn btn-outline" data-marcar-pago="${p.id}" style="font-size:0.72rem;padding:6px 10px;">Marcar pago</button>`;
+    } else {
+      acoes += `<button type="button" class="btn btn-outline" data-gerar-recibo="${p.id}" style="font-size:0.72rem;padding:6px 10px;">Gerar recibo</button>`;
+    }
+    acoes += `<button type="button" class="btn btn-outline" data-excluir-pagamento="${p.id}" aria-label="Excluir pagamento" style="font-size:0.72rem;padding:6px 10px;color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);">Excluir</button>`;
+
+    const row = document.createElement('div');
+    row.className = 'card';
+    row.style.cssText = 'margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;';
+    row.innerHTML = `
+      <div>
+        <div style="color:var(--white);font-size:0.88rem;font-weight:600;">${nomeExibido} &middot; ${p.referencia || ''}</div>
+        <div class="meta" style="margin-top:2px;">${infoData} &middot; ${formatarMoeda(p.valor)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="background:color-mix(in srgb, ${cor} 15%, transparent);border:1px solid color-mix(in srgb, ${cor} 35%, transparent);color:${cor};font-size:0.72rem;font-weight:600;padding:4px 10px;border-radius:20px;">${textoStatusPagamento(status)}</span>
+        ${acoes}
+      </div>
+    `;
+    box.appendChild(row);
+  });
+
+  box.querySelectorAll('[data-marcar-pago]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.marcarPago;
+      abrirConfirmModal(
+        'Marcar como pago?',
+        'Isso registra a data de hoje como data do pagamento.',
+        async () => {
+          await db.collection('pagamentos').doc(id).update({
+            status: 'pago',
+            dataPagamento: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        },
+        'Marcar pago'
+      );
+    });
+  });
+
+  box.querySelectorAll('[data-gerar-recibo]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = pagamentosTodos.find(x => x.id === btn.dataset.gerarRecibo);
+      if (p) gerarReciboPdf(p);
+    });
+  });
+
+  box.querySelectorAll('[data-excluir-pagamento]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.excluirPagamento;
+      abrirConfirmModal(
+        'Excluir pagamento?',
+        'Essa ação não pode ser desfeita.',
+        async () => { await db.collection('pagamentos').doc(id).delete(); },
+        'Excluir'
+      );
+    });
+  });
+}
+
+document.getElementById('btnLancarPagamento').addEventListener('click', async () => {
+  const clienteId = document.getElementById('pgCliente').value;
+  const valor = parseFloat(document.getElementById('pgValor').value);
+  const referencia = document.getElementById('pgReferencia').value.trim();
+  const vencimento = document.getElementById('pgVencimento').value;
+  const msg = document.getElementById('pgMsg');
+  if (!clienteId || !valor || !referencia || !vencimento) return;
+
+  await db.collection('pagamentos').add({
+    clienteId, valor, referencia,
+    vencimento: dateInputToTimestamp(vencimento),
+    status: 'pendente',
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('pgValor').value = '';
+  document.getElementById('pgReferencia').value = '';
+  document.getElementById('pgVencimento').value = '';
+  msg.textContent = 'Pagamento lançado!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+document.getElementById('pgFiltroCliente').addEventListener('change', () => {
+  renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
+});
+document.getElementById('pgFiltroStatus').addEventListener('change', () => {
+  renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
+});
+
+function gerarReciboPdf(p) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    showToast('Não foi possível gerar o PDF agora. Tente recarregar a página.', 'error');
+    return;
+  }
+  const cliente = clientesCache[p.clienteId] || {};
+  const doc = new window.jspdf.jsPDF();
+  const dataEmissao = new Date().toLocaleDateString('pt-BR');
+  const dataPag = p.dataPagamento ? formatarData(p.dataPagamento) : dataEmissao;
+
+  doc.setFontSize(16);
+  doc.text('Recibo', 20, 25);
+  doc.setFontSize(11);
+  doc.text('Lmotion', 20, 34);
+
+  let y = 55;
+  const linhas = [
+    `Recebemos de: ${cliente.nome || ''}${cliente.empresa ? ' - ' + cliente.empresa : ''}`,
+    `Valor: ${formatarMoeda(p.valor)}`,
+    `Referente a: ${p.referencia || ''}`,
+    `Data do pagamento: ${dataPag}`,
+    `Emitido em: ${dataEmissao}`
+  ];
+  linhas.forEach(linha => { doc.text(linha, 20, y); y += 10; });
+
+  y += 10;
+  doc.setFontSize(9);
+  doc.text('Documento sem valor fiscal, emitido apenas como comprovante informal.', 20, y);
+
+  const removerAcentos = (txt) => (txt || '').normalize('NFD').replace(new RegExp(String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f), 'g'), '');
+  const slug = (txt) => removerAcentos(txt).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const nomeArquivo = 'recibo-' + slug(cliente.empresa || cliente.nome || 'cliente') + '-' + slug(p.referencia) + '.pdf';
+  doc.save(nomeArquivo);
+}
+
+function carregarPagamentosAdmin() {
+  db.collection('pagamentos').orderBy('vencimento', 'desc').onSnapshot(snap => {
+    pagamentosTodos = [];
+    snap.forEach(docSnap => pagamentosTodos.push({ id: docSnap.id, ...docSnap.data() }));
+    renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
   });
 }
 

@@ -14,6 +14,7 @@ Essas regras garantem que:
 - O cliente pode apagar os próprios materiais enviados (caso tenha subido algo por engano).
 - O portal registra automaticamente o último acesso do cliente (só esse campo, sem acesso a mais nada).
 - O admin também pode adicionar materiais em nome de um cliente (ex: quando ele manda pelo WhatsApp).
+- Pagamentos são de uso exclusivo do admin — o cliente nunca lê nem escreve nada nessa coleção.
 
 ---
 
@@ -84,6 +85,11 @@ service cloud.firestore {
     match /notificacoes/{id} {
       allow read, update, delete: if isAdmin();
       allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
+    }
+
+    // Pagamentos — controle interno, só o admin acessa
+    match /pagamentos/{id} {
+      allow read, write: if isAdmin();
     }
 
     // Tutoriais — visíveis a qualquer cliente logado, só o admin publica
