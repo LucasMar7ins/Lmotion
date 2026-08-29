@@ -143,6 +143,10 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
             Ver materiais da marca
           </a>
+          <a href="#" id="btnVerInstagramCliente" class="btn btn-outline" style="white-space:nowrap;text-decoration:none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
+            Ver Instagram
+          </a>
           <button class="btn btn-outline" id="btnExcluirCliente" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);white-space:nowrap;">Excluir cliente</button>
         </div>
       </div>
@@ -398,6 +402,44 @@
       </div>
 
       <div id="listaMateriaisCliente"></div>
+    </section>
+
+    <!-- INSTAGRAM DE UM CLIENTE ESPECÍFICO -->
+    <section class="tab-section" id="tab-instagram-cliente">
+      <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarInstagramCliente">&larr; Voltar para <span id="igVoltarNome">cliente</span></div>
+
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1rem;" id="igAvatar">--</div>
+        <div>
+          <h2 style="margin:0;">Instagram</h2>
+          <p class="meta" id="igSub" style="margin-top:2px;"></p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:520px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div class="meta" style="margin-bottom:4px;" id="igLabelConta">Seguidores</div>
+            <div style="display:flex;align-items:baseline;gap:8px;">
+              <span style="color:var(--white);font-size:1.7rem;font-weight:700;" id="igAtual">--</span>
+              <span style="font-size:0.78rem;font-weight:600;" id="igDelta"></span>
+            </div>
+          </div>
+        </div>
+
+        <div id="igGraficoWrap" style="margin-bottom:14px;"></div>
+
+        <div style="border-top:1px solid var(--border);padding-top:16px;">
+          <div class="meta" style="margin-bottom:8px;">Registrar seguidores de hoje</div>
+          <div style="display:flex;gap:8px;">
+            <input type="number" id="igInputSeguidores" placeholder="Ex: 4812" style="flex:1;">
+            <button class="btn" id="btnIgRegistrar" style="white-space:nowrap;">Registrar</button>
+          </div>
+          <p class="success-msg" id="igMsg"></p>
+        </div>
+      </div>
+
+      <div id="listaInstagramCliente" style="max-width:520px;"></div>
     </section>
 
     <!-- PAGAMENTOS -->
@@ -752,7 +794,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 const abaSalvaAdmin = localStorage.getItem('adminAbaAtiva');
-if (abaSalvaAdmin === 'perfil' || abaSalvaAdmin === 'materiais-cliente') {
+if (abaSalvaAdmin === 'perfil' || abaSalvaAdmin === 'materiais-cliente' || abaSalvaAdmin === 'instagram-cliente') {
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
 } else if (abaSalvaAdmin) {
@@ -792,6 +834,7 @@ auth.onAuthStateChanged(async (user) => {
   carregarClientes();
   carregarVideosAdmin();
   carregarMateriaisAdmin();
+  carregarInstagramAdmin();
   carregarPagamentosAdmin();
   carregarDuvidasAdmin();
   carregarTutoriaisAdmin();
@@ -1583,6 +1626,7 @@ function carregarClientes() {
       if (uidSalvo && clientesCache[uidSalvo]) {
         if (abaSalva === 'perfil') abrirPerfilCliente(uidSalvo);
         else if (abaSalva === 'materiais-cliente') abrirMateriaisCliente(uidSalvo);
+        else if (abaSalva === 'instagram-cliente') abrirInstagramCliente(uidSalvo);
       }
     }
 
@@ -2081,7 +2125,7 @@ document.getElementById('confirmModalCancelar').addEventListener('click', () => 
 });
 
 async function excluirClienteCompleto(uid) {
-  const colecoes = ['entregas', 'materiais', 'duvidas', 'pautas', 'notificacoes', 'pagamentos'];
+  const colecoes = ['entregas', 'materiais', 'duvidas', 'pautas', 'notificacoes', 'pagamentos', 'instagramMetricas'];
   for (const col of colecoes) {
     const snap = await db.collection(col).where('clienteId', '==', uid).get();
     if (!snap.empty) {
@@ -2411,6 +2455,172 @@ function carregarMateriaisAdmin() {
     materiaisTodos = [];
     snap.forEach(docSnap => materiaisTodos.push({ id: docSnap.id, ...docSnap.data() }));
     if (mcClienteId) renderMateriaisCliente();
+  });
+}
+
+// --- INSTAGRAM (crescimento de seguidores por cliente) ---
+let instagramTodos = [];
+let igClienteId = null;
+
+function chaveDiaIg(data) {
+  const d = data && data.toDate ? data.toDate() : new Date(data);
+  return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+function abrirInstagramCliente(uid) {
+  igClienteId = uid;
+  const c = clientesCache[uid] || {};
+
+  localStorage.setItem('adminAbaAtiva', 'instagram-cliente');
+  localStorage.setItem('adminPerfilUid', uid);
+  document.getElementById('igVoltarNome').textContent = c.empresa || c.nome || 'cliente';
+  document.getElementById('igAvatar').textContent = iniciaisCliente(c);
+  document.getElementById('igLabelConta').textContent = 'Instagram · ' + (c.empresa || c.nome || 'cliente');
+  document.getElementById('igSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ');
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-instagram-cliente').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('igInputSeguidores').value = '';
+  document.getElementById('igMsg').textContent = '';
+  renderInstagramCliente();
+}
+
+function renderInstagramCliente() {
+  if (!igClienteId) return;
+  const registros = instagramTodos
+    .filter(m => m.clienteId === igClienteId)
+    .slice()
+    .sort((a, b) => {
+      const da = a.data && a.data.toDate ? a.data.toDate() : new Date(a.data);
+      const db_ = b.data && b.data.toDate ? b.data.toDate() : new Date(b.data);
+      return da - db_;
+    });
+
+  const atualEl = document.getElementById('igAtual');
+  const deltaEl = document.getElementById('igDelta');
+  const graficoWrap = document.getElementById('igGraficoWrap');
+  const listaBox = document.getElementById('listaInstagramCliente');
+
+  if (registros.length === 0) {
+    atualEl.textContent = '--';
+    deltaEl.textContent = '';
+    graficoWrap.innerHTML = '';
+    listaBox.innerHTML = '<div class="empty-state">Nenhum registro ainda. Adicione o número de seguidores de hoje pra começar.</div>';
+    return;
+  }
+
+  const ultimo = registros[registros.length - 1];
+  const penultimo = registros.length > 1 ? registros[registros.length - 2] : null;
+  atualEl.textContent = Number(ultimo.seguidores).toLocaleString('pt-BR');
+
+  if (penultimo) {
+    const delta = ultimo.seguidores - penultimo.seguidores;
+    const sinal = delta > 0 ? '+' : '';
+    deltaEl.style.color = delta >= 0 ? 'var(--green)' : 'var(--red)';
+    deltaEl.textContent = sinal + delta.toLocaleString('pt-BR') + ' desde o último registro';
+  } else {
+    deltaEl.textContent = '';
+  }
+
+  if (registros.length >= 2) {
+    const valores = registros.map(r => r.seguidores);
+    const min = Math.min(...valores);
+    const max = Math.max(...valores);
+    const span = Math.max(max - min, 1);
+    const w = 420, h = 90, pad = 6;
+    const pontos = registros.map((r, i) => {
+      const x = registros.length === 1 ? w / 2 : (i / (registros.length - 1)) * (w - pad * 2) + pad;
+      const y = h - pad - ((r.seguidores - min) / span) * (h - pad * 2);
+      return [x, y];
+    });
+    const linha = pontos.map(p => p.join(',')).join(' ');
+    const area = `0,${h} ` + linha + ` ${w},${h}`;
+    const ultimoP = pontos[pontos.length - 1];
+    graficoWrap.innerHTML = `
+      <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;">
+        <polygon points="${area}" fill="var(--purple)" opacity="0.12"></polygon>
+        <polyline points="${linha}" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        <circle cx="${ultimoP[0]}" cy="${ultimoP[1]}" r="4" fill="var(--purple-light)"></circle>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--gray);margin-top:4px;">
+        <span>${formatarData(registros[0].data)}</span>
+        <span>${formatarData(registros[registros.length - 1].data)}</span>
+      </div>
+    `;
+  } else {
+    graficoWrap.innerHTML = '<p class="meta">Registre pelo menos mais uma semana pra ver o gráfico de evolução.</p>';
+  }
+
+  listaBox.innerHTML = '<div class="card table-list"></div>';
+  const list = listaBox.querySelector('.table-list');
+  registros.slice().reverse().forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <div class="info"><strong>${Number(r.seguidores).toLocaleString('pt-BR')}</strong><span>${formatarData(r.data)}</span></div>
+      <button type="button" class="btn btn-outline" data-del-ig="${r.id}" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);" aria-label="Excluir registro">Excluir</button>
+    `;
+    list.appendChild(row);
+  });
+
+  list.querySelectorAll('[data-del-ig]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.delIg;
+      abrirConfirmModal(
+        'Excluir registro?',
+        'Essa ação não pode ser desfeita.',
+        async () => { await db.collection('instagramMetricas').doc(id).delete(); },
+        'Excluir'
+      );
+    });
+  });
+}
+
+document.getElementById('btnVoltarInstagramCliente').addEventListener('click', () => {
+  if (igClienteId) abrirPerfilCliente(igClienteId);
+});
+
+document.getElementById('btnVerInstagramCliente').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!perfilUid) return;
+  abrirInstagramCliente(perfilUid);
+});
+
+document.getElementById('btnIgRegistrar').addEventListener('click', async () => {
+  const valor = Number(document.getElementById('igInputSeguidores').value);
+  const msg = document.getElementById('igMsg');
+  if (!igClienteId || !valor || valor <= 0) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Digite um número de seguidores válido.';
+    return;
+  }
+
+  const hoje = new Date();
+  const chaveHoje = chaveDiaIg(hoje);
+  const existente = instagramTodos.find(r => r.clienteId === igClienteId && chaveDiaIg(r.data) === chaveHoje);
+
+  if (existente) {
+    await db.collection('instagramMetricas').doc(existente.id).update({ seguidores: valor });
+  } else {
+    await db.collection('instagramMetricas').add({
+      clienteId: igClienteId,
+      seguidores: valor,
+      data: firebase.firestore.FieldValue.serverTimestamp(),
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  document.getElementById('igInputSeguidores').value = '';
+  msg.style.color = 'var(--green)';
+  msg.textContent = 'Registrado!';
+  setTimeout(() => msg.textContent = '', 3000);
+});
+
+function carregarInstagramAdmin() {
+  db.collection('instagramMetricas').onSnapshot(snap => {
+    instagramTodos = [];
+    snap.forEach(docSnap => instagramTodos.push({ id: docSnap.id, ...docSnap.data() }));
+    if (igClienteId) renderInstagramCliente();
   });
 }
 

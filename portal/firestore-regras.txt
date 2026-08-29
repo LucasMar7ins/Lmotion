@@ -15,6 +15,7 @@ Essas regras garantem que:
 - O portal registra automaticamente o último acesso do cliente (só esse campo, sem acesso a mais nada).
 - O admin também pode adicionar materiais em nome de um cliente (ex: quando ele manda pelo WhatsApp).
 - Pagamentos são de uso exclusivo do admin — o cliente nunca lê nem escreve nada nessa coleção.
+- Métricas de Instagram (crescimento de seguidores) são de uso exclusivo do admin.
 
 ---
 
@@ -89,6 +90,11 @@ service cloud.firestore {
 
     // Pagamentos — controle interno, só o admin acessa
     match /pagamentos/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Instagram — crescimento de seguidores, controle interno, só o admin acessa
+    match /instagramMetricas/{id} {
       allow read, write: if isAdmin();
     }
 
