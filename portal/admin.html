@@ -180,6 +180,10 @@
                   <div class="meta" style="margin-bottom:4px;">Valor combinado</div>
                   <div id="viewValorCombinado" style="color:var(--white);font-size:0.92rem;"></div>
                 </div>
+                <div>
+                  <div class="meta" style="margin-bottom:4px;">Dia de vencimento</div>
+                  <div id="viewDiaVencimento" style="color:var(--white);font-size:0.92rem;"></div>
+                </div>
                 <div style="grid-column:1 / -1;">
                   <div class="meta" style="margin-bottom:4px;">Resumo do negócio</div>
                   <div id="viewResumo" style="color:var(--white);font-size:0.92rem;line-height:1.5;"></div>
@@ -204,9 +208,15 @@
                 <label>WhatsApp</label>
                 <input type="text" id="perfilEditWhatsapp" placeholder="Ex: (32) 99164-6261">
               </div>
-              <div class="field">
-                <label>Valor combinado (R$)</label>
-                <input type="number" id="perfilEditValorCombinado" step="0.01" min="0" placeholder="Opcional — usado pra sugerir e cobrar pagamentos">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="field">
+                  <label>Valor combinado (R$)</label>
+                  <input type="number" id="perfilEditValorCombinado" step="0.01" min="0" placeholder="Ex: 800.00">
+                </div>
+                <div class="field">
+                  <label>Dia de vencimento</label>
+                  <select id="perfilEditDiaVencimento"><option value="">Sem recorrência</option></select>
+                </div>
               </div>
               <div class="field">
                 <label>Resumo do negócio</label>
@@ -482,6 +492,17 @@
     <div class="field">
       <label>WhatsApp</label>
       <input type="text" id="clWhatsapp" placeholder="Ex: (32) 99164-6261">
+    </div>
+    <p class="meta" style="margin:2px 0 12px;">Combinado com o cliente — opcional, pode preencher depois.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="field">
+        <label>Valor combinado (R$)</label>
+        <input type="number" id="clValorCombinado" step="0.01" min="0" placeholder="Ex: 800.00">
+      </div>
+      <div class="field">
+        <label>Dia de vencimento</label>
+        <select id="clDiaVencimento"><option value="">Sem recorrência</option></select>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" id="btnFecharCadastroCliente">Cancelar</button>
@@ -1379,6 +1400,10 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
   const empresa = document.getElementById('clEmpresa').value.trim();
   const email = document.getElementById('clEmail').value.trim();
   const whatsapp = document.getElementById('clWhatsapp').value.trim();
+  const valorCombinadoInput = document.getElementById('clValorCombinado').value;
+  const valorCombinado = valorCombinadoInput ? parseFloat(valorCombinadoInput) : null;
+  const diaVencimentoInput = document.getElementById('clDiaVencimento').value;
+  const diaVencimento = diaVencimentoInput ? parseInt(diaVencimentoInput, 10) : null;
   if (!nome || !email) return;
 
   const btn = document.getElementById('btnAddCliente');
@@ -1395,7 +1420,7 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
     await authSecundario.signOut();
 
     await db.collection('clientes').doc(uid).set({
-      nome, empresa, email, whatsapp,
+      nome, empresa, email, whatsapp, valorCombinado, diaVencimento,
       isAdmin: false,
       dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
@@ -1406,6 +1431,8 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
     document.getElementById('clEmpresa').value = '';
     document.getElementById('clEmail').value = '';
     document.getElementById('clWhatsapp').value = '';
+    document.getElementById('clValorCombinado').value = '';
+    document.getElementById('clDiaVencimento').value = '';
     document.getElementById('cadastroClienteModal').style.display = 'none';
     msg.className = 'success-msg';
     msg.textContent = 'Cliente cadastrado! Email de acesso enviado.';
@@ -1509,6 +1536,8 @@ function carregarClientes() {
     if (snap.empty) {
       renderListaClientes('');
       selects.forEach(s => s.innerHTML = '<option value="">Nenhum cliente cadastrado</option>');
+      clientesCarregadosPg = true;
+      if (typeof tentarGerarCiclosPagamento === 'function') tentarGerarCiclosPagamento();
       return;
     }
 
@@ -1573,6 +1602,9 @@ function carregarClientes() {
         else if (abaSalva === 'materiais-cliente') abrirMateriaisCliente(uidSalvo);
       }
     }
+
+    clientesCarregadosPg = true;
+    if (typeof tentarGerarCiclosPagamento === 'function') tentarGerarCiclosPagamento();
   });
 }
 
@@ -1595,6 +1627,7 @@ function renderPerfilInfoModo(c) {
     document.getElementById('viewEmail').textContent = c.email || '';
     document.getElementById('viewWhatsapp').textContent = c.whatsapp || '';
     document.getElementById('viewValorCombinado').textContent = c.valorCombinado ? formatarMoeda(c.valorCombinado) : 'Não definido';
+    document.getElementById('viewDiaVencimento').textContent = c.diaVencimento ? 'Dia ' + c.diaVencimento : 'Sem recorrência';
     document.getElementById('viewResumo').textContent = c.resumo || '';
   }
 }
@@ -1639,6 +1672,7 @@ function abrirPerfilCliente(uid) {
   document.getElementById('perfilEditEmail').value = c.email || '';
   document.getElementById('perfilEditWhatsapp').value = c.whatsapp || '';
   document.getElementById('perfilEditValorCombinado').value = c.valorCombinado || '';
+  document.getElementById('perfilEditDiaVencimento').value = c.diaVencimento || '';
   document.getElementById('perfilEditResumo').value = c.resumo || '';
   renderPerfilInfoModo(c);
 
@@ -1921,11 +1955,13 @@ document.getElementById('btnSalvarInfoCliente').addEventListener('click', async 
   const whatsapp = document.getElementById('perfilEditWhatsapp').value.trim();
   const valorCombinadoInput = document.getElementById('perfilEditValorCombinado').value;
   const valorCombinado = valorCombinadoInput ? parseFloat(valorCombinadoInput) : null;
+  const diaVencimentoInput = document.getElementById('perfilEditDiaVencimento').value;
+  const diaVencimento = diaVencimentoInput ? parseInt(diaVencimentoInput, 10) : null;
   const resumo = document.getElementById('perfilEditResumo').value.trim();
   if (!nome) return;
 
   await db.collection('clientes').doc(perfilUid).set({
-    nome, empresa, email, whatsapp, valorCombinado, resumo
+    nome, empresa, email, whatsapp, valorCombinado, diaVencimento, resumo
   }, { merge: true });
 
   document.getElementById('perfilNome').textContent = nome;
@@ -1933,7 +1969,7 @@ document.getElementById('btnSalvarInfoCliente').addEventListener('click', async 
   document.getElementById('perfilAvatar').textContent = (nome || '?').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
 
   perfilEditando = false;
-  renderPerfilInfoModo({ nome, empresa, email, whatsapp, valorCombinado, resumo });
+  renderPerfilInfoModo({ nome, empresa, email, whatsapp, valorCombinado, diaVencimento, resumo });
 
   const msg = document.getElementById('perfilInfoMsg');
   msg.textContent = 'Salvo!';
@@ -2397,6 +2433,60 @@ function carregarMateriaisAdmin() {
 
 // --- PAGAMENTOS ---
 let pagamentosTodos = [];
+let clientesCarregadosPg = false;
+let pagamentosCarregadosPg = false;
+let gerandoCiclosPagamento = false;
+
+function cicloDoPagamento(p) {
+  const d = p.vencimento && p.vencimento.toDate ? p.vencimento.toDate() : (p.vencimento ? new Date(p.vencimento) : null);
+  if (!d) return null;
+  return d.getFullYear() * 12 + d.getMonth();
+}
+
+async function gerarCiclosPendentesPagamentos() {
+  if (gerandoCiclosPagamento) return;
+  gerandoCiclosPagamento = true;
+  try {
+    const hoje = new Date();
+    const cicloAtualNum = hoje.getFullYear() * 12 + hoje.getMonth();
+
+    for (const c of clientesTodos) {
+      if (!c.diaVencimento) continue;
+      const doCliente = pagamentosTodos.filter(p => p.clienteId === c.id);
+      let ultimoCiclo = null;
+      doCliente.forEach(p => {
+        const ciclo = cicloDoPagamento(p);
+        if (ciclo !== null && (ultimoCiclo === null || ciclo > ultimoCiclo)) ultimoCiclo = ciclo;
+      });
+
+      let proximoCiclo = ultimoCiclo === null ? cicloAtualNum : ultimoCiclo + 1;
+      while (proximoCiclo <= cicloAtualNum) {
+        const ano = Math.floor(proximoCiclo / 12);
+        const mes = proximoCiclo % 12;
+        const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+        const diaFinal = Math.min(c.diaVencimento, ultimoDiaMes);
+        const vencData = new Date(ano, mes, diaFinal, 12, 0, 0);
+        await db.collection('pagamentos').add({
+          clienteId: c.id,
+          vencimento: firebase.firestore.Timestamp.fromDate(vencData),
+          valor: null,
+          referencia: '',
+          status: 'pendente',
+          criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        proximoCiclo++;
+      }
+    }
+  } finally {
+    gerandoCiclosPagamento = false;
+  }
+}
+
+function tentarGerarCiclosPagamento() {
+  if (clientesCarregadosPg && pagamentosCarregadosPg) {
+    gerarCiclosPendentesPagamentos();
+  }
+}
 
 function statusRealPagamento(p) {
   if (p.status === 'pago') return 'pago';
@@ -2520,15 +2610,19 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
   });
 }
 
-(function popularDiasVencimento() {
-  const sel = document.getElementById('pgDiaVencimento');
+function popularSelectDias(id) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
   for (let d = 1; d <= 31; d++) {
     const opt = document.createElement('option');
     opt.value = d;
     opt.textContent = 'Dia ' + d;
     sel.appendChild(opt);
   }
-})();
+}
+popularSelectDias('pgDiaVencimento');
+popularSelectDias('clDiaVencimento');
+popularSelectDias('perfilEditDiaVencimento');
 
 function proximaDataPorDia(dia) {
   const hoje = new Date();
@@ -2659,6 +2753,9 @@ function carregarPagamentosAdmin() {
     pagamentosTodos = [];
     snap.forEach(docSnap => pagamentosTodos.push({ id: docSnap.id, ...docSnap.data() }));
     renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
+
+    pagamentosCarregadosPg = true;
+    tentarGerarCiclosPagamento();
   });
 }
 
