@@ -404,44 +404,19 @@
       <div id="listaMateriaisCliente"></div>
     </section>
 
-    <!-- INSTAGRAM DE UM CLIENTE ESPECÍFICO -->
+    <!-- REDES SOCIAIS DE UM CLIENTE ESPECÍFICO -->
     <section class="tab-section" id="tab-instagram-cliente">
       <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarInstagramCliente">&larr; Voltar para <span id="igVoltarNome">cliente</span></div>
 
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
         <div style="width:44px;height:44px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1rem;" id="igAvatar">--</div>
         <div>
-          <h2 style="margin:0;">Instagram</h2>
+          <h2 style="margin:0;">Redes sociais</h2>
           <p class="meta" id="igSub" style="margin-top:2px;"></p>
         </div>
       </div>
 
-      <div class="card" style="max-width:520px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-          <div>
-            <div class="meta" style="margin-bottom:4px;" id="igLabelConta">Seguidores</div>
-            <div style="display:flex;align-items:baseline;gap:8px;">
-              <span style="color:var(--white);font-size:1.7rem;font-weight:700;" id="igAtual">--</span>
-              <span style="font-size:0.78rem;font-weight:600;" id="igDelta"></span>
-            </div>
-          </div>
-        </div>
-
-        <div id="igGraficoWrap" style="margin-bottom:14px;"></div>
-
-        <div style="border-top:1px solid var(--border);padding-top:16px;">
-          <div class="meta" style="margin-bottom:8px;">Registrar seguidores</div>
-          <div style="display:flex;gap:8px;">
-            <input type="date" id="igInputData" style="max-width:160px;">
-            <input type="number" id="igInputSeguidores" placeholder="Ex: 4812" style="flex:1;">
-            <button class="btn" id="btnIgRegistrar" style="white-space:nowrap;">Registrar</button>
-          </div>
-          <p class="meta" style="margin-top:8px;">Pode registrar uma data passada — se já tiver algo pra aquele dia, o valor é atualizado.</p>
-          <p class="success-msg" id="igMsg"></p>
-        </div>
-      </div>
-
-      <div id="listaInstagramCliente" style="max-width:520px;"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:20px;" id="redesCardsWrap"></div>
     </section>
 
     <!-- PAGAMENTOS -->
@@ -836,7 +811,7 @@ auth.onAuthStateChanged(async (user) => {
   carregarClientes();
   carregarVideosAdmin();
   carregarMateriaisAdmin();
-  carregarInstagramAdmin();
+  carregarRedesSociaisAdmin();
   carregarPagamentosAdmin();
   carregarDuvidasAdmin();
   carregarTutoriaisAdmin();
@@ -2127,7 +2102,7 @@ document.getElementById('confirmModalCancelar').addEventListener('click', () => 
 });
 
 async function excluirClienteCompleto(uid) {
-  const colecoes = ['entregas', 'materiais', 'duvidas', 'pautas', 'notificacoes', 'pagamentos', 'instagramMetricas'];
+  const colecoes = ['entregas', 'materiais', 'duvidas', 'pautas', 'notificacoes', 'pagamentos', 'instagramMetricas', 'tiktokMetricas', 'youtubeMetricas'];
   for (const col of colecoes) {
     const snap = await db.collection(col).where('clienteId', '==', uid).get();
     if (!snap.empty) {
@@ -2460,11 +2435,19 @@ function carregarMateriaisAdmin() {
   });
 }
 
-// --- INSTAGRAM (crescimento de seguidores por cliente) ---
-let instagramTodos = [];
-let igClienteId = null;
+// --- REDES SOCIAIS (crescimento de seguidores/inscritos por cliente) ---
+const REDES_SOCIAIS = [
+  { key: 'instagram', prefixo: 'ig', label: 'Instagram', unidade: 'seguidores', colecao: 'instagramMetricas' },
+  { key: 'tiktok', prefixo: 'tt', label: 'TikTok', unidade: 'seguidores', colecao: 'tiktokMetricas' },
+  { key: 'youtube', prefixo: 'yt', label: 'YouTube', unidade: 'inscritos', colecao: 'youtubeMetricas' }
+];
 
-function chaveDiaIg(data) {
+let redesDados = { instagram: [], tiktok: [], youtube: [] };
+let redesClienteId = null;
+
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function chaveDiaRede(data) {
   const d = data && data.toDate ? data.toDate() : new Date(data);
   return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 }
@@ -2476,29 +2459,68 @@ function dataLocalISO(d) {
   return ano + '-' + mes + '-' + dia;
 }
 
+function montarCardsRedesSociais() {
+  const wrap = document.getElementById('redesCardsWrap');
+  wrap.innerHTML = REDES_SOCIAIS.map(rede => `
+    <div class="card" style="flex:1;min-width:320px;max-width:420px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div>
+          <div class="meta" style="margin-bottom:4px;" id="${rede.prefixo}LabelConta">${rede.label}</div>
+          <div style="display:flex;align-items:baseline;gap:8px;">
+            <span style="color:var(--white);font-size:1.7rem;font-weight:700;" id="${rede.prefixo}Atual">--</span>
+            <span style="font-size:0.78rem;font-weight:600;" id="${rede.prefixo}Delta"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="${rede.prefixo}GraficoWrap" style="margin-bottom:14px;"></div>
+
+      <div style="border-top:1px solid var(--border);padding-top:16px;">
+        <div class="meta" style="margin-bottom:8px;">Registrar ${rede.unidade}</div>
+        <div style="display:flex;gap:8px;">
+          <input type="date" id="${rede.prefixo}InputData" style="max-width:148px;">
+          <input type="number" id="${rede.prefixo}InputValor" placeholder="Ex: 4812" style="flex:1;min-width:0;">
+          <button class="btn" id="btn${cap(rede.prefixo)}Registrar" style="white-space:nowrap;">Registrar</button>
+        </div>
+        <p class="success-msg" id="${rede.prefixo}Msg"></p>
+      </div>
+
+      <div id="lista${cap(rede.prefixo)}Cliente" style="margin-top:14px;"></div>
+    </div>
+  `).join('');
+
+  REDES_SOCIAIS.forEach(rede => {
+    document.getElementById('btn' + cap(rede.prefixo) + 'Registrar').addEventListener('click', () => registrarMetricaRede(rede));
+  });
+}
+montarCardsRedesSociais();
+
 function abrirInstagramCliente(uid) {
-  igClienteId = uid;
+  redesClienteId = uid;
   const c = clientesCache[uid] || {};
 
   localStorage.setItem('adminAbaAtiva', 'instagram-cliente');
   localStorage.setItem('adminPerfilUid', uid);
   document.getElementById('igVoltarNome').textContent = c.empresa || c.nome || 'cliente';
   document.getElementById('igAvatar').textContent = iniciaisCliente(c);
-  document.getElementById('igLabelConta').textContent = 'Instagram · ' + (c.empresa || c.nome || 'cliente');
   document.getElementById('igSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ');
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.getElementById('tab-instagram-cliente').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-  document.getElementById('igInputSeguidores').value = '';
-  document.getElementById('igInputData').value = dataLocalISO(new Date());
-  document.getElementById('igMsg').textContent = '';
-  renderInstagramCliente();
+
+  REDES_SOCIAIS.forEach(rede => {
+    document.getElementById(rede.prefixo + 'LabelConta').textContent = rede.label + ' · ' + (c.empresa || c.nome || 'cliente');
+    document.getElementById(rede.prefixo + 'InputValor').value = '';
+    document.getElementById(rede.prefixo + 'InputData').value = dataLocalISO(new Date());
+    document.getElementById(rede.prefixo + 'Msg').textContent = '';
+    renderRedeCliente(rede);
+  });
 }
 
-function renderInstagramCliente() {
-  if (!igClienteId) return;
-  const registros = instagramTodos
-    .filter(m => m.clienteId === igClienteId)
+function renderRedeCliente(rede) {
+  if (!redesClienteId) return;
+  const registros = (redesDados[rede.key] || [])
+    .filter(m => m.clienteId === redesClienteId)
     .slice()
     .sort((a, b) => {
       const da = a.data && a.data.toDate ? a.data.toDate() : new Date(a.data);
@@ -2506,16 +2528,17 @@ function renderInstagramCliente() {
       return da - db_;
     });
 
-  const atualEl = document.getElementById('igAtual');
-  const deltaEl = document.getElementById('igDelta');
-  const graficoWrap = document.getElementById('igGraficoWrap');
-  const listaBox = document.getElementById('listaInstagramCliente');
+  const atualEl = document.getElementById(rede.prefixo + 'Atual');
+  const deltaEl = document.getElementById(rede.prefixo + 'Delta');
+  const graficoWrap = document.getElementById(rede.prefixo + 'GraficoWrap');
+  const listaBox = document.getElementById('lista' + cap(rede.prefixo) + 'Cliente');
+  if (!atualEl) return;
 
   if (registros.length === 0) {
     atualEl.textContent = '--';
     deltaEl.textContent = '';
     graficoWrap.innerHTML = '';
-    listaBox.innerHTML = '<div class="empty-state">Nenhum registro ainda. Adicione o número de seguidores de hoje pra começar.</div>';
+    listaBox.innerHTML = '<div class="empty-state">Nenhum registro ainda.</div>';
     return;
   }
 
@@ -2537,7 +2560,7 @@ function renderInstagramCliente() {
     const min = Math.min(...valores);
     const max = Math.max(...valores);
     const span = Math.max(max - min, 1);
-    const w = 420, h = 90, pad = 6;
+    const w = 380, h = 90, pad = 6;
     const pontos = registros.map((r, i) => {
       const x = registros.length === 1 ? w / 2 : (i / (registros.length - 1)) * (w - pad * 2) + pad;
       const y = h - pad - ((r.seguidores - min) / span) * (h - pad * 2);
@@ -2558,7 +2581,7 @@ function renderInstagramCliente() {
       </div>
     `;
   } else {
-    graficoWrap.innerHTML = '<p class="meta">Registre pelo menos mais uma semana pra ver o gráfico de evolução.</p>';
+    graficoWrap.innerHTML = '<p class="meta">Registre mais uma vez pra ver o gráfico de evolução.</p>';
   }
 
   listaBox.innerHTML = '<div class="card table-list"></div>';
@@ -2568,18 +2591,19 @@ function renderInstagramCliente() {
     row.className = 'row';
     row.innerHTML = `
       <div class="info"><strong>${Number(r.seguidores).toLocaleString('pt-BR')}</strong><span>${formatarData(r.data)}</span></div>
-      <button type="button" class="btn btn-outline" data-del-ig="${r.id}" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);" aria-label="Excluir registro">Excluir</button>
+      <button type="button" class="btn btn-outline" data-del-rede="${rede.key}:${r.id}" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);" aria-label="Excluir registro">Excluir</button>
     `;
     list.appendChild(row);
   });
 
-  list.querySelectorAll('[data-del-ig]').forEach(btn => {
+  list.querySelectorAll('[data-del-rede]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.delIg;
+      const [redeKey, id] = btn.dataset.delRede.split(':');
+      const redeConf = REDES_SOCIAIS.find(r => r.key === redeKey);
       abrirConfirmModal(
         'Excluir registro?',
         'Essa ação não pode ser desfeita.',
-        async () => { await db.collection('instagramMetricas').doc(id).delete(); },
+        async () => { await db.collection(redeConf.colecao).doc(id).delete(); },
         'Excluir'
       );
     });
@@ -2587,7 +2611,7 @@ function renderInstagramCliente() {
 }
 
 document.getElementById('btnVoltarInstagramCliente').addEventListener('click', () => {
-  if (igClienteId) abrirPerfilCliente(igClienteId);
+  if (redesClienteId) abrirPerfilCliente(redesClienteId);
 });
 
 document.getElementById('btnVerInstagramCliente').addEventListener('click', (e) => {
@@ -2596,14 +2620,14 @@ document.getElementById('btnVerInstagramCliente').addEventListener('click', (e) 
   abrirInstagramCliente(perfilUid);
 });
 
-document.getElementById('btnIgRegistrar').addEventListener('click', async () => {
-  const valor = Number(document.getElementById('igInputSeguidores').value);
-  const dataStr = document.getElementById('igInputData').value;
-  const msg = document.getElementById('igMsg');
+async function registrarMetricaRede(rede) {
+  const valor = Number(document.getElementById(rede.prefixo + 'InputValor').value);
+  const dataStr = document.getElementById(rede.prefixo + 'InputData').value;
+  const msg = document.getElementById(rede.prefixo + 'Msg');
 
-  if (!igClienteId || !valor || valor <= 0) {
+  if (!redesClienteId || !valor || valor <= 0) {
     msg.style.color = 'var(--red)';
-    msg.textContent = 'Digite um número de seguidores válido.';
+    msg.textContent = 'Digite um número válido.';
     return;
   }
   if (!dataStr) {
@@ -2614,32 +2638,35 @@ document.getElementById('btnIgRegistrar').addEventListener('click', async () => 
 
   const [ano, mes, dia] = dataStr.split('-').map(Number);
   const dataEscolhida = new Date(ano, mes - 1, dia, 12, 0, 0);
-  const chaveEscolhida = chaveDiaIg(dataEscolhida);
-  const existente = instagramTodos.find(r => r.clienteId === igClienteId && chaveDiaIg(r.data) === chaveEscolhida);
+  const chaveEscolhida = chaveDiaRede(dataEscolhida);
+  const existente = (redesDados[rede.key] || []).find(r => r.clienteId === redesClienteId && chaveDiaRede(r.data) === chaveEscolhida);
 
   if (existente) {
-    await db.collection('instagramMetricas').doc(existente.id).update({ seguidores: valor, data: firebase.firestore.Timestamp.fromDate(dataEscolhida) });
+    await db.collection(rede.colecao).doc(existente.id).update({ seguidores: valor, data: firebase.firestore.Timestamp.fromDate(dataEscolhida) });
   } else {
-    await db.collection('instagramMetricas').add({
-      clienteId: igClienteId,
+    await db.collection(rede.colecao).add({
+      clienteId: redesClienteId,
       seguidores: valor,
       data: firebase.firestore.Timestamp.fromDate(dataEscolhida),
       criadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
   }
 
-  document.getElementById('igInputSeguidores').value = '';
-  document.getElementById('igInputData').value = dataLocalISO(new Date());
+  document.getElementById(rede.prefixo + 'InputValor').value = '';
+  document.getElementById(rede.prefixo + 'InputData').value = dataLocalISO(new Date());
   msg.style.color = 'var(--green)';
   msg.textContent = 'Registrado!';
   setTimeout(() => msg.textContent = '', 3000);
-});
+}
 
-function carregarInstagramAdmin() {
-  db.collection('instagramMetricas').onSnapshot(snap => {
-    instagramTodos = [];
-    snap.forEach(docSnap => instagramTodos.push({ id: docSnap.id, ...docSnap.data() }));
-    if (igClienteId) renderInstagramCliente();
+function carregarRedesSociaisAdmin() {
+  REDES_SOCIAIS.forEach(rede => {
+    db.collection(rede.colecao).onSnapshot(snap => {
+      const arr = [];
+      snap.forEach(docSnap => arr.push({ id: docSnap.id, ...docSnap.data() }));
+      redesDados[rede.key] = arr;
+      if (redesClienteId) renderRedeCliente(rede);
+    });
   });
 }
 
