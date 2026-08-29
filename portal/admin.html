@@ -430,11 +430,13 @@
         <div id="igGraficoWrap" style="margin-bottom:14px;"></div>
 
         <div style="border-top:1px solid var(--border);padding-top:16px;">
-          <div class="meta" style="margin-bottom:8px;">Registrar seguidores de hoje</div>
+          <div class="meta" style="margin-bottom:8px;">Registrar seguidores</div>
           <div style="display:flex;gap:8px;">
+            <input type="date" id="igInputData" style="max-width:160px;">
             <input type="number" id="igInputSeguidores" placeholder="Ex: 4812" style="flex:1;">
             <button class="btn" id="btnIgRegistrar" style="white-space:nowrap;">Registrar</button>
           </div>
+          <p class="meta" style="margin-top:8px;">Pode registrar uma data passada — se já tiver algo pra aquele dia, o valor é atualizado.</p>
           <p class="success-msg" id="igMsg"></p>
         </div>
       </div>
@@ -2467,6 +2469,13 @@ function chaveDiaIg(data) {
   return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 }
 
+function dataLocalISO(d) {
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return ano + '-' + mes + '-' + dia;
+}
+
 function abrirInstagramCliente(uid) {
   igClienteId = uid;
   const c = clientesCache[uid] || {};
@@ -2481,6 +2490,7 @@ function abrirInstagramCliente(uid) {
   document.getElementById('tab-instagram-cliente').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
   document.getElementById('igInputSeguidores').value = '';
+  document.getElementById('igInputData').value = dataLocalISO(new Date());
   document.getElementById('igMsg').textContent = '';
   renderInstagramCliente();
 }
@@ -2588,29 +2598,38 @@ document.getElementById('btnVerInstagramCliente').addEventListener('click', (e) 
 
 document.getElementById('btnIgRegistrar').addEventListener('click', async () => {
   const valor = Number(document.getElementById('igInputSeguidores').value);
+  const dataStr = document.getElementById('igInputData').value;
   const msg = document.getElementById('igMsg');
+
   if (!igClienteId || !valor || valor <= 0) {
     msg.style.color = 'var(--red)';
     msg.textContent = 'Digite um número de seguidores válido.';
     return;
   }
+  if (!dataStr) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Escolha uma data.';
+    return;
+  }
 
-  const hoje = new Date();
-  const chaveHoje = chaveDiaIg(hoje);
-  const existente = instagramTodos.find(r => r.clienteId === igClienteId && chaveDiaIg(r.data) === chaveHoje);
+  const [ano, mes, dia] = dataStr.split('-').map(Number);
+  const dataEscolhida = new Date(ano, mes - 1, dia, 12, 0, 0);
+  const chaveEscolhida = chaveDiaIg(dataEscolhida);
+  const existente = instagramTodos.find(r => r.clienteId === igClienteId && chaveDiaIg(r.data) === chaveEscolhida);
 
   if (existente) {
-    await db.collection('instagramMetricas').doc(existente.id).update({ seguidores: valor });
+    await db.collection('instagramMetricas').doc(existente.id).update({ seguidores: valor, data: firebase.firestore.Timestamp.fromDate(dataEscolhida) });
   } else {
     await db.collection('instagramMetricas').add({
       clienteId: igClienteId,
       seguidores: valor,
-      data: firebase.firestore.FieldValue.serverTimestamp(),
+      data: firebase.firestore.Timestamp.fromDate(dataEscolhida),
       criadoEm: firebase.firestore.FieldValue.serverTimestamp()
     });
   }
 
   document.getElementById('igInputSeguidores').value = '';
+  document.getElementById('igInputData').value = dataLocalISO(new Date());
   msg.style.color = 'var(--green)';
   msg.textContent = 'Registrado!';
   setTimeout(() => msg.textContent = '', 3000);
