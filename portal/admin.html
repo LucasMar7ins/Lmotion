@@ -1573,11 +1573,35 @@ function perfilVideoCardHtml(v) {
   let badgeClass = 'badge-pending', badgeTexto = 'Em aprovação';
   if (publicado) { badgeClass = 'badge-neutral'; badgeTexto = 'Postado'; }
   else if (feedback.tipo === 'aprovado') { badgeClass = 'badge-approved'; badgeTexto = 'Aprovado'; }
+
+  let botaoCobrar = '';
+  if (!publicado && !feedback.tipo) {
+    const cliente = clientesCache[v.clienteId] || {};
+    const numero = formatarNumeroWhatsapp(cliente.whatsapp);
+    if (numero) {
+      const dataPost = formatarData(v.dataPostagem);
+      const texto = dataPost
+        ? `Oi ${cliente.nome || ''}! O vídeo "${v.titulo}" está previsto pra postar dia ${dataPost} e ainda está esperando sua aprovação no portal 🎬 Dá uma olhada quando puder: https://lmotion.com.br/portal/`
+        : `Oi ${cliente.nome || ''}! O vídeo "${v.titulo}" ainda está esperando sua aprovação no portal 🎬 Dá uma olhada quando puder: https://lmotion.com.br/portal/`;
+      botaoCobrar = `
+        <a href="https://wa.me/${numero}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener" data-cobrar-video style="display:flex;align-items:center;gap:5px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.35);color:#25D366;font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:8px;white-space:nowrap;text-decoration:none;flex-shrink:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"/></svg>
+          Cobrar
+        </a>
+      `;
+    }
+  }
+
   return `
     <div class="video-mini-card" data-perfil-video="${v.id}" style="padding:14px 16px;margin-bottom:10px;">
-      <h5 style="font-size:0.9rem;">${v.titulo}</h5>
-      <div class="meta">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
-      <span class="badge ${badgeClass}" style="margin-top:8px;">${badgeTexto}</span>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <h5 style="font-size:0.9rem;margin:0;">${v.titulo}</h5>
+          <div class="meta" style="margin-top:4px;">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+          <span class="badge ${badgeClass}" style="margin-top:8px;">${badgeTexto}</span>
+        </div>
+        ${botaoCobrar}
+      </div>
     </div>
   `;
 }
@@ -1598,6 +1622,9 @@ function renderPerfilVideos() {
       const v = perfilEntregas.find(e => e.id === card.dataset.perfilVideo);
       if (v) abrirVideoDetalheModal(v);
     });
+  });
+  box.querySelectorAll('[data-cobrar-video]').forEach(a => {
+    a.addEventListener('click', (e) => e.stopPropagation());
   });
 }
 document.querySelectorAll('#perfilVideosFiltro .view-toggle-btn').forEach(btn => {
