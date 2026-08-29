@@ -176,6 +176,10 @@
                   <div class="meta" style="margin-bottom:4px;">WhatsApp</div>
                   <div id="viewWhatsapp" style="color:var(--white);font-size:0.92rem;"></div>
                 </div>
+                <div>
+                  <div class="meta" style="margin-bottom:4px;">Valor combinado</div>
+                  <div id="viewValorCombinado" style="color:var(--white);font-size:0.92rem;"></div>
+                </div>
                 <div style="grid-column:1 / -1;">
                   <div class="meta" style="margin-bottom:4px;">Resumo do negócio</div>
                   <div id="viewResumo" style="color:var(--white);font-size:0.92rem;line-height:1.5;"></div>
@@ -199,6 +203,10 @@
               <div class="field">
                 <label>WhatsApp</label>
                 <input type="text" id="perfilEditWhatsapp" placeholder="Ex: (32) 99164-6261">
+              </div>
+              <div class="field">
+                <label>Valor combinado (R$)</label>
+                <input type="number" id="perfilEditValorCombinado" step="0.01" min="0" placeholder="Opcional — usado pra sugerir e cobrar pagamentos">
               </div>
               <div class="field">
                 <label>Resumo do negócio</label>
@@ -1585,6 +1593,7 @@ function renderPerfilInfoModo(c) {
     document.getElementById('viewEmpresa').textContent = c.empresa || '';
     document.getElementById('viewEmail').textContent = c.email || '';
     document.getElementById('viewWhatsapp').textContent = c.whatsapp || '';
+    document.getElementById('viewValorCombinado').textContent = c.valorCombinado ? formatarMoeda(c.valorCombinado) : 'Não definido';
     document.getElementById('viewResumo').textContent = c.resumo || '';
   }
 }
@@ -1628,6 +1637,7 @@ function abrirPerfilCliente(uid) {
   document.getElementById('perfilEditEmpresa').value = c.empresa || '';
   document.getElementById('perfilEditEmail').value = c.email || '';
   document.getElementById('perfilEditWhatsapp').value = c.whatsapp || '';
+  document.getElementById('perfilEditValorCombinado').value = c.valorCombinado || '';
   document.getElementById('perfilEditResumo').value = c.resumo || '';
   renderPerfilInfoModo(c);
 
@@ -1908,11 +1918,13 @@ document.getElementById('btnSalvarInfoCliente').addEventListener('click', async 
   const empresa = document.getElementById('perfilEditEmpresa').value.trim();
   const email = document.getElementById('perfilEditEmail').value.trim();
   const whatsapp = document.getElementById('perfilEditWhatsapp').value.trim();
+  const valorCombinadoInput = document.getElementById('perfilEditValorCombinado').value;
+  const valorCombinado = valorCombinadoInput ? parseFloat(valorCombinadoInput) : null;
   const resumo = document.getElementById('perfilEditResumo').value.trim();
   if (!nome) return;
 
   await db.collection('clientes').doc(perfilUid).set({
-    nome, empresa, email, whatsapp, resumo
+    nome, empresa, email, whatsapp, valorCombinado, resumo
   }, { merge: true });
 
   document.getElementById('perfilNome').textContent = nome;
@@ -1920,7 +1932,7 @@ document.getElementById('btnSalvarInfoCliente').addEventListener('click', async 
   document.getElementById('perfilAvatar').textContent = (nome || '?').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
 
   perfilEditando = false;
-  renderPerfilInfoModo({ nome, empresa, email, whatsapp, resumo });
+  renderPerfilInfoModo({ nome, empresa, email, whatsapp, valorCombinado, resumo });
 
   const msg = document.getElementById('perfilInfoMsg');
   msg.textContent = 'Salvo!';
@@ -2449,7 +2461,8 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
       const numero = formatarNumeroWhatsapp(cliente.whatsapp);
       if (numero) {
         const dataVencTexto = formatarData(p.vencimento) || 'já passado';
-        const texto = `Oi ${cliente.nome || ''}! Só passando pra lembrar que tem um pagamento pendente com vencimento em ${dataVencTexto}. Qualquer coisa me chama!`;
+        const trechoValor = cliente.valorCombinado ? ` de ${formatarMoeda(cliente.valorCombinado)}` : '';
+        const texto = `Oi ${cliente.nome || ''}! Só passando pra lembrar que tem um pagamento${trechoValor} pendente, com vencimento em ${dataVencTexto}. Qualquer coisa me chama!`;
         acoes += `<a href="https://wa.me/${numero}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.35);color:#25D366;font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:8px;white-space:nowrap;text-decoration:none;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"/></svg>
           Cobrar
@@ -2541,7 +2554,7 @@ function abrirModalRegistrarPagamento(p) {
   const cliente = clientesCache[p.clienteId] || {};
   document.getElementById('rpTitulo').textContent = 'Registrar pagamento — ' + (cliente.empresa || cliente.nome || 'cliente');
   document.getElementById('rpSub').textContent = 'Vencimento ' + (formatarData(p.vencimento) || 'sem data');
-  document.getElementById('rpValor').value = '';
+  document.getElementById('rpValor').value = cliente.valorCombinado || '';
   document.getElementById('rpReferencia').value = mesAnoPorExtenso(p.vencimento);
   document.getElementById('rpErro').style.display = 'none';
   document.getElementById('registrarPagamentoModal').style.display = 'flex';
