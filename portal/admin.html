@@ -387,26 +387,18 @@
       <h2>Pagamentos</h2>
       <p class="page-sub">Controle de valores, vencimentos e recibos de cada cliente. Visível só pra você.</p>
 
-      <div class="card" style="max-width:560px;">
-        <h3 style="margin-bottom:4px;">Lançar pagamento</h3>
-        <p class="meta" style="margin-bottom:16px;">Cadastre o valor combinado pra esse mês ou período.</p>
+      <div class="card" style="max-width:420px;">
+        <h3 style="margin-bottom:4px;">Lançar vencimento</h3>
+        <p class="meta" style="margin-bottom:16px;">Só marca quando esse cliente te deve pagar. O valor você preenche na hora de registrar.</p>
         <div class="field">
           <label>Cliente</label>
           <select id="pgCliente"></select>
         </div>
         <div class="field">
-          <label>Valor (R$)</label>
-          <input type="number" id="pgValor" step="0.01" min="0" placeholder="Ex: 800.00">
-        </div>
-        <div class="field">
-          <label>Referência</label>
-          <input type="text" id="pgReferencia" placeholder="Ex: Setembro/2026, Pacote institucional">
-        </div>
-        <div class="field">
           <label>Vencimento</label>
           <input type="date" id="pgVencimento">
         </div>
-        <button class="btn" id="btnLancarPagamento">Lançar pagamento</button>
+        <button class="btn" id="btnLancarPagamento">Lançar vencimento</button>
         <p class="success-msg" id="pgMsg"></p>
       </div>
 
@@ -497,6 +489,26 @@
     <div class="modal-actions">
       <button class="btn btn-outline" id="confirmModalCancelar">Cancelar</button>
       <button class="btn btn-danger" id="confirmModalConfirmar">Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="registrarPagamentoModal" style="display:none;">
+  <div class="modal-box" style="width:340px;">
+    <h3 id="rpTitulo" style="margin-bottom:2px;">Registrar pagamento</h3>
+    <p class="meta" id="rpSub" style="margin-bottom:16px;"></p>
+    <div class="field">
+      <label>Valor (R$)</label>
+      <input type="number" id="rpValor" step="0.01" min="0" placeholder="Ex: 800.00">
+    </div>
+    <div class="field">
+      <label>Referência</label>
+      <input type="text" id="rpReferencia">
+    </div>
+    <p class="error-msg" id="rpErro" style="display:none;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="rpCancelar">Cancelar</button>
+      <button class="btn" id="rpConfirmar">Registrar</button>
     </div>
   </div>
 </div>
@@ -2395,6 +2407,12 @@ function textoStatusPagamento(status) {
 function formatarMoeda(valor) {
   return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
+function mesAnoPorExtenso(data) {
+  const d = data && data.toDate ? data.toDate() : (data ? new Date(data) : null);
+  if (!d) return '';
+  const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  return meses[d.getMonth()] + '/' + d.getFullYear();
+}
 
 function renderPagamentos(filtroClienteId, filtroStatus) {
   const box = document.getElementById('listaPagamentosAdmin');
@@ -2419,24 +2437,27 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
     const cor = corStatusPagamento(status);
     const nomeExibido = cliente.empresa || cliente.nome || 'Cliente';
 
-    const infoData = status === 'pago'
+    const registrado = status === 'pago';
+    const infoData = registrado
       ? 'Pago em ' + (formatarData(p.dataPagamento) || '-')
       : 'Vencimento ' + (formatarData(p.vencimento) || 'sem data');
+    const infoValor = registrado ? ' &middot; ' + formatarMoeda(p.valor) : '';
+    const titulo = nomeExibido + (registrado && p.referencia ? ' &middot; ' + p.referencia : '');
 
     let acoes = '';
     if (status === 'atrasado') {
       const numero = formatarNumeroWhatsapp(cliente.whatsapp);
       if (numero) {
         const dataVencTexto = formatarData(p.vencimento) || 'já passado';
-        const texto = `Oi ${cliente.nome || ''}! Só passando pra lembrar que o pagamento referente a "${p.referencia}" no valor de ${formatarMoeda(p.valor)} venceu dia ${dataVencTexto}. Qualquer coisa me chama!`;
+        const texto = `Oi ${cliente.nome || ''}! Só passando pra lembrar que tem um pagamento pendente com vencimento em ${dataVencTexto}. Qualquer coisa me chama!`;
         acoes += `<a href="https://wa.me/${numero}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.35);color:#25D366;font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:8px;white-space:nowrap;text-decoration:none;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"/></svg>
           Cobrar
         </a>`;
       }
     }
-    if (status !== 'pago') {
-      acoes += `<button type="button" class="btn btn-outline" data-marcar-pago="${p.id}" style="font-size:0.72rem;padding:6px 10px;">Marcar pago</button>`;
+    if (!registrado) {
+      acoes += `<button type="button" class="btn" data-registrar-pagamento="${p.id}" style="font-size:0.72rem;padding:7px 12px;">Registrar pagamento</button>`;
     } else {
       acoes += `<button type="button" class="btn btn-outline" data-gerar-recibo="${p.id}" style="font-size:0.72rem;padding:6px 10px;">Gerar recibo</button>`;
     }
@@ -2447,8 +2468,8 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
     row.style.cssText = 'margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;';
     row.innerHTML = `
       <div>
-        <div style="color:var(--white);font-size:0.88rem;font-weight:600;">${nomeExibido} &middot; ${p.referencia || ''}</div>
-        <div class="meta" style="margin-top:2px;">${infoData} &middot; ${formatarMoeda(p.valor)}</div>
+        <div style="color:var(--white);font-size:0.88rem;font-weight:600;">${titulo}</div>
+        <div class="meta" style="margin-top:2px;">${infoData}${infoValor}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="background:color-mix(in srgb, ${cor} 15%, transparent);border:1px solid color-mix(in srgb, ${cor} 35%, transparent);color:${cor};font-size:0.72rem;font-weight:600;padding:4px 10px;border-radius:20px;">${textoStatusPagamento(status)}</span>
@@ -2458,20 +2479,10 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
     box.appendChild(row);
   });
 
-  box.querySelectorAll('[data-marcar-pago]').forEach(btn => {
+  box.querySelectorAll('[data-registrar-pagamento]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.marcarPago;
-      abrirConfirmModal(
-        'Marcar como pago?',
-        'Isso registra a data de hoje como data do pagamento.',
-        async () => {
-          await db.collection('pagamentos').doc(id).update({
-            status: 'pago',
-            dataPagamento: firebase.firestore.FieldValue.serverTimestamp()
-          });
-        },
-        'Marcar pago'
-      );
+      const p = pagamentosTodos.find(x => x.id === btn.dataset.registrarPagamento);
+      if (p) abrirModalRegistrarPagamento(p);
     });
   });
 
@@ -2497,23 +2508,21 @@ function renderPagamentos(filtroClienteId, filtroStatus) {
 
 document.getElementById('btnLancarPagamento').addEventListener('click', async () => {
   const clienteId = document.getElementById('pgCliente').value;
-  const valor = parseFloat(document.getElementById('pgValor').value);
-  const referencia = document.getElementById('pgReferencia').value.trim();
   const vencimento = document.getElementById('pgVencimento').value;
   const msg = document.getElementById('pgMsg');
-  if (!clienteId || !valor || !referencia || !vencimento) return;
+  if (!clienteId || !vencimento) return;
 
   await db.collection('pagamentos').add({
-    clienteId, valor, referencia,
+    clienteId,
     vencimento: dateInputToTimestamp(vencimento),
+    valor: null,
+    referencia: '',
     status: 'pendente',
     criadoEm: firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  document.getElementById('pgValor').value = '';
-  document.getElementById('pgReferencia').value = '';
   document.getElementById('pgVencimento').value = '';
-  msg.textContent = 'Pagamento lançado!';
+  msg.textContent = 'Vencimento lançado!';
   setTimeout(() => msg.textContent = '', 3000);
 });
 
@@ -2522,6 +2531,46 @@ document.getElementById('pgFiltroCliente').addEventListener('change', () => {
 });
 document.getElementById('pgFiltroStatus').addEventListener('change', () => {
   renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
+});
+
+// --- Modal: registrar pagamento (preenche valor + referência e marca como pago) ---
+let rpAlvoId = null;
+
+function abrirModalRegistrarPagamento(p) {
+  rpAlvoId = p.id;
+  const cliente = clientesCache[p.clienteId] || {};
+  document.getElementById('rpTitulo').textContent = 'Registrar pagamento — ' + (cliente.empresa || cliente.nome || 'cliente');
+  document.getElementById('rpSub').textContent = 'Vencimento ' + (formatarData(p.vencimento) || 'sem data');
+  document.getElementById('rpValor').value = '';
+  document.getElementById('rpReferencia').value = mesAnoPorExtenso(p.vencimento);
+  document.getElementById('rpErro').style.display = 'none';
+  document.getElementById('registrarPagamentoModal').style.display = 'flex';
+}
+
+document.getElementById('rpCancelar').addEventListener('click', () => {
+  document.getElementById('registrarPagamentoModal').style.display = 'none';
+  rpAlvoId = null;
+});
+
+document.getElementById('rpConfirmar').addEventListener('click', async () => {
+  const valor = parseFloat(document.getElementById('rpValor').value);
+  const referencia = document.getElementById('rpReferencia').value.trim();
+  const erro = document.getElementById('rpErro');
+  if (!valor || valor <= 0 || !referencia) {
+    erro.textContent = 'Preencha o valor e a referência.';
+    erro.style.display = 'block';
+    return;
+  }
+  if (!rpAlvoId) return;
+
+  await db.collection('pagamentos').doc(rpAlvoId).update({
+    valor, referencia,
+    status: 'pago',
+    dataPagamento: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('registrarPagamentoModal').style.display = 'none';
+  rpAlvoId = null;
 });
 
 function gerarReciboPdf(p) {
