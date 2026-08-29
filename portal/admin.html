@@ -2462,7 +2462,7 @@ function dataLocalISO(d) {
 function montarCardsRedesSociais() {
   const wrap = document.getElementById('redesCardsWrap');
   wrap.innerHTML = REDES_SOCIAIS.map(rede => `
-    <div class="card" style="flex:1;min-width:320px;max-width:420px;">
+    <div class="card" style="flex:1 1 0;min-width:300px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
         <div>
           <div class="meta" style="margin-bottom:4px;" id="${rede.prefixo}LabelConta">${rede.label}</div>
