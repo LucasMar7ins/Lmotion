@@ -323,29 +323,6 @@
     text-align:center;color:var(--gray);font-size:0.9rem;margin-top:40px;
     max-width:500px;margin-left:auto;margin-right:auto;
   }
-  .case-video-wrap{position:relative;height:340px;overflow:hidden;background:#000;}
-  .case-video-wrap video{width:100%;height:100%;object-fit:cover;display:block;}
-  .case-source-badge{
-    position:absolute;top:14px;right:14px;
-    background:rgba(0,0,0,0.55);color:#e8e8e8;
-    font-size:0.68rem;font-weight:600;padding:5px 11px;border-radius:20px;
-    display:flex;align-items:center;gap:5px;pointer-events:none;
-  }
-  .case-play-overlay{
-    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.25);cursor:pointer;transition:opacity .25s ease;
-  }
-  .case-play-overlay.hidden{opacity:0;pointer-events:none;}
-  .case-play-btn{
-    width:56px;height:56px;border-radius:50%;
-    background:rgba(0,0,0,0.55);border:1.5px solid rgba(255,255,255,0.6);
-    display:flex;align-items:center;justify-content:center;
-  }
-  .case-result-badge{
-    display:inline-flex;align-items:center;
-    color:var(--purple-light);font-size:0.85rem;font-weight:600;
-    margin-top:6px;line-height:1.4;
-  }
 
   /* TESTIMONIALS */
   .testimonials{background:var(--black-soft);}
@@ -569,7 +546,6 @@
       <li><a href="#servicos">Serviços</a></li>
       <li><a href="#diferenciais">Diferenciais</a></li>
       <li><a href="#estudio">Estúdio</a></li>
-      <li><a href="#cases">Cases</a></li>
       <li><a href="#depoimentos">Depoimentos</a></li>
       <li><a href="#processo">Processo</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -590,7 +566,6 @@
   <a href="#servicos">Serviços</a>
   <a href="#diferenciais">Diferenciais</a>
   <a href="#estudio">Estúdio</a>
-  <a href="#cases">Cases</a>
   <a href="#depoimentos">Depoimentos</a>
   <a href="#processo">Processo</a>
   <a href="#faq">FAQ</a>
@@ -716,35 +691,6 @@
         <li>Microfones e iluminação de estúdio</li>
         <li>Estrutura pronta para gravar em minutos</li>
       </ul>
-    </div>
-  </div>
-</section>
-
-<section class="portfolio" id="cases">
-  <span class="section-tag">Resultados reais</span>
-  <h2 class="section-title">Cases</h2>
-  <p class="section-desc">Alguns projetos que já saíram do roteiro pra tela, gravados do nosso jeito.</p>
-  <div class="portfolio-grid">
-    <div class="case-card">
-      <div class="case-video-wrap">
-        <video id="caseVideoMetafisio" poster="assets/cases/case-metafisio-poster.jpg" playsinline preload="metadata">
-          <source src="assets/cases/case-metafisio.mp4" type="video/mp4">
-        </video>
-        <div class="case-source-badge">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
-          Instagram
-        </div>
-        <div class="case-play-overlay" data-play-target="caseVideoMetafisio">
-          <div class="case-play-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-        </div>
-      </div>
-      <div class="case-info">
-        <span>Gestão de redes · Saúde</span>
-        <h4>MetaFisio</h4>
-        <div class="case-result-badge">Menos preocupação com conteúdo, mais tempo pro que importa.</div>
-      </div>
     </div>
   </div>
 </section>
@@ -967,18 +913,6 @@
     });
   }, { threshold: 0.5 });
   counters.forEach(el => counterObserver.observe(el));
-
-  // Cases: play/pause do vídeo ao clicar
-  document.querySelectorAll('.case-play-overlay').forEach(overlay => {
-    const vid = document.getElementById(overlay.getAttribute('data-play-target'));
-    if (!vid) return;
-    overlay.addEventListener('click', () => {
-      vid.play();
-      overlay.classList.add('hidden');
-    });
-    vid.addEventListener('pause', () => overlay.classList.remove('hidden'));
-    vid.addEventListener('ended', () => overlay.classList.remove('hidden'));
-  });
 
   // Contact form -> WhatsApp
   const form = document.getElementById('contactForm');
