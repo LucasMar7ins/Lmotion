@@ -40,6 +40,7 @@
     <div class="role-tag">Administrador</div>
 
     <div class="nav-item active" data-tab="dashboard">Dashboard</div>
+    <div class="nav-item" data-tab="resumo">Resumo</div>
     <div class="nav-item" data-tab="clientes">Clientes</div>
     <div class="nav-item" data-tab="videos">Entregar vídeos</div>
     <div class="nav-item" data-tab="entregas">Entregas</div>
@@ -96,6 +97,58 @@
           </div>
         </div>
         <div id="dashCalGrid"></div>
+      </div>
+    </section>
+
+    <!-- RESUMO PERIÓDICO -->
+    <section class="tab-section" id="tab-resumo">
+      <h2>Resumo</h2>
+      <p class="page-sub">Fechamento semanal e mensal de vídeos, pagamentos, dúvidas e crescimento nas redes.</p>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+        <p class="meta" id="resumoPeriodoLabel" style="margin-bottom:0;"></p>
+        <div class="view-toggle" id="resumoViewToggle">
+          <span class="view-toggle-btn active" data-periodo="semana">Semana</span>
+          <span class="view-toggle-btn" data-periodo="mes">Mês passado</span>
+        </div>
+      </div>
+
+      <div class="dash-stats-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;">
+        <div class="card" style="margin-bottom:0;">
+          <div class="meta">Vídeos entregues</div>
+          <h2 id="resumoVideos" style="margin-top:6px;">0</h2>
+        </div>
+        <div class="card" style="margin-bottom:0;border-color:rgba(62,207,106,0.3);">
+          <div class="meta">Recebido</div>
+          <h2 id="resumoRecebido" style="margin-top:6px;color:var(--green);">R$0</h2>
+        </div>
+        <div class="card" style="margin-bottom:0;border-color:rgba(227,85,85,0.3);">
+          <div class="meta">Atrasado agora</div>
+          <h2 id="resumoAtrasado" style="margin-top:6px;color:var(--red);">R$0</h2>
+        </div>
+        <div class="card" style="margin-bottom:0;border-color:rgba(227,181,85,0.3);">
+          <div class="meta">Dúvidas em aberto</div>
+          <h2 id="resumoDuvidas" style="margin-top:6px;color:var(--yellow);">0</h2>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card" style="margin-bottom:0;">
+          <h3 style="margin-bottom:10px;">Vídeos</h3>
+          <div id="resumoListaVideos" style="font-size:0.85rem;color:var(--gray);line-height:1.9;"></div>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+          <h3 style="margin-bottom:10px;">Pagamentos</h3>
+          <div id="resumoListaPagamentos" style="font-size:0.85rem;color:var(--gray);line-height:1.9;"></div>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+          <h3 style="margin-bottom:10px;">Dúvidas</h3>
+          <div id="resumoListaDuvidas" style="font-size:0.85rem;color:var(--gray);line-height:1.9;"></div>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+          <h3 style="margin-bottom:10px;">Crescimento nas redes</h3>
+          <div id="resumoListaCrescimento" style="font-size:0.85rem;color:var(--gray);line-height:1.9;"></div>
+        </div>
       </div>
     </section>
 
@@ -761,7 +814,7 @@ function ativarAba(tab) {
   tabSection.classList.add('active');
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('sidebarBackdrop').classList.remove('open');
-  document.getElementById('mainArea').classList.toggle('main-wide', tab === 'calendario' || tab === 'entregas' || tab === 'dashboard' || tab === 'gravacao-geral');
+  document.getElementById('mainArea').classList.toggle('main-wide', tab === 'calendario' || tab === 'entregas' || tab === 'dashboard' || tab === 'gravacao-geral' || tab === 'resumo');
   localStorage.setItem('adminAbaAtiva', tab);
   return true;
 }
@@ -1017,6 +1070,137 @@ function renderDashResumo() {
     });
   });
 }
+
+// --- RESUMO PERIÓDICO (semanal / mensal) ---
+let resumoPeriodoAtual = 'semana';
+
+function limitesResumo(periodo) {
+  const hoje = new Date();
+  if (periodo === 'mes') {
+    const anoRef = hoje.getMonth() === 0 ? hoje.getFullYear() - 1 : hoje.getFullYear();
+    const mesRef = hoje.getMonth() === 0 ? 11 : hoje.getMonth() - 1;
+    const inicio = new Date(anoRef, mesRef, 1, 0, 0, 0);
+    const fim = new Date(anoRef, mesRef + 1, 0, 23, 59, 59);
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return { inicio, fim, label: meses[mesRef] + ' de ' + anoRef + ' (mês fechado)' };
+  }
+  const diaSemana = hoje.getDay();
+  const distanciaSegunda = diaSemana === 0 ? 6 : diaSemana - 1;
+  const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - distanciaSegunda, 0, 0, 0);
+  const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6, 23, 59, 59);
+  const fmt = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return { inicio, fim, label: 'Semana de ' + fmt(inicio) + ' a ' + fmt(fim) };
+}
+
+function dataDeCampo(campo) {
+  if (!campo) return null;
+  return campo.toDate ? campo.toDate() : new Date(campo);
+}
+
+function dentroDoPeriodo(campo, inicio, fim) {
+  const d = dataDeCampo(campo);
+  if (!d) return false;
+  return d >= inicio && d <= fim;
+}
+
+function diasEntre(dataAntiga, dataRef) {
+  if (!dataAntiga) return 0;
+  return Math.floor((dataRef - dataAntiga) / (1000 * 60 * 60 * 24));
+}
+
+function renderResumoPeriodico() {
+  if (!document.getElementById('resumoVideos')) return;
+  const { inicio, fim, label } = limitesResumo(resumoPeriodoAtual);
+  document.getElementById('resumoPeriodoLabel').textContent = label;
+  const agora = new Date();
+
+  const entreguesNoPeriodo = todasEntregas.filter(v => dentroDoPeriodo(v.criadoEm, inicio, fim));
+  const aprovadosNoPeriodo = todasEntregas.filter(v => v.feedback && v.feedback.tipo === 'aprovado' && dentroDoPeriodo(v.feedback.data || v.criadoEm, inicio, fim));
+  const paradosGeral = todasEntregas
+    .filter(v => !isPublicado(v) && !(v.feedback && v.feedback.tipo) && v.criadoEm)
+    .map(v => ({ v, dias: diasEntre(dataDeCampo(v.criadoEm), agora) }))
+    .filter(x => x.dias >= 3)
+    .sort((a, b) => b.dias - a.dias);
+
+  document.getElementById('resumoVideos').textContent = entreguesNoPeriodo.length;
+  const linhasVideos = [];
+  linhasVideos.push(entreguesNoPeriodo.length + ' vídeos entraram no período');
+  linhasVideos.push(aprovadosNoPeriodo.length + ' aprovados no período');
+  if (paradosGeral.length) {
+    const p = paradosGeral[0];
+    const nome = (clientesCache[p.v.clienteId] && (clientesCache[p.v.clienteId].empresa || clientesCache[p.v.clienteId].nome)) || 'Cliente';
+    linhasVideos.push('<span style="color:var(--yellow);">' + nome + ' parado em aprovação há ' + p.dias + ' dias</span>');
+  }
+  document.getElementById('resumoListaVideos').innerHTML = linhasVideos.join('<br>');
+
+  const pagosNoPeriodo = pagamentosTodos.filter(p => p.status === 'pago' && dentroDoPeriodo(p.dataPagamento, inicio, fim));
+  const totalRecebido = pagosNoPeriodo.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+  const atrasadosAgora = pagamentosTodos.filter(p => statusRealPagamento(p) === 'atrasado');
+  const totalAtrasado = atrasadosAgora.reduce((s, p) => {
+    const cliente = clientesCache[p.clienteId] || {};
+    return s + (Number(p.valor) || Number(cliente.valorCombinado) || 0);
+  }, 0);
+
+  document.getElementById('resumoRecebido').textContent = formatarMoeda(totalRecebido);
+  document.getElementById('resumoAtrasado').textContent = formatarMoeda(totalAtrasado);
+  const linhasPagamentos = [];
+  linhasPagamentos.push(pagosNoPeriodo.length + ' pagamentos recebidos no período');
+  if (atrasadosAgora.length) {
+    const nomes = [...new Set(atrasadosAgora.map(p => (clientesCache[p.clienteId] && (clientesCache[p.clienteId].empresa || clientesCache[p.clienteId].nome)) || 'Cliente'))];
+    linhasPagamentos.push('<span style="color:var(--red);">Atrasados agora: ' + nomes.join(', ') + '</span>');
+  } else {
+    linhasPagamentos.push('Nenhum pagamento atrasado agora');
+  }
+  document.getElementById('resumoListaPagamentos').innerHTML = linhasPagamentos.join('<br>');
+
+  const duvidasAbertas = duvidasCache
+    .filter(d => d.status !== 'respondida')
+    .map(d => ({ d, dias: diasEntre(dataDeCampo(d.dataEnvio), agora) }))
+    .sort((a, b) => b.dias - a.dias);
+  document.getElementById('resumoDuvidas').textContent = duvidasAbertas.length;
+  if (duvidasAbertas.length) {
+    const linhas = duvidasAbertas.slice(0, 5).map(x => {
+      const nome = (clientesCache[x.d.clienteId] && (clientesCache[x.d.clienteId].empresa || clientesCache[x.d.clienteId].nome)) || 'Cliente';
+      return '<span style="color:var(--yellow);">' + nome + ' há ' + x.dias + ' dias</span>';
+    });
+    document.getElementById('resumoListaDuvidas').innerHTML = linhas.join('<br>');
+  } else {
+    document.getElementById('resumoListaDuvidas').innerHTML = 'Nenhuma dúvida em aberto';
+  }
+
+  const linhasCrescimento = [];
+  REDES_SOCIAIS.forEach(rede => {
+    const registros = redesDados[rede.key] || [];
+    clientesTodos.forEach(c => {
+      const doCliente = registros.filter(r => r.clienteId === c.id).sort((a, b) => dataDeCampo(a.data) - dataDeCampo(b.data));
+      const dentro = doCliente.filter(r => dentroDoPeriodo(r.data, inicio, fim));
+      if (!dentro.length) return;
+      const final = dentro[dentro.length - 1];
+      const anteriores = doCliente.filter(r => dataDeCampo(r.data) < inicio);
+      const inicial = anteriores.length ? anteriores[anteriores.length - 1] : (dentro.length > 1 ? dentro[0] : null);
+      const nome = c.empresa || c.nome || 'Cliente';
+      if (inicial && inicial.id !== final.id) {
+        const delta = final.seguidores - inicial.seguidores;
+        const pct = inicial.seguidores > 0 ? ((delta / inicial.seguidores) * 100).toFixed(1) : '0.0';
+        const cor = delta > 0 ? 'var(--green)' : (delta < 0 ? 'var(--red)' : 'var(--gray)');
+        const sinal = delta > 0 ? '+' : '';
+        linhasCrescimento.push(nome + ' &middot; ' + rede.label + ' <span style="color:' + cor + ';">' + sinal + delta + ' (' + sinal + pct + '%)</span>');
+      } else {
+        linhasCrescimento.push(nome + ' &middot; ' + rede.label + ' <span style="color:var(--gray);">' + final.seguidores + ' ' + rede.unidade + ' (primeiro registro)</span>');
+      }
+    });
+  });
+  document.getElementById('resumoListaCrescimento').innerHTML = linhasCrescimento.length ? linhasCrescimento.join('<br>') : 'Nenhum registro de crescimento no período';
+}
+
+document.querySelectorAll('#resumoViewToggle .view-toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#resumoViewToggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    resumoPeriodoAtual = btn.dataset.periodo;
+    renderResumoPeriodico();
+  });
+});
 
 // --- CALENDÁRIO DE ANOTAÇÕES (compartilhado: Dashboard e aba Calendário) ---
 let dashCalData = new Date();
@@ -1592,6 +1776,7 @@ function carregarClientes() {
     renderDashCalendario();
     renderGravBoard();
     renderDashResumo();
+    renderResumoPeriodico();
     if (typeof renderPagamentos === 'function') {
       renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
     }
@@ -2215,6 +2400,7 @@ function carregarVideosAdmin() {
     renderCalendarioAdmin();
     renderEntregasBoard();
     renderDashResumo();
+    renderResumoPeriodico();
   });
   setInterval(renderEntregasBoard, 60000);
 }
@@ -2666,6 +2852,7 @@ function carregarRedesSociaisAdmin() {
       snap.forEach(docSnap => arr.push({ id: docSnap.id, ...docSnap.data() }));
       redesDados[rede.key] = arr;
       if (redesClienteId) renderRedeCliente(rede);
+      renderResumoPeriodico();
     });
   });
 }
@@ -3003,6 +3190,7 @@ function carregarPagamentosAdmin() {
     pagamentosTodos = [];
     snap.forEach(docSnap => pagamentosTodos.push({ id: docSnap.id, ...docSnap.data() }));
     renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
+    renderResumoPeriodico();
 
     pagamentosCarregadosPg = true;
     tentarGerarCiclosPagamento();
@@ -3015,6 +3203,7 @@ function carregarDuvidasAdmin() {
     duvidasCache = [];
     snap.forEach(docSnap => duvidasCache.push({ id: docSnap.id, ...docSnap.data() }));
     renderDashResumo();
+    renderResumoPeriodico();
     const box = document.getElementById('listaDuvidasAdmin');
     if (snap.empty) {
       box.innerHTML = '<div class="empty-state">Nenhuma dúvida enviada ainda.</div>';
