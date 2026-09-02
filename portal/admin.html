@@ -2226,9 +2226,26 @@ function renderPerfilCalendario() {
     if (!diasComVideo[dia]) return;
     el.addEventListener('click', () => {
       const detalhe = document.getElementById('perfilCalDetalhe');
-      detalhe.innerHTML = diasComVideo[dia].map(v => `
-        <div class="cal-item" data-abrir-video="${v.id}" style="cursor:pointer;"><strong>${v.titulo}</strong>${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>
-      `).join('');
+      const cliente = clientesCache[perfilUid] || {};
+      const numero = formatarNumeroWhatsapp(cliente.whatsapp);
+      detalhe.innerHTML = diasComVideo[dia].map(v => {
+        let btnWhats = '';
+        if (numero) {
+          const dataTxt = v.horarioPostagem ? ', às ' + v.horarioPostagem : '';
+          const texto = `Oi ${cliente.nome || ''}! Passando pra lembrar que hoje é o dia de postar o vídeo "${v.titulo}"${dataTxt}. Qualquer coisa me chama!`;
+          btnWhats = `<a href="https://wa.me/${numero}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener" data-lembrar-postar="1" style="display:inline-flex;align-items:center;gap:6px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.35);color:#25D366;font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:8px;white-space:nowrap;flex-shrink:0;text-decoration:none;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2z"/></svg>
+            Lembrar de postar
+          </a>`;
+        }
+        return `<div class="cal-item" data-abrir-video="${v.id}" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div><strong>${v.titulo}</strong>${v.horarioPostagem ? ' · ' + v.horarioPostagem : ''}</div>
+          ${btnWhats}
+        </div>`;
+      }).join('');
+      detalhe.querySelectorAll('[data-lembrar-postar]').forEach(link => {
+        link.addEventListener('click', (e) => e.stopPropagation());
+      });
       detalhe.querySelectorAll('[data-abrir-video]').forEach(item => {
         item.addEventListener('click', () => {
           const v = diasComVideo[dia].find(x => x.id === item.dataset.abrirVideo);
