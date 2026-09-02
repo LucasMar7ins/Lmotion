@@ -200,6 +200,10 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
             Análise de métricas
           </a>
+          <a href="#" id="btnVerNegocioCliente" class="btn btn-outline" style="white-space:nowrap;text-decoration:none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8l8-5 8 5v13"/><path d="M9 21v-6h6v6"/></svg>
+            Sobre o negócio
+          </a>
           <button class="btn btn-outline" id="btnExcluirCliente" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);white-space:nowrap;">Excluir cliente</button>
         </div>
       </div>
@@ -470,6 +474,21 @@
       </div>
 
       <div style="display:flex;flex-wrap:wrap;gap:20px;" id="redesCardsWrap"></div>
+    </section>
+
+    <!-- SOBRE O NEGÓCIO DE UM CLIENTE ESPECÍFICO -->
+    <section class="tab-section" id="tab-negocio-cliente">
+      <div style="color:var(--purple-light);font-size:0.85rem;font-weight:600;cursor:pointer;margin-bottom:20px;" id="btnVoltarNegocioCliente">&larr; Voltar para <span id="ngVoltarNome">cliente</span></div>
+
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--black-card);border:1px solid rgba(110,45,231,0.4);display:flex;align-items:center;justify-content:center;color:var(--purple-light);font-weight:700;font-size:1rem;" id="ngAvatar">--</div>
+        <div>
+          <h2 style="margin:0;">Sobre o negócio</h2>
+          <p class="meta" id="ngSub" style="margin-top:2px;"></p>
+        </div>
+      </div>
+
+      <div id="ngCorpo"></div>
     </section>
 
     <!-- PAGAMENTOS -->
@@ -824,7 +843,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 const abaSalvaAdmin = localStorage.getItem('adminAbaAtiva');
-if (abaSalvaAdmin === 'perfil' || abaSalvaAdmin === 'materiais-cliente' || abaSalvaAdmin === 'instagram-cliente') {
+if (abaSalvaAdmin === 'perfil' || abaSalvaAdmin === 'materiais-cliente' || abaSalvaAdmin === 'instagram-cliente' || abaSalvaAdmin === 'negocio-cliente') {
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
 } else if (abaSalvaAdmin) {
@@ -1789,6 +1808,7 @@ function carregarClientes() {
         if (abaSalva === 'perfil') abrirPerfilCliente(uidSalvo);
         else if (abaSalva === 'materiais-cliente') abrirMateriaisCliente(uidSalvo);
         else if (abaSalva === 'instagram-cliente') abrirInstagramCliente(uidSalvo);
+        else if (abaSalva === 'negocio-cliente') abrirNegocioCliente(uidSalvo);
       }
     }
 
@@ -2702,6 +2722,61 @@ function abrirInstagramCliente(uid) {
     renderRedeCliente(rede);
   });
 }
+
+// --- SOBRE O NEGÓCIO (leitura) ---
+const CAMPOS_NEGOCIO = [
+  { key: 'oQueFaz', label: 'O que a empresa faz' },
+  { key: 'publicoAlvo', label: 'Público alvo' },
+  { key: 'areaAtuacao', label: 'Área de atuação' },
+  { key: 'diferencial', label: 'Diferencial em relação aos concorrentes' },
+  { key: 'concorrentes', label: 'Concorrentes' },
+  { key: 'objetivosRedes', label: 'Objetivos nas redes' },
+  { key: 'maiorDesafio', label: 'Maior desafio hoje' },
+  { key: 'identidadeVisual', label: 'Identidade visual' },
+  { key: 'referencias', label: 'Referências no nicho', largo: true },
+  { key: 'temas', label: 'Temas de interesse', largo: true },
+  { key: 'observacoes', label: 'Observações', largo: true }
+];
+
+function abrirNegocioCliente(uid) {
+  const c = clientesCache[uid] || {};
+
+  localStorage.setItem('adminAbaAtiva', 'negocio-cliente');
+  localStorage.setItem('adminPerfilUid', uid);
+  document.getElementById('ngVoltarNome').textContent = c.empresa || c.nome || 'cliente';
+  document.getElementById('ngAvatar').textContent = iniciaisCliente(c);
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-negocio-cliente').classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+  const briefing = c.briefing;
+  const corpo = document.getElementById('ngCorpo');
+  if (!briefing) {
+    document.getElementById('ngSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ');
+    corpo.innerHTML = '<div class="empty-state">Esse cliente ainda não preencheu as informações do negócio.</div>';
+    return;
+  }
+  const dataTxt = briefing.respondidoEm ? formatarData(briefing.respondidoEm) : '';
+  document.getElementById('ngSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ') + (dataTxt ? ' · respondido em ' + dataTxt : '');
+  corpo.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' + CAMPOS_NEGOCIO.map(campo => {
+    let valor = briefing[campo.key] || '-';
+    if (campo.key === 'identidadeVisual') valor = valor === 'sim' ? 'Sim, já possui' : (valor === 'nao' ? 'Não possui ainda' : '-');
+    return `<div class="card" style="margin-bottom:0;${campo.largo ? 'grid-column:1 / -1;' : ''}">
+      <div class="meta" style="margin-bottom:6px;">${campo.label}</div>
+      <div style="color:var(--white);font-size:0.92rem;line-height:1.6;white-space:pre-wrap;">${valor}</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+document.getElementById('btnVoltarNegocioCliente').addEventListener('click', () => {
+  if (perfilUid) abrirPerfilCliente(perfilUid);
+});
+
+document.getElementById('btnVerNegocioCliente').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!perfilUid) return;
+  abrirNegocioCliente(perfilUid);
+});
 
 function renderRedeCliente(rede) {
   if (!redesClienteId) return;

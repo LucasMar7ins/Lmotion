@@ -26,6 +26,7 @@
     <div class="role-tag" id="clienteNome">Carregando...</div>
 
     <div class="nav-item active" data-tab="inicio">Início</div>
+    <div class="nav-item" data-tab="negocio">Sobre o negócio</div>
     <div class="nav-item" data-tab="gravacao" style="position:relative;">Gravação<span id="gravNotifDot" style="display:none;position:absolute;top:10px;right:14px;width:7px;height:7px;border-radius:50%;background:var(--purple-light);"></span></div>
     <div class="nav-item" data-tab="videos" style="position:relative;">Vídeos<span id="videosNavBadge" class="nav-badge" style="display:none;"></span></div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
@@ -106,6 +107,64 @@
         <h4 style="margin-bottom:2px;font-size:0.92rem;">Cronograma da semana</h4>
         <p class="meta" id="inicioSemanaLabel" style="margin-bottom:14px;"></p>
         <div class="semana-grid" id="inicioSemanaGrid"></div>
+      </div>
+    </section>
+
+    <!-- SOBRE O NEGÓCIO -->
+    <section class="tab-section" id="tab-negocio">
+      <h2>Sobre o negócio</h2>
+      <p class="page-sub">Essas informações ajudam a gente a criar conteúdo mais alinhado com você. Leva uns 5 minutos.</p>
+      <div class="card">
+        <div class="field">
+          <label>O que a sua empresa faz?</label>
+          <textarea id="bgOQueFaz" rows="2" placeholder="Descreva brevemente o que sua empresa faz"></textarea>
+        </div>
+        <div class="field">
+          <label>Qual seu público alvo?</label>
+          <textarea id="bgPublicoAlvo" rows="2" placeholder="Quem são seus clientes ideais"></textarea>
+        </div>
+        <div class="field">
+          <label>Qual a sua área de atuação?</label>
+          <input type="text" id="bgAreaAtuacao" placeholder="Ex: fisioterapia, academia, moda">
+        </div>
+        <div class="field">
+          <label>Qual o seu diferencial em relação aos seus concorrentes?</label>
+          <textarea id="bgDiferencial" rows="2"></textarea>
+        </div>
+        <div class="field">
+          <label>Quem são os seus concorrentes? Sabe informar o @ deles?</label>
+          <textarea id="bgConcorrentes" rows="2"></textarea>
+        </div>
+        <div class="field">
+          <label>Quais são os principais objetivos da sua empresa nas redes sociais?</label>
+          <textarea id="bgObjetivosRedes" rows="2"></textarea>
+        </div>
+        <div class="field">
+          <label>Qual é o maior desafio da sua empresa hoje no marketing?</label>
+          <textarea id="bgMaiorDesafio" rows="2"></textarea>
+        </div>
+        <div class="field">
+          <label>Já possui uma identidade visual (logo, cores, fontes)?</label>
+          <select id="bgIdentidadeVisual">
+            <option value="">Selecione</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Compartilhe o @ das suas referências dentro do seu nicho</label>
+          <textarea id="bgReferencias" rows="2"></textarea>
+        </div>
+        <div class="field">
+          <label>Quais temas você gostaria de tratar?</label>
+          <textarea id="bgTemas" rows="2"></textarea>
+        </div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>Existe alguma observação ou outro detalhe que devemos saber?</label>
+          <textarea id="bgObservacoes" rows="2"></textarea>
+        </div>
+        <button class="btn" id="btnSalvarNegocio">Salvar</button>
+        <span class="success-msg" id="negocioMsg" style="margin-left:10px;"></span>
       </div>
     </section>
 
@@ -508,6 +567,7 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('inicioSaudacao').textContent = saudacaoPorHorario();
     renderGravacao({});
     renderGravacaoTab({});
+    renderBriefingCliente(null);
   } else {
     const dados = doc.data();
     if (dados.isAdmin === true) {
@@ -521,6 +581,7 @@ auth.onAuthStateChanged(async (user) => {
     document.getElementById('gravObservacao').value = dados.observacaoGravacao || '';
     renderGravacao(dados);
     renderGravacaoTab(dados);
+    renderBriefingCliente(dados.briefing || null);
   }
 
   carregarVideos();
@@ -528,6 +589,42 @@ auth.onAuthStateChanged(async (user) => {
   carregarDuvidas();
   carregarTutoriais();
   renderInicioResumo();
+});
+
+// --- Sobre o negócio (briefing) ---
+function renderBriefingCliente(briefing) {
+  document.getElementById('bgOQueFaz').value = (briefing && briefing.oQueFaz) || '';
+  document.getElementById('bgPublicoAlvo').value = (briefing && briefing.publicoAlvo) || '';
+  document.getElementById('bgAreaAtuacao').value = (briefing && briefing.areaAtuacao) || '';
+  document.getElementById('bgDiferencial').value = (briefing && briefing.diferencial) || '';
+  document.getElementById('bgConcorrentes').value = (briefing && briefing.concorrentes) || '';
+  document.getElementById('bgObjetivosRedes').value = (briefing && briefing.objetivosRedes) || '';
+  document.getElementById('bgMaiorDesafio').value = (briefing && briefing.maiorDesafio) || '';
+  document.getElementById('bgIdentidadeVisual').value = (briefing && briefing.identidadeVisual) || '';
+  document.getElementById('bgReferencias').value = (briefing && briefing.referencias) || '';
+  document.getElementById('bgTemas').value = (briefing && briefing.temas) || '';
+  document.getElementById('bgObservacoes').value = (briefing && briefing.observacoes) || '';
+}
+
+document.getElementById('btnSalvarNegocio').addEventListener('click', async () => {
+  const briefing = {
+    oQueFaz: document.getElementById('bgOQueFaz').value.trim(),
+    publicoAlvo: document.getElementById('bgPublicoAlvo').value.trim(),
+    areaAtuacao: document.getElementById('bgAreaAtuacao').value.trim(),
+    diferencial: document.getElementById('bgDiferencial').value.trim(),
+    concorrentes: document.getElementById('bgConcorrentes').value.trim(),
+    objetivosRedes: document.getElementById('bgObjetivosRedes').value.trim(),
+    maiorDesafio: document.getElementById('bgMaiorDesafio').value.trim(),
+    identidadeVisual: document.getElementById('bgIdentidadeVisual').value,
+    referencias: document.getElementById('bgReferencias').value.trim(),
+    temas: document.getElementById('bgTemas').value.trim(),
+    observacoes: document.getElementById('bgObservacoes').value.trim(),
+    respondidoEm: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  await db.collection('clientes').doc(currentUser.uid).set({ briefing }, { merge: true });
+  const msg = document.getElementById('negocioMsg');
+  msg.textContent = 'Salvo!';
+  setTimeout(() => msg.textContent = '', 3000);
 });
 
 // --- Gravações: array de itens no doc do cliente ---

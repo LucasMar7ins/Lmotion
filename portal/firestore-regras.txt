@@ -36,14 +36,15 @@ service cloud.firestore {
 
     // Cada cliente lê o próprio cadastro; admin lê e escreve tudo.
     // O cliente também pode confirmar presença / pedir remarcação nas próprias gravações
-    // (lista "gravacoes") e salvar a observação geral.
+    // (lista "gravacoes"), salvar a observação geral e preencher o "briefing"
+    // (aba Sobre o negócio).
     match /clientes/{uid} {
       allow read: if logado() && (request.auth.uid == uid || isAdmin());
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || (
         logado() &&
         request.auth.uid == uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gravacoes', 'observacaoGravacao', 'ultimoAcesso'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gravacoes', 'observacaoGravacao', 'ultimoAcesso', 'briefing'])
       );
     }
 
