@@ -603,18 +603,24 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 // --- Sobre o negócio (briefing) ---
-const CAMPOS_NEGOCIO = [
-  { key: 'oQueFaz', label: 'O que a sua empresa faz?' },
-  { key: 'publicoAlvo', label: 'Qual seu público alvo?' },
-  { key: 'areaAtuacao', label: 'Qual a sua área de atuação?' },
-  { key: 'diferencial', label: 'Diferencial em relação aos concorrentes' },
-  { key: 'concorrentes', label: 'Concorrentes' },
-  { key: 'objetivosRedes', label: 'Objetivos nas redes sociais' },
-  { key: 'maiorDesafio', label: 'Maior desafio hoje no marketing' },
-  { key: 'identidadeVisual', label: 'Já possui identidade visual?' },
-  { key: 'referencias', label: 'Referências no nicho' },
-  { key: 'temas', label: 'Temas de interesse' },
-  { key: 'observacoes', label: 'Observações' }
+const SECOES_NEGOCIO = [
+  { titulo: 'O negócio', colunas: 2, campos: [
+    { key: 'oQueFaz', label: 'O que a sua empresa faz?' },
+    { key: 'publicoAlvo', label: 'Qual seu público alvo?' },
+    { key: 'areaAtuacao', label: 'Área de atuação' },
+    { key: 'identidadeVisual', label: 'Já possui identidade visual?' }
+  ]},
+  { titulo: 'Concorrência', colunas: 2, campos: [
+    { key: 'diferencial', label: 'Diferencial em relação aos concorrentes' },
+    { key: 'concorrentes', label: 'Concorrentes' }
+  ]},
+  { titulo: 'Conteúdo', colunas: 1, campos: [
+    { key: 'objetivosRedes', label: 'Objetivos nas redes sociais' },
+    { key: 'maiorDesafio', label: 'Maior desafio hoje no marketing' },
+    { key: 'referencias', label: 'Referências no nicho' },
+    { key: 'temas', label: 'Temas de interesse' },
+    { key: 'observacoes', label: 'Observações' }
+  ]}
 ];
 
 let ultimoBriefingCliente = null;
@@ -645,13 +651,17 @@ function mostrarNegocioView(briefing) {
   document.getElementById('negocioEditadoEm').textContent = briefing.respondidoEm
     ? 'Editado pela última vez em ' + formatarDataHora(briefing.respondidoEm)
     : '';
-  document.getElementById('negocioViewLista').innerHTML = CAMPOS_NEGOCIO.map(campo => {
-    let valor = briefing[campo.key] || '-';
-    if (campo.key === 'identidadeVisual') valor = valor === 'sim' ? 'Sim' : (valor === 'nao' ? 'Não' : '-');
-    return `<div style="background:var(--black);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
-      <div class="meta" style="margin-bottom:4px;">${campo.label}</div>
-      <div style="color:var(--white);font-size:0.9rem;white-space:pre-wrap;">${valor}</div>
-    </div>`;
+  document.getElementById('negocioViewLista').innerHTML = SECOES_NEGOCIO.map(secao => {
+    const itens = secao.campos.map(campo => {
+      let valor = briefing[campo.key] || '-';
+      if (campo.key === 'identidadeVisual') valor = valor === 'sim' ? 'Sim' : (valor === 'nao' ? 'Não' : '-');
+      return `<div style="border-left:2px solid var(--purple);padding-left:12px;">
+        <div class="meta" style="margin-bottom:3px;">${campo.label}</div>
+        <div style="color:var(--white);font-size:0.9rem;white-space:pre-wrap;">${valor}</div>
+      </div>`;
+    }).join('');
+    return `<div style="font-size:0.72rem;color:var(--purple-light);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">${secao.titulo}</div>
+      <div style="display:grid;grid-template-columns:${secao.colunas === 2 ? '1fr 1fr' : '1fr'};gap:12px 20px;margin-bottom:22px;">${itens}</div>`;
   }).join('');
 }
 
