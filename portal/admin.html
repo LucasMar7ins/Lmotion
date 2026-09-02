@@ -2757,7 +2757,7 @@ function abrirNegocioCliente(uid) {
     return;
   }
   const dataTxt = briefing.respondidoEm ? formatarData(briefing.respondidoEm) : '';
-  document.getElementById('ngSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ') + (dataTxt ? ' · respondido em ' + dataTxt : '');
+  document.getElementById('ngSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ') + (dataTxt ? ' · editado pela última vez em ' + dataTxt : '');
   corpo.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' + CAMPOS_NEGOCIO.map(campo => {
     let valor = briefing[campo.key] || '-';
     if (campo.key === 'identidadeVisual') valor = valor === 'sim' ? 'Sim, já possui' : (valor === 'nao' ? 'Não possui ainda' : '-');

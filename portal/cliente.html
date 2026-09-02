@@ -114,7 +114,17 @@
     <section class="tab-section" id="tab-negocio">
       <h2>Sobre o negócio</h2>
       <p class="page-sub">Essas informações ajudam a gente a criar conteúdo mais alinhado com você. Leva uns 5 minutos.</p>
-      <div class="card">
+
+      <div class="card" id="negocioView" style="display:none;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px;">
+          <h3 style="margin:0;">Suas respostas</h3>
+          <button class="btn btn-outline" id="btnEditarNegocio" style="padding:7px 14px;font-size:0.78rem;">Editar</button>
+        </div>
+        <p class="meta" id="negocioEditadoEm" style="margin-bottom:16px;"></p>
+        <div id="negocioViewLista"></div>
+      </div>
+
+      <div class="card" id="negocioEdit">
         <div class="field">
           <label>O que a sua empresa faz?</label>
           <textarea id="bgOQueFaz" rows="2" placeholder="Descreva brevemente o que sua empresa faz"></textarea>
@@ -164,6 +174,7 @@
           <textarea id="bgObservacoes" rows="2"></textarea>
         </div>
         <button class="btn" id="btnSalvarNegocio">Salvar</button>
+        <button class="btn btn-outline" id="btnCancelarNegocio" style="display:none;margin-left:8px;">Cancelar</button>
         <span class="success-msg" id="negocioMsg" style="margin-left:10px;"></span>
       </div>
     </section>
@@ -592,7 +603,29 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 // --- Sobre o negócio (briefing) ---
-function renderBriefingCliente(briefing) {
+const CAMPOS_NEGOCIO = [
+  { key: 'oQueFaz', label: 'O que a sua empresa faz?' },
+  { key: 'publicoAlvo', label: 'Qual seu público alvo?' },
+  { key: 'areaAtuacao', label: 'Qual a sua área de atuação?' },
+  { key: 'diferencial', label: 'Diferencial em relação aos concorrentes' },
+  { key: 'concorrentes', label: 'Concorrentes' },
+  { key: 'objetivosRedes', label: 'Objetivos nas redes sociais' },
+  { key: 'maiorDesafio', label: 'Maior desafio hoje no marketing' },
+  { key: 'identidadeVisual', label: 'Já possui identidade visual?' },
+  { key: 'referencias', label: 'Referências no nicho' },
+  { key: 'temas', label: 'Temas de interesse' },
+  { key: 'observacoes', label: 'Observações' }
+];
+
+let ultimoBriefingCliente = null;
+
+function formatarDataHora(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function preencherFormNegocio(briefing) {
   document.getElementById('bgOQueFaz').value = (briefing && briefing.oQueFaz) || '';
   document.getElementById('bgPublicoAlvo').value = (briefing && briefing.publicoAlvo) || '';
   document.getElementById('bgAreaAtuacao').value = (briefing && briefing.areaAtuacao) || '';
@@ -606,6 +639,50 @@ function renderBriefingCliente(briefing) {
   document.getElementById('bgObservacoes').value = (briefing && briefing.observacoes) || '';
 }
 
+function mostrarNegocioView(briefing) {
+  document.getElementById('negocioView').style.display = 'block';
+  document.getElementById('negocioEdit').style.display = 'none';
+  document.getElementById('negocioEditadoEm').textContent = briefing.respondidoEm
+    ? 'Editado pela última vez em ' + formatarDataHora(briefing.respondidoEm)
+    : '';
+  document.getElementById('negocioViewLista').innerHTML = CAMPOS_NEGOCIO.map(campo => {
+    let valor = briefing[campo.key] || '-';
+    if (campo.key === 'identidadeVisual') valor = valor === 'sim' ? 'Sim' : (valor === 'nao' ? 'Não' : '-');
+    return `<div style="background:var(--black);border-radius:10px;padding:12px 14px;margin-bottom:8px;">
+      <div class="meta" style="margin-bottom:4px;">${campo.label}</div>
+      <div style="color:var(--white);font-size:0.9rem;white-space:pre-wrap;">${valor}</div>
+    </div>`;
+  }).join('');
+}
+
+function mostrarNegocioEdit(cancelavel) {
+  document.getElementById('negocioView').style.display = 'none';
+  document.getElementById('negocioEdit').style.display = 'block';
+  document.getElementById('btnCancelarNegocio').style.display = cancelavel ? 'inline-flex' : 'none';
+}
+
+function renderBriefingCliente(briefing) {
+  ultimoBriefingCliente = briefing;
+  preencherFormNegocio(briefing);
+  if (briefing && Object.keys(briefing).length) {
+    mostrarNegocioView(briefing);
+  } else {
+    mostrarNegocioEdit(false);
+  }
+}
+
+document.getElementById('btnEditarNegocio').addEventListener('click', () => {
+  preencherFormNegocio(ultimoBriefingCliente);
+  mostrarNegocioEdit(true);
+});
+
+document.getElementById('btnCancelarNegocio').addEventListener('click', () => {
+  if (ultimoBriefingCliente) {
+    preencherFormNegocio(ultimoBriefingCliente);
+    mostrarNegocioView(ultimoBriefingCliente);
+  }
+});
+
 document.getElementById('btnSalvarNegocio').addEventListener('click', async () => {
   const briefing = {
     oQueFaz: document.getElementById('bgOQueFaz').value.trim(),
@@ -618,13 +695,15 @@ document.getElementById('btnSalvarNegocio').addEventListener('click', async () =
     identidadeVisual: document.getElementById('bgIdentidadeVisual').value,
     referencias: document.getElementById('bgReferencias').value.trim(),
     temas: document.getElementById('bgTemas').value.trim(),
-    observacoes: document.getElementById('bgObservacoes').value.trim(),
-    respondidoEm: firebase.firestore.FieldValue.serverTimestamp()
+    observacoes: document.getElementById('bgObservacoes').value.trim()
   };
-  await db.collection('clientes').doc(currentUser.uid).set({ briefing }, { merge: true });
+  await db.collection('clientes').doc(currentUser.uid).set({ briefing: { ...briefing, respondidoEm: firebase.firestore.FieldValue.serverTimestamp() } }, { merge: true });
   const msg = document.getElementById('negocioMsg');
   msg.textContent = 'Salvo!';
   setTimeout(() => msg.textContent = '', 3000);
+  briefing.respondidoEm = new Date();
+  ultimoBriefingCliente = briefing;
+  mostrarNegocioView(briefing);
 });
 
 // --- Gravações: array de itens no doc do cliente ---
