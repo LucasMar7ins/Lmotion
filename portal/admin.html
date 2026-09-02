@@ -2762,7 +2762,7 @@ function abrirNegocioCliente(uid) {
     corpo.innerHTML = '<div class="empty-state">Esse cliente ainda não preencheu as informações do negócio.</div>';
     return;
   }
-  const dataTxt = briefing.respondidoEm ? formatarData(briefing.respondidoEm) : '';
+  const dataTxt = briefing.respondidoEm ? formatarDataHora(briefing.respondidoEm) : '';
   document.getElementById('ngSub').textContent = [c.empresa, c.nome].filter(Boolean).join(' · ') + (dataTxt ? ' · editado pela última vez em ' + dataTxt : '');
   corpo.innerHTML = SECOES_NEGOCIO.map(secao => {
     const itens = secao.campos.map(campo => {
