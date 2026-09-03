@@ -652,7 +652,26 @@
 <div class="modal-overlay" id="videoDetalheModal" style="display:none;">
   <div class="modal-box" style="width:360px;">
     <h3 id="vdTitulo">Vídeo</h3>
-    <p class="meta" id="vdMeta" style="margin:4px 0 14px;"></p>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 14px;">
+      <p class="meta" id="vdMeta" style="margin:0;"></p>
+      <button class="btn btn-outline" id="vdBtnEditarData" style="padding:5px 10px;font-size:0.72rem;flex-shrink:0;white-space:nowrap;">Editar</button>
+    </div>
+    <div id="vdEditDataWrap" style="display:none;background:var(--black-card);border-radius:10px;padding:14px;margin-bottom:14px;">
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div class="field" style="flex:1;margin-bottom:0;">
+          <label>Data</label>
+          <input type="date" id="vdEditData">
+        </div>
+        <div class="field" style="flex:1;margin-bottom:0;">
+          <label>Horário</label>
+          <input type="time" id="vdEditHorario">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="vdBtnSalvarData" style="flex:1;padding:8px;font-size:0.78rem;">Salvar</button>
+        <button class="btn btn-outline" id="vdBtnCancelarData" style="flex:1;padding:8px;font-size:0.78rem;">Cancelar</button>
+      </div>
+    </div>
     <div id="vdLegendaWrap" style="display:none;">
       <div class="meta" style="margin-bottom:4px;">Legenda</div>
       <p id="vdLegenda" style="color:var(--white);font-size:0.88rem;line-height:1.5;background:rgba(255,255,255,0.04);border-radius:8px;padding:12px 14px;margin-bottom:12px;"></p>
@@ -1925,7 +1944,7 @@ function perfilVideoCardHtml(v) {
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
         <div style="flex:1;min-width:0;">
           <h5 style="font-size:0.9rem;margin:0;">${v.titulo}</h5>
-          <div class="meta" style="margin-top:4px;">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
+          <div class="meta" style="margin-top:4px;">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}${v.horarioPostagem ? ' às ' + v.horarioPostagem : ''}</div>
           <span class="badge ${badgeClass}" style="margin-top:8px;">${badgeTexto}</span>
         </div>
         ${botaoCobrar}
@@ -2356,11 +2375,26 @@ document.getElementById('btnExcluirCliente').addEventListener('click', () => {
     'Excluir cliente'
   );
 });
+let vdVideoAtual = null;
+
+function timestampToInputDate(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function atualizarVdMetaTexto() {
+  if (!vdVideoAtual) return;
+  const nomeCliente = (clientesCache[vdVideoAtual.clienteId] && clientesCache[vdVideoAtual.clienteId].nome) || 'Cliente';
+  document.getElementById('vdMeta').textContent = `${nomeCliente} · postagem em ${formatarData(vdVideoAtual.dataPostagem) || 'a definir'}${vdVideoAtual.horarioPostagem ? ' às ' + vdVideoAtual.horarioPostagem : ''}`;
+}
+
 function abrirVideoDetalheModal(v) {
-  const nomeCliente = (clientesCache[v.clienteId] && clientesCache[v.clienteId].nome) || 'Cliente';
+  vdVideoAtual = v;
   const feedback = v.feedback || {};
   document.getElementById('vdTitulo').textContent = v.titulo || 'Sem título';
-  document.getElementById('vdMeta').textContent = `${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}${v.horarioPostagem ? ' às ' + v.horarioPostagem : ''}`;
+  document.getElementById('vdEditDataWrap').style.display = 'none';
+  atualizarVdMetaTexto();
   const legendaWrap = document.getElementById('vdLegendaWrap');
   if (v.legenda) {
     document.getElementById('vdLegenda').textContent = v.legenda;
@@ -2386,6 +2420,31 @@ function abrirVideoDetalheModal(v) {
 }
 document.getElementById('vdFechar').addEventListener('click', () => {
   document.getElementById('videoDetalheModal').style.display = 'none';
+});
+
+document.getElementById('vdBtnEditarData').addEventListener('click', () => {
+  if (!vdVideoAtual) return;
+  document.getElementById('vdEditData').value = timestampToInputDate(vdVideoAtual.dataPostagem);
+  document.getElementById('vdEditHorario').value = vdVideoAtual.horarioPostagem || '';
+  document.getElementById('vdEditDataWrap').style.display = 'block';
+});
+
+document.getElementById('vdBtnCancelarData').addEventListener('click', () => {
+  document.getElementById('vdEditDataWrap').style.display = 'none';
+});
+
+document.getElementById('vdBtnSalvarData').addEventListener('click', async () => {
+  if (!vdVideoAtual) return;
+  const novaData = document.getElementById('vdEditData').value;
+  const novoHorario = document.getElementById('vdEditHorario').value;
+  await db.collection('entregas').doc(vdVideoAtual.id).update({
+    dataPostagem: dateInputToTimestamp(novaData),
+    horarioPostagem: novoHorario || ''
+  });
+  vdVideoAtual.dataPostagem = dateInputToTimestamp(novaData);
+  vdVideoAtual.horarioPostagem = novoHorario || '';
+  atualizarVdMetaTexto();
+  document.getElementById('vdEditDataWrap').style.display = 'none';
 });
 
 document.getElementById('confirmModalConfirmar').addEventListener('click', async () => {
