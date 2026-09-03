@@ -738,6 +738,19 @@ let currentUser = null;
 let clientesCache = {};
 let primeiraCargaClientes = true;
 
+// Escapa texto vindo de clientes/campos livres antes de inserir via innerHTML,
+// pra evitar que HTML/JS digitado num campo rode na tela de quem está vendo.
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+// Só aceita links http/https como href; qualquer outra coisa (ex: javascript:) vira "#".
+function safeUrl(url) {
+  const u = String(url == null ? '' : url).trim();
+  return /^https?:\/\//i.test(u) ? u : '#';
+}
+
 function showToast(msg, tipo) {
   const wrap = document.getElementById('toastWrap');
   const el = document.createElement('div');
@@ -1096,8 +1109,8 @@ function renderDashResumo() {
     <div class="dash-atencao-item" data-atencao-idx="${i}">
       <span class="dash-atencao-dot" style="background:${it.cor};"></span>
       <div>
-        <div class="dash-atencao-titulo">${it.titulo}</div>
-        <div class="dash-atencao-sub">${it.sub}</div>
+        <div class="dash-atencao-titulo">${escapeHtml(it.titulo)}</div>
+        <div class="dash-atencao-sub">${escapeHtml(it.sub)}</div>
       </div>
     </div>
   `).join('');
@@ -1412,7 +1425,7 @@ function abrirGravacaoModal(uid, gravacaoId) {
     statusEl.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;"></span><span style="color:var(--green);font-size:0.85rem;font-weight:600;">Cliente confirmou presença</span>';
   } else if (g.status === 'remarcar') {
     statusEl.style.background = 'rgba(227,181,85,0.08)';
-    statusEl.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;"></span><span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para desmarcar</span>${g.motivo ? `<div style="flex-basis:100%;color:var(--gray);font-size:0.82rem;margin-top:2px;">Motivo: "${g.motivo}"</div>` : ''}`;
+    statusEl.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;"></span><span style="color:var(--yellow);font-size:0.85rem;font-weight:600;">Cliente pediu para desmarcar</span>${g.motivo ? `<div style="flex-basis:100%;color:var(--gray);font-size:0.82rem;margin-top:2px;">Motivo: "${escapeHtml(g.motivo)}"</div>` : ''}`;
   } else {
     statusEl.style.background = 'rgba(255,255,255,0.04)';
     statusEl.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;"></span><span class="meta">Aguardando resposta do cliente</span>';
@@ -2097,7 +2110,7 @@ function gravCardHtmlItem(uid, c, g, coluna) {
     if (g.status === 'confirmada') {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;"></span><span style="color:var(--green);">Confirmou presença</span></div>';
     } else if (g.status === 'remarcar') {
-      statusLine = `<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;margin-right:6px;"></span><span style="color:var(--yellow);">Pediu para desmarcar</span></div>${g.motivo ? `<div class="meta" style="margin-top:4px;">Motivo: "${g.motivo}"</div>` : ''}`;
+      statusLine = `<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--yellow);display:inline-block;margin-right:6px;"></span><span style="color:var(--yellow);">Pediu para desmarcar</span></div>${g.motivo ? `<div class="meta" style="margin-top:4px;">Motivo: "${escapeHtml(g.motivo)}"</div>` : ''}`;
     } else {
       statusLine = '<div class="video-mini-when" style="border-top:none;padding-top:0;margin-top:8px;"><span style="width:7px;height:7px;border-radius:50%;background:#6b6b6b;display:inline-block;margin-right:6px;"></span><span class="meta">Aguardando resposta</span></div>';
     }
@@ -2483,7 +2496,7 @@ function videoCardHtml(v) {
       <button class="video-del-btn" data-del="${v.id}" data-titulo="${(v.titulo || '').replace(/"/g,'&quot;')}" aria-label="Excluir vídeo">&#10005;</button>
       <h5>${v.titulo}</h5>
       <div class="meta">${nomeCliente} · postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
-      ${feedback.comentario ? `<div class="video-mini-comment">"${feedback.comentario}"</div>` : ''}
+      ${feedback.comentario ? `<div class="video-mini-comment">"${escapeHtml(feedback.comentario)}"</div>` : ''}
       ${quando ? `<div class="video-mini-when">${quando}</div>` : ''}
     </div>
   `;
@@ -2660,9 +2673,9 @@ function renderMateriaisCliente() {
     row.className = 'row';
     row.id = 'material-cliente-' + m.id;
     row.innerHTML = `
-      <div class="info"><strong>${m.tipo}</strong></div>
+      <div class="info"><strong>${escapeHtml(m.tipo)}</strong></div>
       <div style="display:flex;gap:8px;">
-        <a href="${m.link}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
+        <a href="${safeUrl(m.link)}" target="_blank" rel="noopener" class="btn btn-outline">Abrir</a>
         <button type="button" class="btn btn-outline" data-del-material-c="${m.id}" style="color:var(--red, #e5484d);border-color:rgba(229,72,77,0.4);" aria-label="Excluir material">Excluir</button>
       </div>
     `;
@@ -2846,7 +2859,7 @@ function abrirNegocioCliente(uid) {
       if (campo.key === 'identidadeVisual') valor = valor === 'sim' ? 'Sim, já possui' : (valor === 'nao' ? 'Não possui ainda' : '-');
       return `<div style="border-left:2px solid var(--purple);padding-left:12px;min-width:0;">
         <div class="meta" style="margin-bottom:3px;">${campo.label}</div>
-        <div style="color:var(--white);font-size:0.92rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${valor}</div>
+        <div style="color:var(--white);font-size:0.92rem;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(valor)}</div>
       </div>`;
     }).join('');
     return `<div style="font-size:0.72rem;color:var(--purple-light);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">${secao.titulo}</div>
@@ -3383,10 +3396,10 @@ function carregarDuvidasAdmin() {
       card.className = 'card';
       card.id = 'duvida-' + id;
       card.innerHTML = `
-        <div class="top-actions"><div class="meta">${nomeCliente} · ${formatarData(d.dataEnvio)}</div>${badge}</div>
-        <p style="margin-bottom:12px;">${d.pergunta}</p>
+        <div class="top-actions"><div class="meta">${escapeHtml(nomeCliente)} · ${formatarData(d.dataEnvio)}</div>${badge}</div>
+        <p style="margin-bottom:12px;">${escapeHtml(d.pergunta)}</p>
         <div class="field">
-          <textarea rows="2" placeholder="Escreva a resposta..." data-resposta="${id}">${d.resposta || ''}</textarea>
+          <textarea rows="2" placeholder="Escreva a resposta..." data-resposta="${id}">${escapeHtml(d.resposta || '')}</textarea>
         </div>
         <button class="btn" data-responder="${id}">Enviar resposta</button>
       `;

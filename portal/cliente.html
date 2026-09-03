@@ -478,6 +478,19 @@ let currentUser = null;
 let meusVideosCache = [];
 let minhasDuvidasCache = [];
 
+// Escapa texto livre antes de inserir via innerHTML, pra evitar que HTML/JS
+// digitado num campo rode na tela de quem está vendo.
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+// Só aceita links http/https como href; qualquer outra coisa (ex: javascript:) vira "#".
+function safeUrl(url) {
+  const u = String(url == null ? '' : url).trim();
+  return /^https?:\/\//i.test(u) ? u : '#';
+}
+
 // --- Erro genérico em ações que falharem (ex: sem conexão) ---
 window.addEventListener('unhandledrejection', (e) => {
   console.error(e.reason);
@@ -657,7 +670,7 @@ function mostrarNegocioView(briefing) {
       if (campo.key === 'identidadeVisual') valor = valor === 'sim' ? 'Sim' : (valor === 'nao' ? 'Não' : '-');
       return `<div style="border-left:2px solid var(--purple);padding-left:12px;min-width:0;">
         <div class="meta" style="margin-bottom:3px;">${campo.label}</div>
-        <div style="color:var(--white);font-size:0.9rem;white-space:pre-wrap;overflow-wrap:anywhere;">${valor}</div>
+        <div style="color:var(--white);font-size:0.9rem;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(valor)}</div>
       </div>`;
     }).join('');
     return `<div style="font-size:0.72rem;color:var(--purple-light);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">${secao.titulo}</div>
@@ -1133,8 +1146,8 @@ function renderNotificacoes() {
           <div class="notif-item ${lida ? 'read' : 'unread'}" data-notif-idx="${i}">
             <div class="notif-icon" style="background:${ic.bg};color:${ic.cor};">${ic.svg}</div>
             <div>
-              <div class="notif-item-titulo">${item.titulo}</div>
-              <div class="notif-item-sub">${item.sub}</div>
+              <div class="notif-item-titulo">${escapeHtml(item.titulo)}</div>
+              <div class="notif-item-sub">${escapeHtml(item.sub)}</div>
             </div>
           </div>
         `;
@@ -1402,7 +1415,7 @@ function clienteVideoCardHtml(v) {
     <div class="video-mini-card" data-abrir-video="${v.id}">
       <h5>${v.titulo || 'Sem título'}</h5>
       <div class="video-mini-when video-mini-when-strong">Postagem em ${formatarData(v.dataPostagem) || 'a definir'}</div>
-      ${feedback.tipo === 'reprovado' && feedback.comentario ? `<div class="video-mini-comment">"${feedback.comentario}"</div>` : ''}
+      ${feedback.tipo === 'reprovado' && feedback.comentario ? `<div class="video-mini-comment">"${escapeHtml(feedback.comentario)}"</div>` : ''}
     </div>
   `;
 }
@@ -1694,12 +1707,12 @@ function materialIconeSvg(tipo) {
 
 function materialCardHtml(m) {
   return `
-    <a href="${m.link}" target="_blank" rel="noopener" class="material-card">
+    <a href="${safeUrl(m.link)}" target="_blank" rel="noopener" class="material-card">
       <button type="button" class="material-remove" data-remover-material="${m.id}" aria-label="Remover material" title="Remover">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
       <div class="material-icon">${materialIconeSvg(m.tipo)}</div>
-      <div class="material-titulo">${m.tipo || 'Material'}</div>
+      <div class="material-titulo">${escapeHtml(m.tipo || 'Material')}</div>
       <div class="material-meta">Enviado em ${formatarData(m.dataUpload) || '-'}</div>
     </a>
   `;
@@ -1781,12 +1794,12 @@ function clienteDuvidaHtml(d) {
   return `
     <div class="duvida-thread">
       <div class="chat-bubble chat-bubble-cliente">
-        <div class="chat-bubble-texto">${d.pergunta}</div>
+        <div class="chat-bubble-texto">${escapeHtml(d.pergunta)}</div>
         <div class="chat-bubble-meta">Você · ${formatarData(d.dataEnvio)}</div>
       </div>
       ${d.resposta ? `
       <div class="chat-bubble chat-bubble-lmotion">
-        <div class="chat-bubble-texto">${d.resposta}</div>
+        <div class="chat-bubble-texto">${escapeHtml(d.resposta)}</div>
         <div class="chat-bubble-meta">Lmotion · ${formatarData(d.dataResposta)}</div>
       </div>` : `
       <span class="badge badge-open" style="align-self:flex-start;">Aguardando resposta</span>`}
