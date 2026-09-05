@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /portal/
+
+Sitemap: https://lmotion.com.br/sitemap.xml
