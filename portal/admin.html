@@ -2924,22 +2924,43 @@ function renderRedeCliente(rede) {
     const pontos = registros.map((r, i) => {
       const x = registros.length === 1 ? w / 2 : (i / (registros.length - 1)) * (w - pad * 2) + pad;
       const y = h - pad - ((r.seguidores - min) / span) * (h - pad * 2);
-      return [x, y];
+      return { x, y, valor: r.seguidores, data: formatarData(r.data) };
     });
-    const linha = pontos.map(p => p.join(',')).join(' ');
+    const linha = pontos.map(p => p.x + ',' + p.y).join(' ');
     const area = `0,${h} ` + linha + ` ${w},${h}`;
-    const ultimoP = pontos[pontos.length - 1];
+    const marcadores = pontos.map((p, i) => {
+      const ultimo = i === pontos.length - 1;
+      return `<g class="rede-pt" data-v="${p.valor}" data-d="${escapeHtml(p.data)}">
+        <circle cx="${p.x}" cy="${p.y}" r="${ultimo ? 5 : 4}" fill="${ultimo ? 'var(--purple-light)' : 'var(--black-soft)'}" stroke="var(--purple-light)" stroke-width="2"></circle>
+      </g>`;
+    }).join('');
     graficoWrap.innerHTML = `
-      <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;">
-        <polygon points="${area}" fill="var(--purple)" opacity="0.12"></polygon>
-        <polyline points="${linha}" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
-        <circle cx="${ultimoP[0]}" cy="${ultimoP[1]}" r="4" fill="var(--purple-light)"></circle>
-      </svg>
+      <div style="position:relative;">
+        <svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible;">
+          <polygon points="${area}" fill="var(--purple)" opacity="0.12"></polygon>
+          <polyline points="${linha}" fill="none" stroke="var(--purple)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          ${marcadores}
+        </svg>
+        <div class="rede-tooltip"><span class="v">0</span> ${rede.unidade} &middot; <span class="d"></span></div>
+      </div>
       <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--gray);margin-top:4px;">
         <span>${formatarData(registros[0].data)}</span>
         <span>${formatarData(registros[registros.length - 1].data)}</span>
       </div>
     `;
+    const tip = graficoWrap.querySelector('.rede-tooltip');
+    graficoWrap.querySelectorAll('.rede-pt').forEach(pt => {
+      pt.addEventListener('mouseenter', () => {
+        tip.querySelector('.v').textContent = Number(pt.dataset.v).toLocaleString('pt-BR');
+        tip.querySelector('.d').textContent = pt.dataset.d;
+        const r = pt.querySelector('circle').getBoundingClientRect();
+        const parentR = pt.closest('div').getBoundingClientRect();
+        tip.style.left = (r.left - parentR.left + r.width / 2) + 'px';
+        tip.style.top = (r.top - parentR.top) + 'px';
+        tip.classList.add('show');
+      });
+      pt.addEventListener('mouseleave', () => tip.classList.remove('show'));
+    });
   } else {
     graficoWrap.innerHTML = '<p class="meta">Registre mais uma vez pra ver o gráfico de evolução.</p>';
   }
