@@ -376,7 +376,7 @@
       <p class="page-sub">Acompanhe o status de aprovação de cada vídeo entregue.</p>
       <div class="field" style="max-width:280px;">
         <label>Filtrar por cliente</label>
-        <select id="entregasFiltroCliente"><option value="">Todos os clientes</option></select>
+        <select id="entregasFiltroCliente"><option value="">Selecionar clientes</option><option value="todos">Todos os clientes</option></select>
       </div>
       <div id="listaVideosAdmin" class="videos-list-area"><div class="empty-state">Carregando...</div></div>
     </section>
@@ -1784,7 +1784,7 @@ function carregarClientes() {
     document.getElementById('ggClienteId').innerHTML = '<option value="">Selecione um cliente</option>';
     const filtroEntregas = document.getElementById('entregasFiltroCliente');
     const filtroEntregasAtual = filtroEntregas.value;
-    filtroEntregas.innerHTML = '<option value="">Todos os clientes</option>';
+    filtroEntregas.innerHTML = '<option value="">Selecionar clientes</option><option value="todos">Todos os clientes</option>';
     const filtroPagamentos = document.getElementById('pgFiltroCliente');
     const filtroPagamentosAtual = filtroPagamentos.value;
     filtroPagamentos.innerHTML = '<option value="">Todos os clientes</option>';
@@ -2519,7 +2519,13 @@ document.getElementById('entregasFiltroCliente').addEventListener('change', rend
 function renderEntregasBoard() {
   const box = document.getElementById('listaVideosAdmin');
   const filtroUid = document.getElementById('entregasFiltroCliente').value;
-  const lista = filtroUid ? todasEntregas.filter(v => v.clienteId === filtroUid) : todasEntregas;
+
+  if (!filtroUid) {
+    box.innerHTML = '<div class="empty-state">Selecione um cliente (ou "Todos os clientes") acima pra ver as entregas.</div>';
+    return;
+  }
+
+  const lista = filtroUid === 'todos' ? todasEntregas : todasEntregas.filter(v => v.clienteId === filtroUid);
 
   if (!lista.length) {
     box.innerHTML = '<div class="empty-state">Nenhum vídeo entregue ainda.</div>';
