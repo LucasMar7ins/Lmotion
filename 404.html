@@ -19,14 +19,23 @@
 
   <div class="login-card" style="text-align:center;">
     <div class="login-logo-wrap">
-      <img src="assets/logo-web.jpg" alt="Lmotion logo">
+      <img src="assets/logo.png" alt="Lmotion logo">
     </div>
     <h1 style="font-size:2rem;margin-bottom:6px;">404</h1>
     <p class="sub">Essa página não existe ou foi movida.</p>
-    <a href="portal/" class="btn btn-block" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin-top:20px;">Voltar para o portal</a>
-    <p class="login-footer">Lmotion &middot; portal do cliente</p>
+    <a href="/" id="btn404Voltar" class="btn btn-block" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin-top:20px;">Voltar para o início</a>
+    <p class="login-footer" id="footer404">Lmotion &middot; agência de marketing digital</p>
   </div>
 </div>
+
+<script>
+  if (window.location.pathname.indexOf('/portal') === 0) {
+    var btn = document.getElementById('btn404Voltar');
+    btn.textContent = 'Voltar para o portal';
+    btn.setAttribute('href', '/portal/');
+    document.getElementById('footer404').textContent = 'Lmotion · portal do cliente';
+  }
+</script>
 
 </body>
 </html>
