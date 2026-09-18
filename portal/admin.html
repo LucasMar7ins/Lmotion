@@ -521,6 +521,22 @@
     <!-- DÚVIDAS -->
     <section class="tab-section" id="tab-duvidas">
       <h2>Dúvidas dos clientes</h2>
+
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+        <div class="field" style="max-width:260px;">
+          <label>Filtrar por cliente</label>
+          <select id="duvFiltroCliente"><option value="">Todos os clientes</option></select>
+        </div>
+        <div class="field" style="max-width:220px;">
+          <label>Filtrar por status</label>
+          <select id="duvFiltroStatus">
+            <option value="">Todos os status</option>
+            <option value="aberta">Pendentes</option>
+            <option value="respondida">Respondidas</option>
+          </select>
+        </div>
+      </div>
+
       <div id="listaDuvidasAdmin"><div class="empty-state">Carregando...</div></div>
     </section>
 
@@ -1595,6 +1611,14 @@ function formatarData(ts) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+function formatarDataHora(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const data = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${data} às ${hora}`;
+}
+
 function animarNumero(el, valorFinal) {
   if (!el) return;
   const valorAtual = parseInt(el.textContent, 10) || 0;
@@ -1791,6 +1815,9 @@ function carregarClientes() {
     const filtroPagamentos = document.getElementById('pgFiltroCliente');
     const filtroPagamentosAtual = filtroPagamentos.value;
     filtroPagamentos.innerHTML = '<option value="">Todos os clientes</option>';
+    const filtroDuvidas = document.getElementById('duvFiltroCliente');
+    const filtroDuvidasAtual = filtroDuvidas.value;
+    filtroDuvidas.innerHTML = '<option value="">Todos os clientes</option>';
 
     snap.forEach(docSnap => {
       const c = docSnap.data();
@@ -1813,6 +1840,11 @@ function carregarClientes() {
       optFiltroPg.value = docSnap.id;
       optFiltroPg.textContent = c.empresa || c.nome;
       filtroPagamentos.appendChild(optFiltroPg);
+
+      const optFiltroDuv = document.createElement('option');
+      optFiltroDuv.value = docSnap.id;
+      optFiltroDuv.textContent = c.empresa || c.nome;
+      filtroDuvidas.appendChild(optFiltroDuv);
     });
 
     clientesTodos.sort((a, b) => (a.empresa || a.nome || '').localeCompare(b.empresa || b.nome || ''));
@@ -1820,6 +1852,7 @@ function carregarClientes() {
 
     filtroEntregas.value = filtroEntregasAtual;
     filtroPagamentos.value = filtroPagamentosAtual;
+    filtroDuvidas.value = filtroDuvidasAtual;
     document.getElementById('ggClienteId').value = ggAtual;
 
     if (document.getElementById('ggClienteId').value) {
@@ -1833,6 +1866,9 @@ function carregarClientes() {
     renderResumoPeriodico();
     if (typeof renderPagamentos === 'function') {
       renderPagamentos(document.getElementById('pgFiltroCliente').value, document.getElementById('pgFiltroStatus').value);
+    }
+    if (typeof renderDuvidasAdmin === 'function') {
+      renderDuvidasAdmin(document.getElementById('duvFiltroCliente').value, document.getElementById('duvFiltroStatus').value);
     }
 
     if (primeiraCargaClientes) {
@@ -3408,48 +3444,71 @@ function carregarDuvidasAdmin() {
     snap.forEach(docSnap => duvidasCache.push({ id: docSnap.id, ...docSnap.data() }));
     renderDashResumo();
     renderResumoPeriodico();
-    const box = document.getElementById('listaDuvidasAdmin');
-    if (snap.empty) {
-      box.innerHTML = '<div class="empty-state">Nenhuma dúvida enviada ainda.</div>';
-      return;
-    }
-    box.innerHTML = '';
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      const id = docSnap.id;
-      const nomeCliente = (clientesCache[d.clienteId] && clientesCache[d.clienteId].nome) || 'Cliente';
-      const badge = d.status === 'respondida'
-        ? '<span class="badge badge-answered">Respondida</span>'
-        : '<span class="badge badge-open">Aguardando resposta</span>';
+    renderDuvidasAdmin(document.getElementById('duvFiltroCliente').value, document.getElementById('duvFiltroStatus').value);
+  });
+}
 
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.id = 'duvida-' + id;
-      card.innerHTML = `
-        <div class="top-actions"><div class="meta">${escapeHtml(nomeCliente)} · ${formatarData(d.dataEnvio)}</div>${badge}</div>
-        <p style="margin-bottom:12px;">${escapeHtml(d.pergunta)}</p>
-        <div class="field">
-          <textarea rows="2" placeholder="Escreva a resposta..." data-resposta="${id}">${escapeHtml(d.resposta || '')}</textarea>
-        </div>
-        <button class="btn" data-responder="${id}">Enviar resposta</button>
-      `;
-      box.appendChild(card);
-    });
+function renderDuvidasAdmin(filtroClienteId, filtroStatus) {
+  const box = document.getElementById('listaDuvidasAdmin');
+  if (!box) return;
 
-    box.querySelectorAll('[data-responder]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.responder;
-        const texto = box.querySelector(`[data-resposta="${id}"]`).value.trim();
-        if (!texto) return;
-        await db.collection('duvidas').doc(id).update({
-          resposta: texto,
-          status: 'respondida',
-          dataResposta: firebase.firestore.FieldValue.serverTimestamp()
-        });
+  if (!duvidasCache.length) {
+    box.innerHTML = '<div class="empty-state">Nenhuma dúvida enviada ainda.</div>';
+    return;
+  }
+
+  let lista = duvidasCache;
+  if (filtroClienteId) lista = lista.filter(d => d.clienteId === filtroClienteId);
+  if (filtroStatus) lista = lista.filter(d => d.status === filtroStatus);
+
+  if (!lista.length) {
+    box.innerHTML = '<div class="empty-state">Nenhuma dúvida encontrada com esse filtro.</div>';
+    return;
+  }
+
+  box.innerHTML = '';
+  lista.forEach(d => {
+    const id = d.id;
+    const nomeCliente = (clientesCache[d.clienteId] && clientesCache[d.clienteId].nome) || 'Cliente';
+    const badge = d.status === 'respondida'
+      ? '<span class="badge badge-answered">Respondida</span>'
+      : '<span class="badge badge-open">Aguardando resposta</span>';
+    const metaResposta = (d.status === 'respondida' && d.dataResposta) ? ` · respondida em ${formatarDataHora(d.dataResposta)}` : '';
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'duvida-' + id;
+    card.innerHTML = `
+      <div class="top-actions"><div class="meta">${escapeHtml(nomeCliente)} · enviada em ${formatarDataHora(d.dataEnvio)}${metaResposta}</div>${badge}</div>
+      <p style="margin-bottom:12px;">${escapeHtml(d.pergunta)}</p>
+      <div class="field">
+        <textarea rows="2" placeholder="Escreva a resposta..." data-resposta="${id}">${escapeHtml(d.resposta || '')}</textarea>
+      </div>
+      <button class="btn" data-responder="${id}">Enviar resposta</button>
+    `;
+    box.appendChild(card);
+  });
+
+  box.querySelectorAll('[data-responder]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.responder;
+      const texto = box.querySelector(`[data-resposta="${id}"]`).value.trim();
+      if (!texto) return;
+      await db.collection('duvidas').doc(id).update({
+        resposta: texto,
+        status: 'respondida',
+        dataResposta: firebase.firestore.FieldValue.serverTimestamp()
       });
     });
   });
 }
+
+document.getElementById('duvFiltroCliente').addEventListener('change', () => {
+  renderDuvidasAdmin(document.getElementById('duvFiltroCliente').value, document.getElementById('duvFiltroStatus').value);
+});
+document.getElementById('duvFiltroStatus').addEventListener('change', () => {
+  renderDuvidasAdmin(document.getElementById('duvFiltroCliente').value, document.getElementById('duvFiltroStatus').value);
+});
 
 // --- TUTORIAIS ---
 document.getElementById('btnAddTutorial').addEventListener('click', async () => {
