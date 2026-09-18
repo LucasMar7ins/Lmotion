@@ -212,6 +212,20 @@ a{color:var(--purple-light);text-decoration:none;}
   overflow-y:auto;
   z-index:1;
 }
+.sidebar .brand-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:6px;
+}
+.sidebar .brand-logo{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  flex-shrink:0;
+  object-fit:cover;
+}
+.sidebar .brand-row .brand{margin-bottom:0;}
 .sidebar .brand{
   font-size:1.1rem;
   font-weight:700;
