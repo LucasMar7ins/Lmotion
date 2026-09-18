@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=21">
+<link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 
@@ -1774,8 +1774,8 @@ function renderListaClientes(filtro) {
     row.innerHTML = `
       <div class="client-list-avatar">${iniciaisCliente(c)}</div>
       <div class="client-list-info">
-        <div class="client-list-empresa">${c.empresa || c.nome}</div>
-        <div class="client-list-nome">${c.nome}</div>
+        <div class="client-list-empresa">${escapeHtml(c.empresa || c.nome || '')}</div>
+        <div class="client-list-nome">${escapeHtml(c.nome || '')}</div>
       </div>
       <span class="client-list-status" style="background:color-mix(in srgb, ${corDot} 15%, transparent);border:1px solid color-mix(in srgb, ${corDot} 35%, transparent);color:${corDot};">
         <span style="width:5px;height:5px;border-radius:50%;background:${corDot};display:inline-block;"></span>${textoAcessoCurto(diasAcesso)}
