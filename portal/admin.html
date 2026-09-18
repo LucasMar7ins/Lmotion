@@ -101,6 +101,13 @@
         </div>
         <div id="dashCalGrid"></div>
       </div>
+
+      <div class="card" style="margin-top:20px;">
+        <h3 style="margin-bottom:6px;">Backup dos dados</h3>
+        <p class="meta" style="margin-bottom:14px;">Baixa um arquivo com todos os dados do portal (clientes, vídeos, pagamentos, dúvidas, materiais e métricas) pro seu computador. Guarde esse arquivo em algum lugar seguro (Google Drive, por exemplo). Recomendado fazer isso de vez em quando.</p>
+        <button class="btn btn-outline" id="btnExportarBackup">Exportar dados (backup)</button>
+        <p class="error-msg" id="backupMsg" style="margin-top:10px;"></p>
+      </div>
     </section>
 
     <!-- RESUMO PERIÓDICO -->
@@ -3508,6 +3515,66 @@ document.getElementById('duvFiltroCliente').addEventListener('change', () => {
 });
 document.getElementById('duvFiltroStatus').addEventListener('change', () => {
   renderDuvidasAdmin(document.getElementById('duvFiltroCliente').value, document.getElementById('duvFiltroStatus').value);
+});
+
+// --- BACKUP ---
+function serializarParaBackup(valor) {
+  if (valor && typeof valor.toDate === 'function') {
+    return valor.toDate().toISOString();
+  }
+  if (Array.isArray(valor)) {
+    return valor.map(serializarParaBackup);
+  }
+  if (valor && typeof valor === 'object') {
+    const obj = {};
+    Object.keys(valor).forEach(k => { obj[k] = serializarParaBackup(valor[k]); });
+    return obj;
+  }
+  return valor;
+}
+
+document.getElementById('btnExportarBackup').addEventListener('click', async () => {
+  const btn = document.getElementById('btnExportarBackup');
+  const msg = document.getElementById('backupMsg');
+  btn.disabled = true;
+  btn.textContent = 'Exportando...';
+  msg.textContent = '';
+  msg.className = 'error-msg';
+
+  const colecoes = ['clientes', 'entregas', 'materiais', 'duvidas', 'pautas', 'pagamentos', 'instagramMetricas', 'tiktokMetricas', 'youtubeMetricas', 'tutoriais', 'notificacoes'];
+
+  try {
+    const backup = { exportadoEm: new Date().toISOString() };
+
+    for (const nome of colecoes) {
+      const snap = await db.collection(nome).get();
+      backup[nome] = snap.docs.map(d => serializarParaBackup({ id: d.id, ...d.data() }));
+    }
+
+    const notasSnap = await db.collection('notasDashboard').doc(currentUser.uid).collection('dias').get();
+    backup.notasDashboard = notasSnap.docs.map(d => serializarParaBackup({ id: d.id, ...d.data() }));
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const hoje = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `lmotion-backup-${hoje}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    msg.className = 'success-msg';
+    msg.textContent = 'Backup baixado com sucesso!';
+    setTimeout(() => { msg.textContent = ''; }, 5000);
+  } catch (err) {
+    msg.className = 'error-msg';
+    msg.textContent = 'Não foi possível gerar o backup. Tente novamente.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Exportar dados (backup)';
+  }
 });
 
 // --- TUTORIAIS ---
