@@ -76,9 +76,16 @@ service cloud.firestore {
     }
 
     // Dúvidas
+    // Ao criar, o cliente só pode enviar exatamente esses campos, com a dúvida
+    // sempre começando como "aberta" e sem resposta — evita que alguém, escrevendo
+    // direto na API (fora do site), já crie a dúvida marcada como respondida.
     match /duvidas/{id} {
       allow read: if logado() && (resource.data.clienteId == request.auth.uid || isAdmin());
-      allow create: if logado() && request.resource.data.clienteId == request.auth.uid;
+      allow create: if logado() &&
+        request.resource.data.clienteId == request.auth.uid &&
+        request.resource.data.resposta == '' &&
+        request.resource.data.status == 'aberta' &&
+        request.resource.data.keys().hasOnly(['clienteId', 'pergunta', 'resposta', 'status', 'dataEnvio']);
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
