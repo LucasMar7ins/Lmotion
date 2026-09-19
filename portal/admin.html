@@ -1898,24 +1898,20 @@ function carregarClientes() {
 // --- PERFIL DO CLIENTE ---
 let perfilEditando = false;
 
-function perfilCamposCompletos(c) {
-  return !!(c && c.nome && c.empresa && c.email && c.whatsapp && c.resumo);
-}
-
 function renderPerfilInfoModo(c) {
-  const mostrarEdicao = perfilEditando || !perfilCamposCompletos(c);
+  const mostrarEdicao = perfilEditando;
   document.getElementById('perfilInfoForm').style.display = mostrarEdicao ? 'block' : 'none';
   document.getElementById('perfilInfoView').style.display = mostrarEdicao ? 'none' : 'block';
   document.getElementById('btnEditarInfoCliente').style.display = mostrarEdicao ? 'none' : 'inline-block';
   document.getElementById('perfilInfoBadge').style.display = mostrarEdicao ? 'none' : 'inline-block';
   if (!mostrarEdicao) {
-    document.getElementById('viewNome').textContent = c.nome || '';
-    document.getElementById('viewEmpresa').textContent = c.empresa || '';
-    document.getElementById('viewEmail').textContent = c.email || '';
-    document.getElementById('viewWhatsapp').textContent = c.whatsapp || '';
+    document.getElementById('viewNome').textContent = c.nome || 'Não preenchido';
+    document.getElementById('viewEmpresa').textContent = c.empresa || 'Não preenchido';
+    document.getElementById('viewEmail').textContent = c.email || 'Não preenchido';
+    document.getElementById('viewWhatsapp').textContent = c.whatsapp || 'Não preenchido';
     document.getElementById('viewValorCombinado').textContent = c.valorCombinado ? formatarMoeda(c.valorCombinado) : 'Não definido';
     document.getElementById('viewDiaVencimento').textContent = c.diaVencimento ? 'Dia ' + c.diaVencimento : 'Sem recorrência';
-    document.getElementById('viewResumo').textContent = c.resumo || '';
+    document.getElementById('viewResumo').textContent = c.resumo || 'Não preenchido';
   }
 }
 
