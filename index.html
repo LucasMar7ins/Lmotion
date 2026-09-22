@@ -466,14 +466,18 @@
   .diag-bars{background:var(--black);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 20px;margin-bottom:26px;text-align:left;}
   .diag-bars-label{color:var(--gray);font-size:0.78rem;margin-bottom:14px;}
   .diag-bar-row{margin-bottom:12px;}
-  .diag-bar-row:last-of-type{margin-bottom:0;}
-  .diag-bar-name{font-size:0.85rem;color:var(--gray);margin-bottom:5px;}
+  .diag-bar-row:last-of-type{margin-bottom:14px;}
+  .diag-bar-row-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+  .diag-bar-name{font-size:0.85rem;color:var(--gray);}
   .diag-bar-name.active{color:var(--purple-light);font-weight:700;}
   .diag-bar-track{background:rgba(255,255,255,0.08);border-radius:6px;height:10px;overflow:hidden;}
   .diag-bar-fill{height:100%;border-radius:6px;}
-  .diag-bar-fill.low{background:rgba(255,255,255,0.25);width:22%;}
-  .diag-bar-fill.high{background:var(--purple);width:88%;}
-  .diag-bars-note{color:var(--gray);font-size:0.7rem;margin-top:12px;opacity:0.75;}
+  .diag-bar-fill.low{background:rgba(255,255,255,0.25);width:20%;}
+  .diag-bar-fill.high{background:var(--purple);width:100%;}
+  .diag-bar-val{font-size:0.85rem;color:var(--gray);font-weight:700;}
+  .diag-bar-val.active{color:var(--purple-light);}
+  .diag-bars-translate{color:var(--gray);font-size:0.85rem;line-height:1.6;margin-top:4px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);}
+  .diag-bars-note{color:var(--gray);font-size:0.7rem;margin-top:12px;opacity:0.75;line-height:1.5;}
   .diag-result-btn{
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
     background:var(--purple);color:#fff;font-weight:600;font-size:0.98rem;
@@ -1076,10 +1080,11 @@
       html += `<div class="diag-result-titulo">${servico}</div>`;
       html += `<p class="diag-result-blurb">${blurb}</p>`;
       html += '<div class="diag-bars">';
-      html += '<div class="diag-bars-label">O que uma estratégia consistente pode mudar</div>';
-      html += '<div class="diag-bar-row"><div class="diag-bar-name">Alcance sem estratégia</div><div class="diag-bar-track"><div class="diag-bar-fill low"></div></div></div>';
-      html += '<div class="diag-bar-row"><div class="diag-bar-name active">Alcance com estratégia Lmotion</div><div class="diag-bar-track"><div class="diag-bar-fill high"></div></div></div>';
-      html += '<div class="diag-bars-note">Exemplo ilustrativo, não representa números reais nem promessa de resultado</div>';
+      html += '<div class="diag-bars-label">O que a consistência pode mudar</div>';
+      html += '<div class="diag-bar-row"><div class="diag-bar-row-head"><span class="diag-bar-name">Engajamento sem estratégia</span><span class="diag-bar-val">1x</span></div><div class="diag-bar-track"><div class="diag-bar-fill low"></div></div></div>';
+      html += '<div class="diag-bar-row"><div class="diag-bar-row-head"><span class="diag-bar-name active">Engajamento com estratégia consistente</span><span class="diag-bar-val active">5x</span></div><div class="diag-bar-track"><div class="diag-bar-fill high"></div></div></div>';
+      html += '<div class="diag-bars-translate">Na prática, isso significa mais gente vendo, curtindo e compartilhando cada vídeo, ou seja, mais gente conhecendo sua marca sem você precisar gastar com anúncio.</div>';
+      html += '<div class="diag-bars-note">Fonte: Buffer, análise de mais de 100 mil contas. Referência de mercado, não é garantia de resultado pra sua marca.</div>';
       html += '</div>';
       html += `<a href="${link}" target="_blank" rel="noopener" class="diag-result-btn">Falar no WhatsApp com esse contexto</a>`;
       html += '</div>';
