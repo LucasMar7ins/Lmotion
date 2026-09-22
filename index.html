@@ -462,7 +462,18 @@
   }
   .diag-result-tag{color:var(--gray);font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
   .diag-result-titulo{font-size:1.5rem;font-weight:800;margin-bottom:14px;}
-  .diag-result-blurb{color:var(--gray);font-size:0.95rem;line-height:1.65;margin-bottom:28px;}
+  .diag-result-blurb{color:var(--gray);font-size:0.95rem;line-height:1.65;margin-bottom:20px;}
+  .diag-bars{background:var(--black);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:18px 20px;margin-bottom:26px;text-align:left;}
+  .diag-bars-label{color:var(--gray);font-size:0.78rem;margin-bottom:14px;}
+  .diag-bar-row{margin-bottom:12px;}
+  .diag-bar-row:last-of-type{margin-bottom:0;}
+  .diag-bar-name{font-size:0.85rem;color:var(--gray);margin-bottom:5px;}
+  .diag-bar-name.active{color:var(--purple-light);font-weight:700;}
+  .diag-bar-track{background:rgba(255,255,255,0.08);border-radius:6px;height:10px;overflow:hidden;}
+  .diag-bar-fill{height:100%;border-radius:6px;}
+  .diag-bar-fill.low{background:rgba(255,255,255,0.25);width:22%;}
+  .diag-bar-fill.high{background:var(--purple);width:88%;}
+  .diag-bars-note{color:var(--gray);font-size:0.7rem;margin-top:12px;opacity:0.75;}
   .diag-result-btn{
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
     background:var(--purple);color:#fff;font-weight:600;font-size:0.98rem;
@@ -974,25 +985,25 @@
       {
         titulo: "Como estão as redes sociais da sua marca hoje?",
         opcoes: [
-          { texto: "Quase não posto nada", tag: "conteudo" },
-          { texto: "Posto, mas sem estratégia", tag: "conteudo" },
-          { texto: "Já posto bem, quero profissionalizar", tag: "conteudo" }
+          { texto: "Quase não posto nada", nivel: "inicio" },
+          { texto: "Posto, mas sem estratégia", nivel: "meio" },
+          { texto: "Já posto bem, quero profissionalizar", nivel: "avancado" }
         ]
       },
       {
         titulo: "Sua marca já tem identidade visual definida (logo, cores, etc)?",
         opcoes: [
-          { texto: "Não, ainda não tenho nada definido", tag: "branding" },
-          { texto: "Tenho algo, mas está desatualizado", tag: "branding" },
-          { texto: "Sim, já tenho uma identidade forte", tag: "conteudo" }
+          { texto: "Não, ainda não tenho nada definido", identidade: "nenhuma" },
+          { texto: "Tenho algo, mas está desatualizado", identidade: "desatualizada" },
+          { texto: "Sim, já tenho uma identidade forte", identidade: "forte" }
         ]
       },
       {
         titulo: "Você já grava conteúdo (vídeos e fotos) ou precisa que a gente grave?",
         opcoes: [
-          { texto: "Preciso que gravem tudo pra mim", tag: "conteudo" },
-          { texto: "Tenho algum material, mas falta constância", tag: "conteudo" },
-          { texto: "Já gravo, só falta estratégia e edição", tag: "conteudo" }
+          { texto: "Preciso que gravem tudo pra mim", producao: "total" },
+          { texto: "Tenho algum material, mas falta constância", producao: "parcial" },
+          { texto: "Já gravo, só falta estratégia e edição", producao: "tem" }
         ]
       }
     ];
@@ -1023,7 +1034,7 @@
       body.querySelectorAll('.diag-opt').forEach(btn => {
         btn.addEventListener('click', () => {
           const idx = parseInt(btn.getAttribute('data-idx'));
-          respostas.push({ resposta: p.opcoes[idx].texto, tag: p.opcoes[idx].tag });
+          respostas.push({ resposta: p.opcoes[idx].texto, opcao: p.opcoes[idx] });
           passo++;
           if (passo < perguntas.length) { renderPergunta(); } else { renderResultado(); }
         });
@@ -1033,18 +1044,28 @@
     function renderResultado() {
       renderSteps();
       if (typeof gtag === 'function') gtag('event', 'diagnostico_concluido');
-      const contagem = { branding: 0, conteudo: 0 };
-      respostas.forEach(r => { if (contagem[r.tag] !== undefined) contagem[r.tag]++; });
-      let servico, blurb, icone;
-      if (contagem.branding >= 1) {
-        servico = "Branding & Design";
-        blurb = "Sua marca ainda precisa de uma identidade visual sólida antes de acelerar o conteúdo. A gente constrói logo, cores e manual de marca do zero.";
-        icone = "&#9998;";
+
+      const nivel = (respostas[0] && respostas[0].opcao.nivel) || "meio";
+      const identidade = (respostas[1] && respostas[1].opcao.identidade) || "forte";
+
+      const servico = "Gestão de Redes Sociais + Vídeos Virais";
+      const icone = "&#128200;";
+
+      let blurb;
+      if (nivel === "inicio") {
+        blurb = "Sua marca ainda não está sendo vista. A Lmotion assume a produção e a estratégia, cuidando da gravação, edição e publicação constante, pensada pra gerar alcance de verdade.";
+      } else if (nivel === "avancado") {
+        blurb = "Sua base já é boa. Agora é hora de profissionalizar a produção e escalar o alcance com uma estratégia de vídeos pensada pra viralizar.";
       } else {
-        servico = "Gestão de Redes Sociais";
-        blurb = "Sua marca já tem uma base — o próximo passo é ter conteúdo estratégico e constante, gravado e publicado sem você precisar se preocupar com isso.";
-        icone = "&#128247;";
+        blurb = "Você já posta, mas sem uma estratégia por trás isso não vira alcance de verdade. A Lmotion assume a produção e a direção de conteúdo, pensando cada vídeo pra gerar alcance, viralização e reconhecimento pra sua marca.";
       }
+      if (identidade === "nenhuma") {
+        blurb += " Como sua marca ainda não tem uma identidade visual definida, a gente também cuida disso dentro do processo, criando logo, cores e um padrão visual pra sua marca ficar reconhecível.";
+      } else if (identidade === "desatualizada") {
+        blurb += " Como sua identidade visual está desatualizada, a gente também atualiza isso dentro do processo, pra sua marca ficar com uma cara mais atual e consistente.";
+      }
+      blurb += " Enquanto isso não acontece, você provavelmente está deixando de aparecer pra gente que nunca ouviu falar do seu negócio, perdendo espaço pra concorrentes que postam com mais constância e não construindo a confiabilidade que transforma seguidor em cliente.";
+
       const resumo = respostas.map(r => "• " + r.resposta).join(NL);
       const msg = "Olá! Fiz o diagnóstico rápido no site da Lmotion e me recomendaram " + servico + "." + NL + NL + "Minhas respostas:" + NL + resumo + NL + NL + "Quero saber mais.";
       const link = "https://wa.me/5532999959855?text=" + encodeURIComponent(msg);
@@ -1054,6 +1075,12 @@
       html += '<div class="diag-result-tag">Recomendado pra você</div>';
       html += `<div class="diag-result-titulo">${servico}</div>`;
       html += `<p class="diag-result-blurb">${blurb}</p>`;
+      html += '<div class="diag-bars">';
+      html += '<div class="diag-bars-label">O que uma estratégia consistente pode mudar</div>';
+      html += '<div class="diag-bar-row"><div class="diag-bar-name">Alcance sem estratégia</div><div class="diag-bar-track"><div class="diag-bar-fill low"></div></div></div>';
+      html += '<div class="diag-bar-row"><div class="diag-bar-name active">Alcance com estratégia Lmotion</div><div class="diag-bar-track"><div class="diag-bar-fill high"></div></div></div>';
+      html += '<div class="diag-bars-note">Exemplo ilustrativo, não representa números reais nem promessa de resultado</div>';
+      html += '</div>';
       html += `<a href="${link}" target="_blank" rel="noopener" class="diag-result-btn">Falar no WhatsApp com esse contexto</a>`;
       html += '</div>';
       body.innerHTML = html;
