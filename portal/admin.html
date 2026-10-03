@@ -674,7 +674,7 @@
 
 <div class="modal-overlay" id="novaDemandaModal" style="display:none;">
   <div class="modal-box" style="width:380px;">
-    <h3 style="margin-bottom:16px;">Nova demanda de arte</h3>
+    <h3 style="margin-bottom:16px;" id="ndTitulo">Nova demanda de arte</h3>
     <div class="field">
       <label>Cliente</label>
       <select id="ndCliente"><option value="">Selecione o cliente</option></select>
@@ -1955,6 +1955,7 @@ carregarDesigners();
 // --- DEMANDAS DE ARTE ---
 let demandasCache = {};
 let demandaRevisandoId = null;
+let demandaEditandoId = null;
 
 function demStatusInfo(status) {
   const mapa = {
@@ -1972,7 +1973,7 @@ function demFormatoLabel(formato) {
   return mapa[formato] || '';
 }
 
-document.getElementById('btnNovaDemanda').addEventListener('click', () => {
+function popularSelectClientesDemanda(valorAtual) {
   const select = document.getElementById('ndCliente');
   select.innerHTML = '<option value="">Selecione o cliente</option>';
   clientesTodos.forEach(c => {
@@ -1981,6 +1982,14 @@ document.getElementById('btnNovaDemanda').addEventListener('click', () => {
     opt.textContent = c.empresa || c.nome;
     select.appendChild(opt);
   });
+  select.value = valorAtual || '';
+}
+
+document.getElementById('btnNovaDemanda').addEventListener('click', () => {
+  demandaEditandoId = null;
+  document.getElementById('ndTitulo').textContent = 'Nova demanda de arte';
+  document.getElementById('ndConfirmar').textContent = 'Criar demanda';
+  popularSelectClientesDemanda('');
   document.getElementById('ndDesigner').value = '';
   document.getElementById('ndDescricao').value = '';
   document.getElementById('ndPrazo').value = '';
@@ -1993,6 +2002,23 @@ document.getElementById('btnNovaDemanda').addEventListener('click', () => {
 document.getElementById('ndCancelar').addEventListener('click', () => {
   document.getElementById('novaDemandaModal').style.display = 'none';
 });
+
+function abrirEditarDemanda(id) {
+  const d = demandasCache[id];
+  if (!d) return;
+  demandaEditandoId = id;
+  document.getElementById('ndTitulo').textContent = 'Editar demanda de arte';
+  document.getElementById('ndConfirmar').textContent = 'Salvar alterações';
+  popularSelectClientesDemanda(d.clienteId);
+  document.getElementById('ndDesigner').value = d.designerId || '';
+  document.getElementById('ndDescricao').value = d.descricao || '';
+  document.getElementById('ndPrazo').value = d.prazo || '';
+  document.getElementById('ndReferencias').value = d.referencias || '';
+  document.getElementById('ndQuantidade').value = d.quantidade || '';
+  document.getElementById('ndFormato').value = d.formato || '';
+  document.getElementById('ndErro').style.display = 'none';
+  document.getElementById('novaDemandaModal').style.display = 'flex';
+}
 
 document.getElementById('ndConfirmar').addEventListener('click', async () => {
   const clienteId = document.getElementById('ndCliente').value;
@@ -2013,13 +2039,14 @@ document.getElementById('ndConfirmar').addEventListener('click', async () => {
   erro.style.display = 'none';
 
   const btn = document.getElementById('ndConfirmar');
+  const editando = !!demandaEditandoId;
   btn.disabled = true;
-  btn.textContent = 'Criando...';
+  btn.textContent = editando ? 'Salvando...' : 'Criando...';
 
   try {
     const cliente = clientesCache[clienteId] || {};
     const designer = designersCache[designerId] || {};
-    await db.collection('demandasArte').add({
+    const dados = {
       clienteId,
       clienteNome: cliente.empresa || cliente.nome || 'Cliente',
       designerId,
@@ -2029,20 +2056,29 @@ document.getElementById('ndConfirmar').addEventListener('click', async () => {
       referencias,
       quantidade,
       formato,
-      status: 'aberta',
-      linkDrive: '',
-      feedbackAdmin: '',
-      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
       atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+
+    if (editando) {
+      await db.collection('demandasArte').doc(demandaEditandoId).update(dados);
+    } else {
+      await db.collection('demandasArte').add({
+        ...dados,
+        status: 'aberta',
+        linkDrive: '',
+        feedbackAdmin: '',
+        criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
     document.getElementById('novaDemandaModal').style.display = 'none';
-    if (typeof showToast === 'function') showToast('Demanda criada!', 'success');
+    if (typeof showToast === 'function') showToast(editando ? 'Demanda atualizada!' : 'Demanda criada!', 'success');
   } catch (err) {
-    erro.textContent = 'Não foi possível criar a demanda. Tente novamente.';
+    erro.textContent = editando ? 'Não foi possível salvar. Tente novamente.' : 'Não foi possível criar a demanda. Tente novamente.';
     erro.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Criar demanda';
+    btn.textContent = editando ? 'Salvar alterações' : 'Criar demanda';
   }
 });
 
@@ -2076,6 +2112,7 @@ function renderDemandasAdmin(filtroDesigner, filtroCliente, filtroStatus) {
     const botaoRevisar = d.status === 'em_analise'
       ? `<button class="btn btn-outline" data-revisar="${d.id}" style="margin-top:10px;">Revisar</button>`
       : '';
+    const botaoEditar = `<button class="btn btn-outline" data-editar="${d.id}" style="margin-top:10px;">Editar</button>`;
 
     return `<div class="card" style="margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
@@ -2087,12 +2124,15 @@ function renderDemandasAdmin(filtroDesigner, filtroCliente, filtroStatus) {
       </div>
       <p style="margin:10px 0 2px;">${escapeHtml(d.descricao)}</p>
       ${detalhes}
-      ${botaoRevisar}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">${botaoRevisar}${botaoEditar}</div>
     </div>`;
   }).join('');
 
   wrap.querySelectorAll('[data-revisar]').forEach(btn => {
     btn.addEventListener('click', () => abrirRevisarDemanda(btn.getAttribute('data-revisar')));
+  });
+  wrap.querySelectorAll('[data-editar]').forEach(btn => {
+    btn.addEventListener('click', () => abrirEditarDemanda(btn.getAttribute('data-editar')));
   });
 }
 
