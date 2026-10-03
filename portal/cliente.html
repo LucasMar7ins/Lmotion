@@ -601,6 +601,10 @@ auth.onAuthStateChanged(async (user) => {
       window.location.href = 'admin.html';
       return;
     }
+    if (dados.tipo === 'designer') {
+      window.location.href = 'designer.html';
+      return;
+    }
     clienteNomeAtual = dados.nome || user.email;
     db.collection('clientes').doc(user.uid).update({ ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
     document.getElementById('clienteNome').textContent = dados.nome || user.email;

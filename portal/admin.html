@@ -51,6 +51,7 @@
     <div class="nav-item" data-tab="calendario">Calendário</div>
     <div class="nav-item" data-tab="pagamentos">Pagamentos</div>
     <div class="nav-item" data-tab="duvidas">Dúvidas</div>
+    <div class="nav-item" data-tab="design">Design</div>
     <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
 
     <div class="logout">
@@ -547,6 +548,45 @@
       <div id="listaDuvidasAdmin"><div class="empty-state">Carregando...</div></div>
     </section>
 
+    <!-- DESIGN -->
+    <section class="tab-section" id="tab-design">
+      <h2>Design</h2>
+      <p class="page-sub">Organize as demandas de arte pra sua equipe de design e revise antes de enviar pro cliente.</p>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:12px;">Equipe de design</h3>
+        <div id="listaDesigners" style="margin-bottom:14px;"><div class="empty-state">Carregando...</div></div>
+        <button class="btn btn-outline" id="btnAbrirCadastroDesigner">+ Adicionar designer</button>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:18px;">
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div class="field" style="max-width:220px;margin-bottom:0;">
+            <label>Filtrar por designer</label>
+            <select id="demFiltroDesigner"><option value="">Todas</option></select>
+          </div>
+          <div class="field" style="max-width:220px;margin-bottom:0;">
+            <label>Filtrar por cliente</label>
+            <select id="demFiltroCliente"><option value="">Todos os clientes</option></select>
+          </div>
+          <div class="field" style="max-width:200px;margin-bottom:0;">
+            <label>Filtrar por status</label>
+            <select id="demFiltroStatus">
+              <option value="">Todos os status</option>
+              <option value="aberta">Aberta</option>
+              <option value="em_analise">Em análise</option>
+              <option value="alteracao_solicitada">Alteração solicitada</option>
+              <option value="aprovada">Aprovada</option>
+              <option value="enviada">Enviada</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" id="btnNovaDemanda">+ Nova demanda</button>
+      </div>
+
+      <div id="listaDemandasAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
     <!-- TUTORIAIS -->
     <section class="tab-section" id="tab-tutoriais">
       <h2>Tutoriais</h2>
@@ -610,6 +650,89 @@
       <button class="btn" id="btnAddCliente" style="flex:1.4;">Cadastrar cliente</button>
     </div>
     <p class="success-msg" id="clienteMsg"></p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cadastroDesignerModal" style="display:none;">
+  <div class="modal-box">
+    <h3 style="margin-bottom:16px;">Nova designer</h3>
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="dsNome">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="dsEmail">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btnFecharCadastroDesigner">Cancelar</button>
+      <button class="btn" id="btnAddDesigner" style="flex:1.4;">Cadastrar designer</button>
+    </div>
+    <p class="success-msg" id="designerMsg"></p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="novaDemandaModal" style="display:none;">
+  <div class="modal-box" style="width:380px;">
+    <h3 style="margin-bottom:16px;">Nova demanda de arte</h3>
+    <div class="field">
+      <label>Cliente</label>
+      <select id="ndCliente"><option value="">Selecione o cliente</option></select>
+    </div>
+    <div class="field">
+      <label>Designer responsável</label>
+      <select id="ndDesigner"><option value="">Selecione a designer</option></select>
+    </div>
+    <div class="field">
+      <label>Descrição</label>
+      <textarea id="ndDescricao" rows="2" placeholder="Ex: 3 artes de feed pro lançamento do serviço X"></textarea>
+    </div>
+    <div class="field">
+      <label>Prazo de entrega (opcional)</label>
+      <input type="date" id="ndPrazo">
+    </div>
+    <div class="field">
+      <label>Referências / anexos (opcional)</label>
+      <input type="text" id="ndReferencias" placeholder="Link de referência (Pinterest, Drive, print...)">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <div class="field" style="max-width:100px;">
+        <label>Qtd (opcional)</label>
+        <input type="number" id="ndQuantidade" min="1">
+      </div>
+      <div class="field" style="flex:1;">
+        <label>Formato</label>
+        <select id="ndFormato">
+          <option value="">-</option>
+          <option value="feed">Posts de feed</option>
+          <option value="stories">Stories</option>
+          <option value="reels_capa">Reels (capa)</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <p class="error-msg" id="ndErro" style="display:none;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="ndCancelar">Cancelar</button>
+      <button class="btn" id="ndConfirmar" style="flex:1.4;">Criar demanda</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="revisarDemandaModal" style="display:none;">
+  <div class="modal-box" style="width:380px;">
+    <h3 style="margin-bottom:2px;">Revisar arte</h3>
+    <p class="meta" id="rdSub" style="margin-bottom:14px;"></p>
+    <p style="margin-bottom:14px;"><a href="#" id="rdLinkDrive" target="_blank" rel="noopener" class="btn btn-outline" style="display:inline-flex;">Abrir arquivo no Drive</a></p>
+    <div class="field">
+      <label>Feedback (preencha se for pedir alteração)</label>
+      <textarea id="rdFeedback" rows="2" placeholder="O que precisa mudar"></textarea>
+    </div>
+    <p class="error-msg" id="rdErro" style="display:none;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="rdPedirAlteracao">Pedir alteração</button>
+      <button class="btn" id="rdAprovar" style="flex:1.4;">Aprovar</button>
+    </div>
   </div>
 </div>
 
@@ -934,7 +1057,7 @@ auth.onAuthStateChanged(async (user) => {
   currentUser = user;
   const doc = await db.collection('clientes').doc(user.uid).get();
   if (!doc.exists || doc.data().isAdmin !== true) {
-    window.location.href = 'cliente.html';
+    window.location.href = doc.exists && doc.data().tipo === 'designer' ? 'designer.html' : 'cliente.html';
     return;
   }
 
@@ -1720,6 +1843,333 @@ document.getElementById('btnAddCliente').addEventListener('click', async () => {
   }
 });
 
+// --- CADASTRAR DESIGNER ---
+let designersCache = {};
+
+document.getElementById('btnAbrirCadastroDesigner').addEventListener('click', () => {
+  document.getElementById('cadastroDesignerModal').style.display = 'flex';
+});
+document.getElementById('btnFecharCadastroDesigner').addEventListener('click', () => {
+  document.getElementById('cadastroDesignerModal').style.display = 'none';
+});
+
+document.getElementById('btnAddDesigner').addEventListener('click', async () => {
+  const nome = document.getElementById('dsNome').value.trim();
+  const email = document.getElementById('dsEmail').value.trim();
+  if (!nome || !email) return;
+
+  const btn = document.getElementById('btnAddDesigner');
+  const msg = document.getElementById('designerMsg');
+  btn.disabled = true;
+  btn.textContent = 'Cadastrando...';
+  msg.textContent = '';
+
+  try {
+    const appSecundario = firebase.apps.find(a => a.name === 'ClienteSecundario') || firebase.initializeApp(firebaseConfig, 'ClienteSecundario');
+    const authSecundario = appSecundario.auth();
+    const cred = await authSecundario.createUserWithEmailAndPassword(email, gerarSenhaTemporaria());
+    const uid = cred.user.uid;
+    await authSecundario.signOut();
+
+    await db.collection('clientes').doc(uid).set({
+      nome, email,
+      tipo: 'designer',
+      isAdmin: false,
+      dataCriacao: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await auth.sendPasswordResetEmail(email);
+
+    document.getElementById('dsNome').value = '';
+    document.getElementById('dsEmail').value = '';
+    document.getElementById('cadastroDesignerModal').style.display = 'none';
+    msg.className = 'success-msg';
+    msg.textContent = 'Designer cadastrada! Email de acesso enviado.';
+    setTimeout(() => msg.textContent = '', 4000);
+  } catch (err) {
+    msg.className = 'error-msg';
+    if (err.code === 'auth/email-already-in-use') msg.textContent = 'Já existe uma conta com esse email.';
+    else if (err.code === 'auth/invalid-email') msg.textContent = 'Digite um email válido.';
+    else msg.textContent = 'Não foi possível cadastrar. Tente novamente.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Cadastrar designer';
+  }
+});
+
+function renderListaDesigners() {
+  const wrap = document.getElementById('listaDesigners');
+  const ids = Object.keys(designersCache);
+  if (ids.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">Nenhuma designer cadastrada ainda.</div>';
+    return;
+  }
+  wrap.innerHTML = ids.map(uid => {
+    const d = designersCache[uid];
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div>
+        <div style="font-weight:600;">${escapeHtml(d.nome || '')}</div>
+        <div class="meta">${escapeHtml(d.email || '')}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function carregarDesigners() {
+  db.collection('clientes').where('tipo', '==', 'designer').onSnapshot(snap => {
+    designersCache = {};
+    const selectDemanda = document.getElementById('ndDesigner');
+    const selectFiltro = document.getElementById('demFiltroDesigner');
+    const filtroAtual = selectFiltro.value;
+    selectDemanda.innerHTML = '<option value="">Selecione a designer</option>';
+    selectFiltro.innerHTML = '<option value="">Todas</option>';
+
+    snap.forEach(docSnap => {
+      const d = docSnap.data();
+      designersCache[docSnap.id] = d;
+
+      const opt1 = document.createElement('option');
+      opt1.value = docSnap.id;
+      opt1.textContent = d.nome;
+      selectDemanda.appendChild(opt1);
+
+      const opt2 = document.createElement('option');
+      opt2.value = docSnap.id;
+      opt2.textContent = d.nome;
+      selectFiltro.appendChild(opt2);
+    });
+
+    selectFiltro.value = filtroAtual;
+    renderListaDesigners();
+    if (typeof renderDemandasAdmin === 'function') {
+      renderDemandasAdmin(
+        document.getElementById('demFiltroDesigner').value,
+        document.getElementById('demFiltroCliente').value,
+        document.getElementById('demFiltroStatus').value
+      );
+    }
+  });
+}
+carregarDesigners();
+
+// --- DEMANDAS DE ARTE ---
+let demandasCache = {};
+let demandaRevisandoId = null;
+
+function demStatusInfo(status) {
+  const mapa = {
+    aberta: { texto: 'Aberta', classe: 'badge-neutral' },
+    em_analise: { texto: 'Em análise', classe: 'badge-pending' },
+    alteracao_solicitada: { texto: 'Alteração solicitada', classe: 'badge-rejected' },
+    aprovada: { texto: 'Aprovada', classe: 'badge-approved' },
+    enviada: { texto: 'Enviada ao cliente', classe: 'badge-answered' }
+  };
+  return mapa[status] || { texto: status, classe: 'badge-neutral' };
+}
+
+function demFormatoLabel(formato) {
+  const mapa = { feed: 'Posts de feed', stories: 'Stories', reels_capa: 'Reels (capa)', outro: 'Outro' };
+  return mapa[formato] || '';
+}
+
+document.getElementById('btnNovaDemanda').addEventListener('click', () => {
+  const select = document.getElementById('ndCliente');
+  select.innerHTML = '<option value="">Selecione o cliente</option>';
+  clientesTodos.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.empresa || c.nome;
+    select.appendChild(opt);
+  });
+  document.getElementById('ndDesigner').value = '';
+  document.getElementById('ndDescricao').value = '';
+  document.getElementById('ndPrazo').value = '';
+  document.getElementById('ndReferencias').value = '';
+  document.getElementById('ndQuantidade').value = '';
+  document.getElementById('ndFormato').value = '';
+  document.getElementById('ndErro').style.display = 'none';
+  document.getElementById('novaDemandaModal').style.display = 'flex';
+});
+document.getElementById('ndCancelar').addEventListener('click', () => {
+  document.getElementById('novaDemandaModal').style.display = 'none';
+});
+
+document.getElementById('ndConfirmar').addEventListener('click', async () => {
+  const clienteId = document.getElementById('ndCliente').value;
+  const designerId = document.getElementById('ndDesigner').value;
+  const descricao = document.getElementById('ndDescricao').value.trim();
+  const prazo = document.getElementById('ndPrazo').value || null;
+  const referencias = document.getElementById('ndReferencias').value.trim() || null;
+  const quantidadeInput = document.getElementById('ndQuantidade').value;
+  const quantidade = quantidadeInput ? parseInt(quantidadeInput, 10) : null;
+  const formato = document.getElementById('ndFormato').value || null;
+  const erro = document.getElementById('ndErro');
+
+  if (!clienteId || !designerId || !descricao) {
+    erro.textContent = 'Preencha cliente, designer e descrição.';
+    erro.style.display = 'block';
+    return;
+  }
+  erro.style.display = 'none';
+
+  const btn = document.getElementById('ndConfirmar');
+  btn.disabled = true;
+  btn.textContent = 'Criando...';
+
+  try {
+    const cliente = clientesCache[clienteId] || {};
+    const designer = designersCache[designerId] || {};
+    await db.collection('demandasArte').add({
+      clienteId,
+      clienteNome: cliente.empresa || cliente.nome || 'Cliente',
+      designerId,
+      designerNome: designer.nome || 'Designer',
+      descricao,
+      prazo,
+      referencias,
+      quantidade,
+      formato,
+      status: 'aberta',
+      linkDrive: '',
+      feedbackAdmin: '',
+      criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('novaDemandaModal').style.display = 'none';
+    if (typeof showToast === 'function') showToast('Demanda criada!', 'success');
+  } catch (err) {
+    erro.textContent = 'Não foi possível criar a demanda. Tente novamente.';
+    erro.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Criar demanda';
+  }
+});
+
+function renderDemandasAdmin(filtroDesigner, filtroCliente, filtroStatus) {
+  const wrap = document.getElementById('listaDemandasAdmin');
+  if (!wrap) return;
+  let lista = Object.keys(demandasCache).map(id => ({ id, ...demandasCache[id] }));
+  if (filtroDesigner) lista = lista.filter(d => d.designerId === filtroDesigner);
+  if (filtroCliente) lista = lista.filter(d => d.clienteId === filtroCliente);
+  if (filtroStatus) lista = lista.filter(d => d.status === filtroStatus);
+
+  if (lista.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">Nenhuma demanda encontrada.</div>';
+    return;
+  }
+
+  lista.sort((a, b) => {
+    const ta = a.criadoEm && a.criadoEm.toDate ? a.criadoEm.toDate().getTime() : 0;
+    const tb = b.criadoEm && b.criadoEm.toDate ? b.criadoEm.toDate().getTime() : 0;
+    return tb - ta;
+  });
+
+  wrap.innerHTML = lista.map(d => {
+    const info = demStatusInfo(d.status);
+    let detalhes = '';
+    if (d.prazo) detalhes += `<div class="meta">Prazo: ${escapeHtml(d.prazo)}</div>`;
+    if (d.quantidade) detalhes += `<div class="meta">Qtd: ${escapeHtml(String(d.quantidade))}${d.formato ? ' · ' + escapeHtml(demFormatoLabel(d.formato)) : ''}</div>`;
+    if (d.referencias) detalhes += `<div class="meta">Referência: ${escapeHtml(d.referencias)}</div>`;
+    if (d.feedbackAdmin && d.status === 'alteracao_solicitada') detalhes += `<div class="meta" style="color:var(--red);">Feedback: ${escapeHtml(d.feedbackAdmin)}</div>`;
+
+    const botaoRevisar = d.status === 'em_analise'
+      ? `<button class="btn btn-outline" data-revisar="${d.id}" style="margin-top:10px;">Revisar</button>`
+      : '';
+
+    return `<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:600;">${escapeHtml(d.clienteNome)}</div>
+          <div class="meta">${escapeHtml(d.designerNome)}</div>
+        </div>
+        <span class="badge ${info.classe}">${info.texto}</span>
+      </div>
+      <p style="margin:10px 0 2px;">${escapeHtml(d.descricao)}</p>
+      ${detalhes}
+      ${botaoRevisar}
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-revisar]').forEach(btn => {
+    btn.addEventListener('click', () => abrirRevisarDemanda(btn.getAttribute('data-revisar')));
+  });
+}
+
+function abrirRevisarDemanda(id) {
+  const d = demandasCache[id];
+  if (!d) return;
+  demandaRevisandoId = id;
+  document.getElementById('rdSub').textContent = d.clienteNome + ' · ' + d.designerNome;
+  document.getElementById('rdLinkDrive').href = d.linkDrive || '#';
+  document.getElementById('rdFeedback').value = '';
+  document.getElementById('rdErro').style.display = 'none';
+  document.getElementById('revisarDemandaModal').style.display = 'flex';
+}
+
+document.getElementById('rdAprovar').addEventListener('click', async () => {
+  if (!demandaRevisandoId) return;
+  try {
+    await db.collection('demandasArte').doc(demandaRevisandoId).update({
+      status: 'aprovada',
+      feedbackAdmin: '',
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('revisarDemandaModal').style.display = 'none';
+    if (typeof showToast === 'function') showToast('Arte aprovada!', 'success');
+  } catch (err) {
+    const erro = document.getElementById('rdErro');
+    erro.textContent = 'Não foi possível aprovar. Tente novamente.';
+    erro.style.display = 'block';
+  }
+});
+
+document.getElementById('rdPedirAlteracao').addEventListener('click', async () => {
+  if (!demandaRevisandoId) return;
+  const feedback = document.getElementById('rdFeedback').value.trim();
+  const erro = document.getElementById('rdErro');
+  if (!feedback) {
+    erro.textContent = 'Descreva o que precisa mudar.';
+    erro.style.display = 'block';
+    return;
+  }
+  try {
+    await db.collection('demandasArte').doc(demandaRevisandoId).update({
+      status: 'alteracao_solicitada',
+      feedbackAdmin: feedback,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('revisarDemandaModal').style.display = 'none';
+    if (typeof showToast === 'function') showToast('Alteração solicitada.', 'success');
+  } catch (err) {
+    erro.textContent = 'Não foi possível enviar. Tente novamente.';
+    erro.style.display = 'block';
+  }
+});
+
+['demFiltroDesigner', 'demFiltroCliente', 'demFiltroStatus'].forEach(idSel => {
+  document.getElementById(idSel).addEventListener('change', () => {
+    renderDemandasAdmin(
+      document.getElementById('demFiltroDesigner').value,
+      document.getElementById('demFiltroCliente').value,
+      document.getElementById('demFiltroStatus').value
+    );
+  });
+});
+
+function carregarDemandasAdmin() {
+  db.collection('demandasArte').onSnapshot(snap => {
+    demandasCache = {};
+    snap.forEach(docSnap => { demandasCache[docSnap.id] = docSnap.data(); });
+    renderDemandasAdmin(
+      document.getElementById('demFiltroDesigner').value,
+      document.getElementById('demFiltroCliente').value,
+      document.getElementById('demFiltroStatus').value
+    );
+  });
+}
+carregarDemandasAdmin();
+
 // --- Último acesso do cliente ---
 function diasDesdeAcesso(ultimoAcesso) {
   if (!ultimoAcesso) return null;
@@ -1803,7 +2253,8 @@ function carregarClientes() {
     clientesCache = {};
     clientesTodos = [];
     const selects = [document.getElementById('vClienteId'), document.getElementById('ggClienteId')];
-    animarNumero(document.getElementById('dashClientesTotal'), snap.size);
+    const totalClientesReais = snap.docs.filter(d => d.data().tipo !== 'designer').length;
+    animarNumero(document.getElementById('dashClientesTotal'), totalClientesReais);
 
     if (snap.empty) {
       renderListaClientes('');
@@ -1825,9 +2276,13 @@ function carregarClientes() {
     const filtroDuvidas = document.getElementById('duvFiltroCliente');
     const filtroDuvidasAtual = filtroDuvidas.value;
     filtroDuvidas.innerHTML = '<option value="">Todos os clientes</option>';
+    const filtroDemandas = document.getElementById('demFiltroCliente');
+    const filtroDemandasAtual = filtroDemandas.value;
+    filtroDemandas.innerHTML = '<option value="">Todos os clientes</option>';
 
     snap.forEach(docSnap => {
       const c = docSnap.data();
+      if (c.tipo === 'designer') return;
       clientesCache[docSnap.id] = c;
       clientesTodos.push({ id: docSnap.id, ...c });
 
@@ -1852,6 +2307,11 @@ function carregarClientes() {
       optFiltroDuv.value = docSnap.id;
       optFiltroDuv.textContent = c.empresa || c.nome;
       filtroDuvidas.appendChild(optFiltroDuv);
+
+      const optFiltroDem = document.createElement('option');
+      optFiltroDem.value = docSnap.id;
+      optFiltroDem.textContent = c.empresa || c.nome;
+      filtroDemandas.appendChild(optFiltroDem);
     });
 
     clientesTodos.sort((a, b) => (a.empresa || a.nome || '').localeCompare(b.empresa || b.nome || ''));
@@ -1860,6 +2320,7 @@ function carregarClientes() {
     filtroEntregas.value = filtroEntregasAtual;
     filtroPagamentos.value = filtroPagamentosAtual;
     filtroDuvidas.value = filtroDuvidasAtual;
+    filtroDemandas.value = filtroDemandasAtual;
     document.getElementById('ggClienteId').value = ggAtual;
 
     if (document.getElementById('ggClienteId').value) {

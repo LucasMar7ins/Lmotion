@@ -16,6 +16,7 @@ Essas regras garantem que:
 - O admin também pode adicionar materiais em nome de um cliente (ex: quando ele manda pelo WhatsApp).
 - Pagamentos são de uso exclusivo do admin — o cliente nunca lê nem escreve nada nessa coleção.
 - Métricas de Instagram, TikTok e YouTube (crescimento de seguidores/inscritos) são de uso exclusivo do admin.
+- Designers (conta com tipo "designer" na coleção clientes) só leem e atualizam as próprias demandas de arte, nunca a coleção de clientes (o nome do cliente fica copiado dentro da própria demanda, pra designer nunca precisar enxergar dados sensíveis de cliente como valor combinado).
 
 ---
 
@@ -32,6 +33,12 @@ service cloud.firestore {
       return logado() &&
         exists(/databases/$(database)/documents/clientes/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/clientes/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isDesigner() {
+      return logado() &&
+        exists(/databases/$(database)/documents/clientes/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/clientes/$(request.auth.uid)).data.tipo == 'designer';
     }
 
     // Cada cliente lê o próprio cadastro; admin lê e escreve tudo.
@@ -125,6 +132,22 @@ service cloud.firestore {
     // Anotações do calendário do Dashboard — cada admin só vê e escreve as próprias
     match /notasDashboard/{uid}/dias/{id} {
       allow read, write: if logado() && request.auth.uid == uid && isAdmin();
+    }
+
+    // Demandas de arte — o admin cria e revisa; cada designer só vê e atualiza
+    // (link do Drive + status) as próprias demandas, nunca as de outra designer.
+    // O nome do cliente fica copiado dentro da demanda (campo clienteNome) pra
+    // designer nunca precisar de acesso à coleção clientes.
+    match /demandasArte/{id} {
+      allow read: if isAdmin() || (logado() && resource.data.designerId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        logado() &&
+        resource.data.designerId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkDrive', 'status', 'atualizadoEm']) &&
+        request.resource.data.status == 'em_analise'
+      );
+      allow delete: if isAdmin();
     }
   }
 }

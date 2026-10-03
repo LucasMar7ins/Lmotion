@@ -149,8 +149,11 @@ form.addEventListener('submit', async (e) => {
 async function redirecionar(uid) {
   try {
     const doc = await db.collection('clientes').doc(uid).get();
-    if (doc.exists && doc.data().isAdmin === true) {
+    const dados = doc.exists ? doc.data() : {};
+    if (dados.isAdmin === true) {
       window.location.href = 'admin.html';
+    } else if (dados.tipo === 'designer') {
+      window.location.href = 'designer.html';
     } else {
       window.location.href = 'cliente.html';
     }

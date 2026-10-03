@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<title>Portal Lmotion — Design</title>
+<link rel="stylesheet" href="style.css?v=22">
+</head>
+<body>
+
+<button class="menu-toggle-mobile" id="menuToggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="app-shell">
+  <svg class="shell-grain" aria-hidden="true"><filter id="shellGrainFilter"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#shellGrainFilter)"/></svg>
+  <div class="shell-glow shell-glow-1"></div>
+  <div class="shell-glow shell-glow-2"></div>
+  <div class="shell-glow shell-glow-3"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand-row">
+      <img src="../assets/logo.png" alt="" class="brand-logo">
+      <div class="brand">Portal <span>Lmotion</span></div>
+    </div>
+    <div class="role-tag" id="designerNome">Carregando...</div>
+
+    <div class="nav-item active" data-tab="demandas" style="position:relative;">Minhas demandas<span id="demandasNavBadge" class="nav-badge" style="display:none;"></span></div>
+
+    <div class="logout">
+      <button class="btn btn-outline btn-block" id="btnSair">Sair</button>
+    </div>
+  </aside>
+
+  <main class="main main-wide">
+
+    <section class="tab-section active" id="tab-demandas">
+      <h1 style="font-size:1.6rem;font-weight:700;margin:0 0 6px;" id="demandasSaudacao">Olá</h1>
+      <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:20px;max-width:560px;">Aqui ficam as demandas de arte que a Lmotion te atribuiu. Quando terminar, cole o link do Drive e aguarde a aprovação.</p>
+
+      <div id="listaDemandasDesigner"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal-overlay" id="sairModal" style="display:none;">
+  <div class="modal-box">
+    <h3>Sair da conta</h3>
+    <p>Tem certeza que deseja sair? Você vai precisar entrar novamente com seu email e senha.</p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="sairModalConfirmar">Sair</button>
+      <button class="btn btn-outline" id="sairModalCancelar">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="enviarLinkModal" style="display:none;">
+  <div class="modal-box" style="width:380px;">
+    <h3 style="margin-bottom:2px;">Enviar arte pra aprovação</h3>
+    <p class="meta" id="elSub" style="margin-bottom:16px;"></p>
+    <div class="field">
+      <label>Link do Drive</label>
+      <input type="text" id="elLink" placeholder="https://drive.google.com/...">
+    </div>
+    <p class="error-msg" id="elErro" style="display:none;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="elCancelar">Cancelar</button>
+      <button class="btn" id="elConfirmar" style="flex:1.4;">Enviar pra aprovação</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+let currentUser = null;
+let demandasDesignerCache = {};
+let demandaEnviandoId = null;
+
+// Escapa texto livre antes de inserir via innerHTML, pra evitar que HTML/JS
+// digitado num campo rode na tela de quem está vendo.
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+// Só aceita links http/https como href; qualquer outra coisa (ex: javascript:) vira "#".
+function safeUrl(url) {
+  const u = String(url == null ? '' : url).trim();
+  return /^https?:\/\//i.test(u) ? u : '#';
+}
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error(e.reason);
+  showToast('Não foi possível salvar. Verifique sua conexão e tente novamente.', 'error');
+  e.preventDefault();
+});
+
+function showToast(msg, tipo) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (tipo === 'info' ? ' toast-info' : tipo === 'error' ? ' toast-error' : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('toast-show'));
+  setTimeout(() => {
+    el.classList.remove('toast-show');
+    setTimeout(() => el.remove(), 300);
+  }, 3200);
+}
+
+function saudacaoPorHorario() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarBackdrop').classList.toggle('open');
+});
+document.getElementById('sidebarBackdrop').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
+});
+
+document.getElementById('btnSair').addEventListener('click', () => {
+  document.getElementById('sairModal').style.display = 'flex';
+});
+document.getElementById('sairModalCancelar').addEventListener('click', () => {
+  document.getElementById('sairModal').style.display = 'none';
+});
+document.getElementById('sairModalConfirmar').addEventListener('click', () => {
+  auth.signOut().then(() => window.location.href = 'index.html');
+});
+
+function demStatusInfo(status) {
+  const mapa = {
+    aberta: { texto: 'Nova', classe: 'badge-neutral' },
+    em_analise: { texto: 'Aguardando aprovação', classe: 'badge-pending' },
+    alteracao_solicitada: { texto: 'Alteração solicitada', classe: 'badge-rejected' },
+    aprovada: { texto: 'Aprovada', classe: 'badge-approved' },
+    enviada: { texto: 'Enviada ao cliente', classe: 'badge-answered' }
+  };
+  return mapa[status] || { texto: status, classe: 'badge-neutral' };
+}
+function demFormatoLabel(formato) {
+  const mapa = { feed: 'Posts de feed', stories: 'Stories', reels_capa: 'Reels (capa)', outro: 'Outro' };
+  return mapa[formato] || '';
+}
+
+function renderDemandasDesigner() {
+  const wrap = document.getElementById('listaDemandasDesigner');
+  const lista = Object.keys(demandasDesignerCache).map(id => ({ id, ...demandasDesignerCache[id] }));
+
+  const pendentes = lista.filter(d => d.status === 'aberta' || d.status === 'alteracao_solicitada').length;
+  const badge = document.getElementById('demandasNavBadge');
+  if (pendentes > 0) {
+    badge.textContent = pendentes;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  if (lista.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">Nenhuma demanda por enquanto.</div>';
+    return;
+  }
+
+  const ordem = { alteracao_solicitada: 0, aberta: 1, em_analise: 2, aprovada: 3, enviada: 4 };
+  lista.sort((a, b) => (ordem[a.status] ?? 9) - (ordem[b.status] ?? 9));
+
+  wrap.innerHTML = lista.map(d => {
+    const info = demStatusInfo(d.status);
+    let detalhes = '';
+    if (d.prazo) detalhes += `<div class="meta">Prazo: ${escapeHtml(d.prazo)}</div>`;
+    if (d.quantidade) detalhes += `<div class="meta">Qtd: ${escapeHtml(String(d.quantidade))}${d.formato ? ' · ' + escapeHtml(demFormatoLabel(d.formato)) : ''}</div>`;
+    if (d.referencias) detalhes += `<div class="meta">Referência: <a href="${safeUrl(d.referencias)}" target="_blank" rel="noopener" style="color:var(--purple-light);">${escapeHtml(d.referencias)}</a></div>`;
+    if (d.feedbackAdmin && d.status === 'alteracao_solicitada') detalhes += `<div class="meta" style="color:var(--red);">Feedback da Lmotion: ${escapeHtml(d.feedbackAdmin)}</div>`;
+
+    const podeEnviar = d.status === 'aberta' || d.status === 'alteracao_solicitada';
+    const botao = podeEnviar
+      ? `<button class="btn" data-enviar="${d.id}" style="margin-top:10px;">${d.status === 'alteracao_solicitada' ? 'Reenviar link' : 'Enviar link do Drive'}</button>`
+      : (d.linkDrive ? `<a href="${safeUrl(d.linkDrive)}" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:10px;display:inline-flex;">Ver arquivo enviado</a>` : '');
+
+    return `<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div style="font-weight:600;">${escapeHtml(d.clienteNome)}</div>
+        <span class="badge ${info.classe}">${info.texto}</span>
+      </div>
+      <p style="margin:10px 0 2px;">${escapeHtml(d.descricao)}</p>
+      ${detalhes}
+      ${botao}
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-enviar]').forEach(btn => {
+    btn.addEventListener('click', () => abrirEnviarLink(btn.getAttribute('data-enviar')));
+  });
+}
+
+function abrirEnviarLink(id) {
+  const d = demandasDesignerCache[id];
+  if (!d) return;
+  demandaEnviandoId = id;
+  document.getElementById('elSub').textContent = d.clienteNome + ' · ' + d.descricao;
+  document.getElementById('elLink').value = d.linkDrive || '';
+  document.getElementById('elErro').style.display = 'none';
+  document.getElementById('enviarLinkModal').style.display = 'flex';
+}
+document.getElementById('elCancelar').addEventListener('click', () => {
+  document.getElementById('enviarLinkModal').style.display = 'none';
+});
+document.getElementById('elConfirmar').addEventListener('click', async () => {
+  const link = document.getElementById('elLink').value.trim();
+  const erro = document.getElementById('elErro');
+  if (!/^https?:\/\//i.test(link)) {
+    erro.textContent = 'Cole um link válido (começando com http:// ou https://).';
+    erro.style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('elConfirmar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    await db.collection('demandasArte').doc(demandaEnviandoId).update({
+      linkDrive: link,
+      status: 'em_analise',
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById('enviarLinkModal').style.display = 'none';
+    showToast('Enviado pra aprovação!', 'success');
+  } catch (err) {
+    erro.textContent = 'Não foi possível enviar. Tente novamente.';
+    erro.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar pra aprovação';
+  }
+});
+
+function carregarDemandasDesigner() {
+  db.collection('demandasArte').where('designerId', '==', currentUser.uid).onSnapshot(snap => {
+    demandasDesignerCache = {};
+    snap.forEach(docSnap => { demandasDesignerCache[docSnap.id] = docSnap.data(); });
+    renderDemandasDesigner();
+  });
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
+  }
+  currentUser = user;
+  const doc = await db.collection('clientes').doc(user.uid).get();
+  if (!doc.exists || doc.data().tipo !== 'designer') {
+    window.location.href = (doc.exists && doc.data().isAdmin === true) ? 'admin.html' : 'cliente.html';
+    return;
+  }
+  const dados = doc.data();
+  document.getElementById('designerNome').textContent = dados.nome || user.email;
+  document.getElementById('demandasSaudacao').innerHTML = saudacaoPorHorario() + ', <span style="color:var(--purple-light)">' + (dados.nome || 'designer') + '</span>';
+  carregarDemandasDesigner();
+});
+</script>
+
+</body>
+</html>
