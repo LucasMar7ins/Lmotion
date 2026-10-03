@@ -38,10 +38,10 @@
   <main class="main main-wide">
 
     <section class="tab-section active" id="tab-demandas">
-      <h1 style="font-size:1.6rem;font-weight:700;margin:0 0 6px;" id="demandasSaudacao">Olá</h1>
-      <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:20px;max-width:560px;">Aqui ficam as demandas de arte que a Lmotion te atribuiu. Quando terminar, cole o link do Drive e aguarde a aprovação.</p>
+      <h1 style="font-size:1.8rem;font-weight:700;margin:0 0 10px;" id="demandasSaudacao">Olá</h1>
+      <p style="color:var(--gray);font-size:1rem;line-height:1.7;margin-bottom:32px;max-width:720px;">Aqui ficam as demandas de arte que a Lmotion te atribuiu. Quando terminar, cole o link do Drive e aguarde a aprovação.</p>
 
-      <div id="listaDemandasDesigner"><div class="empty-state">Carregando...</div></div>
+      <div id="listaDemandasDesigner" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;"><div class="empty-state">Carregando...</div></div>
     </section>
 
   </main>
@@ -170,7 +170,7 @@ function renderDemandasDesigner() {
   }
 
   if (lista.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">Nenhuma demanda por enquanto.</div>';
+    wrap.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">Nenhuma demanda por enquanto.</div>';
     return;
   }
 
@@ -190,7 +190,7 @@ function renderDemandasDesigner() {
       ? `<button class="btn" data-enviar="${d.id}" style="margin-top:10px;">${d.status === 'alteracao_solicitada' ? 'Reenviar link' : 'Enviar link do Drive'}</button>`
       : (d.linkDrive ? `<a href="${safeUrl(d.linkDrive)}" target="_blank" rel="noopener" class="btn btn-outline" style="margin-top:10px;display:inline-flex;">Ver arquivo enviado</a>` : '');
 
-    return `<div class="card" style="margin-bottom:12px;">
+    return `<div class="card" style="margin-bottom:0;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
         <div style="font-weight:600;">${escapeHtml(d.clienteNome)}</div>
         <span class="badge ${info.classe}">${info.texto}</span>
@@ -267,7 +267,7 @@ auth.onAuthStateChanged(async (user) => {
   }
   const dados = doc.data();
   document.getElementById('designerNome').textContent = dados.nome || user.email;
-  document.getElementById('demandasSaudacao').innerHTML = saudacaoPorHorario() + ', <span style="color:var(--purple-light)">' + (dados.nome || 'designer') + '</span>';
+  document.getElementById('demandasSaudacao').innerHTML = 'Olá, <span style="color:var(--purple-light)">' + (dados.nome || 'designer') + '</span>';
   carregarDemandasDesigner();
 });
 </script>
