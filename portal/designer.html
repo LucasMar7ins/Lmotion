@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Design</title>
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -141,6 +141,11 @@ document.getElementById('sairModalConfirmar').addEventListener('click', () => {
   auth.signOut().then(() => window.location.href = 'index.html');
 });
 
+// "2026-10-25" -> "25/10/2026" (o campo de data guarda no formato ISO)
+function formatarPrazo(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || '');
+}
 function demStatusInfo(status) {
   const mapa = {
     aberta: { texto: 'Nova', classe: 'badge-neutral' },
@@ -180,7 +185,7 @@ function renderDemandasDesigner() {
   wrap.innerHTML = lista.map(d => {
     const info = demStatusInfo(d.status);
     let detalhes = '';
-    if (d.prazo) detalhes += `<div class="meta">Prazo: ${escapeHtml(d.prazo)}</div>`;
+    if (d.prazo) detalhes += `<div class="meta">Prazo: ${escapeHtml(formatarPrazo(d.prazo))}</div>`;
     if (d.quantidade) detalhes += `<div class="meta">Qtd: ${escapeHtml(String(d.quantidade))}${d.formato ? ' · ' + escapeHtml(demFormatoLabel(d.formato)) : ''}</div>`;
     if (d.referencias) detalhes += `<div class="meta">Referência: <a href="${safeUrl(d.referencias)}" target="_blank" rel="noopener" style="color:var(--purple-light);">${escapeHtml(d.referencias)}</a></div>`;
     if (d.feedbackAdmin && d.status === 'alteracao_solicitada') detalhes += `<div class="meta" style="color:var(--red);">Feedback da Lmotion: ${escapeHtml(d.feedbackAdmin)}</div>`;

@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -36,6 +36,7 @@
     <div class="nav-item" data-tab="materiais">Materiais da marca</div>
     <div class="nav-item" data-tab="duvidas" style="position:relative;">Dúvidas<span id="duvidasNavDot" class="pulse-dot" style="display:none;position:absolute;top:14px;right:14px;width:7px;height:7px;border-radius:50%;background:var(--purple-light);"></span></div>
     <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
+    <div class="nav-item" id="navReverTour" role="button" tabindex="0" style="display:none;color:var(--purple-light);">Rever passo a passo</div>
 
     <div class="logout">
       <button class="btn btn-outline btn-block" id="btnSair">Sair</button>
@@ -63,6 +64,22 @@
         </div>
       </div>
       <p style="color:var(--gray);font-size:0.95rem;line-height:1.6;margin-bottom:20px;max-width:560px;">Este é o seu espaço exclusivo com a Lmotion. Aqui você acompanha de perto toda a produção do marketing digital da sua marca: recebe o cronograma completo de conteúdo, com os vídeos e as datas de postagem já definidos, e pode pedir ajustes sempre que sentir necessidade. Tudo em um só lugar, feito pra facilitar o seu dia a dia.</p>
+
+      <div class="card onb-card" id="onbChecklistCard" style="display:none;">
+        <div class="onb-head">
+          <h3 style="margin:0;font-size:1rem;">Primeiros passos</h3>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <span class="meta" id="onbContagem">0 de 0</span>
+            <button type="button" class="onb-link" id="onbOcultar" style="padding:4px 2px;">Ocultar</button>
+          </div>
+        </div>
+        <div class="onb-bar"><div id="onbBarra" style="width:0%;"></div></div>
+        <div id="onbItens"></div>
+        <div id="onbConcluido" style="display:none;margin-top:14px;">
+          <div style="color:var(--purple-light);font-size:0.88rem;font-weight:600;">Tudo pronto. Você já domina o portal.</div>
+          <button type="button" class="btn" id="onbConcluir" style="margin-top:10px;padding:9px 20px;">Concluir</button>
+        </div>
+      </div>
 
       <div class="card" id="inicioDuvidaCard" style="display:none;background:rgba(155,107,242,0.08);border-color:rgba(155,107,242,0.3);cursor:pointer;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -450,6 +467,22 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="onbModal" style="display:none;z-index:1400;" role="dialog" aria-modal="true" aria-labelledby="onbTitulo">
+  <div class="modal-box onb-box">
+    <div class="onb-ic" id="onbIcone" aria-hidden="true"></div>
+    <h3 id="onbTitulo"></h3>
+    <div class="onb-txt" id="onbTexto"></div>
+    <div class="onb-dots" id="onbDots" aria-hidden="true"></div>
+    <div class="onb-actions">
+      <button type="button" class="onb-link" id="onbPular">Pular</button>
+      <div class="onb-nav-btns">
+        <button type="button" class="btn btn-outline" id="onbVoltar" style="display:none;">Voltar</button>
+        <button type="button" class="btn" id="onbProximo">Próximo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="sairModal" style="display:none;">
   <div class="modal-box">
     <h3>Sair da conta</h3>
@@ -613,6 +646,7 @@ auth.onAuthStateChanged(async (user) => {
     renderGravacao(dados);
     renderGravacaoTab(dados);
     renderBriefingCliente(dados.briefing || null);
+    onbIniciar(dados);
   }
 
   carregarVideos();
@@ -621,6 +655,149 @@ auth.onAuthStateChanged(async (user) => {
   carregarTutoriais();
   renderInicioResumo();
 });
+
+// --- Tutorial de primeiro acesso (boas-vindas em passos + checklist) ---
+// O estado fica em clientes/{uid}.onboarding (vale em qualquer aparelho). Uma cópia
+// no localStorage evita o tutorial reaparecer enquanto a regra do Firestore não estiver publicada.
+const ONB_ICONES = {
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  video: '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  chat: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>'
+};
+function onbIconeSvg(nome, tam) {
+  return '<svg width="' + tam + '" height="' + tam + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ONB_ICONES[nome] + '</svg>';
+}
+const ONB_PASSOS = [
+  { icone: 'star', titulo: 'Bem-vindo ao Portal Lmotion', texto: 'Aqui você acompanha toda a produção do seu conteúdo em um só lugar. Vamos te mostrar rapidinho como funciona.' },
+  { icone: 'video', titulo: 'Seus vídeos', texto: 'Na aba Vídeos você assiste cada vídeo entregue e aprova ou pede ajustes direto na página, sem precisar mandar mensagem.' },
+  { icone: 'calendar', titulo: 'Calendário', texto: 'Veja em que dia cada vídeo está previsto para ir ao ar e acompanhe tudo o que já foi publicado.' },
+  { icone: 'check', titulo: 'Gravação', texto: 'Confirme sua presença nas gravações marcadas. Se precisar desmarcar, avise com pelo menos 24 horas de antecedência.' },
+  { icone: 'briefcase', titulo: 'Sobre o negócio e materiais', texto: 'Conte um pouco sobre a sua empresa (leva uns 5 minutos) e envie logo e referências na aba Materiais da marca. Quanto mais a gente souber, melhor fica o conteúdo.' },
+  { icone: 'chat', titulo: 'Ficou com dúvida?', texto: 'Mande sua pergunta na aba Dúvidas e receba a resposta aqui mesmo, ou fale direto com a gente no WhatsApp. Para rever este passo a passo, use o menu à esquerda.' }
+];
+
+let onbEstado = {};
+let onbGravacoes = [];
+let onbQtdMateriais = 0;
+let onbPassoAtual = 0;
+let onbHabilitado = false;
+let onbAvaliou = false;
+const onbCarregado = { videos: false, materiais: false };
+
+function onbChaveLocal(nome) { return 'onb_' + (currentUser ? currentUser.uid : 'anon') + '_' + nome; }
+function onbFlag(nome) {
+  if (onbEstado && onbEstado[nome]) return true;
+  try { return localStorage.getItem(onbChaveLocal(nome)) === '1'; } catch (e) { return false; }
+}
+function onbSalvar(campos) {
+  onbEstado = Object.assign({}, onbEstado, campos);
+  try { Object.keys(campos).forEach(k => { if (campos[k]) localStorage.setItem(onbChaveLocal(k), '1'); }); } catch (e) {}
+  if (!currentUser) return;
+  db.collection('clientes').doc(currentUser.uid).set({ onboarding: onbEstado }, { merge: true }).catch(() => {});
+}
+
+function onbRenderPasso() {
+  const p = ONB_PASSOS[onbPassoAtual];
+  const ultimo = onbPassoAtual === ONB_PASSOS.length - 1;
+  document.getElementById('onbIcone').innerHTML = onbIconeSvg(p.icone, 28);
+  document.getElementById('onbTitulo').textContent = p.titulo;
+  document.getElementById('onbTexto').textContent = p.texto;
+  document.getElementById('onbVoltar').style.display = onbPassoAtual > 0 ? 'inline-flex' : 'none';
+  document.getElementById('onbProximo').textContent = ultimo ? 'Começar' : 'Próximo';
+  document.getElementById('onbPular').style.visibility = ultimo ? 'hidden' : 'visible';
+  document.getElementById('onbDots').innerHTML = ONB_PASSOS.map((_, i) => '<div class="onb-dot' + (i === onbPassoAtual ? ' on' : '') + '"></div>').join('');
+}
+function onbAbrirTour() {
+  onbPassoAtual = 0;
+  onbRenderPasso();
+  document.getElementById('onbModal').style.display = 'flex';
+  document.getElementById('onbProximo').focus();
+}
+function onbFecharTour() {
+  document.getElementById('onbModal').style.display = 'none';
+  if (!onbFlag('tourVisto')) onbSalvar({ tourVisto: true });
+}
+document.getElementById('onbProximo').addEventListener('click', () => {
+  if (onbPassoAtual < ONB_PASSOS.length - 1) { onbPassoAtual++; onbRenderPasso(); }
+  else onbFecharTour();
+});
+document.getElementById('onbVoltar').addEventListener('click', () => {
+  if (onbPassoAtual > 0) { onbPassoAtual--; onbRenderPasso(); }
+});
+document.getElementById('onbPular').addEventListener('click', onbFecharTour);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('onbModal').style.display === 'flex') onbFecharTour();
+});
+const navReverTour = document.getElementById('navReverTour');
+navReverTour.addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
+  onbAbrirTour();
+});
+navReverTour.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navReverTour.click(); }
+});
+
+function onbItens() {
+  const itens = [];
+  itens.push({ label: 'Preencher o Sobre o negócio', tab: 'negocio', done: !!(ultimoBriefingCliente && Object.keys(ultimoBriefingCliente).length) });
+  if (meusVideosCache.length) {
+    itens.push({ label: 'Abrir o seu primeiro vídeo', tab: 'videos', done: onbFlag('videoVisto') || meusVideosCache.some(v => v.feedback && v.feedback.tipo) });
+  }
+  if (onbGravacoes.length) {
+    itens.push({ label: 'Confirmar presença na gravação', tab: 'gravacao', done: onbGravacoes.some(g => g.status === 'confirmada') });
+  }
+  itens.push({ label: 'Enviar logo e materiais da marca', tab: 'materiais', done: onbQtdMateriais > 0 });
+  return itens;
+}
+function onbOcultarChecklist() {
+  onbSalvar({ checklistOculto: true });
+  document.getElementById('onbChecklistCard').style.display = 'none';
+}
+function onbRender() {
+  if (!onbHabilitado || !onbCarregado.videos || !onbCarregado.materiais) return;
+  const card = document.getElementById('onbChecklistCard');
+  if (onbFlag('checklistOculto')) { card.style.display = 'none'; return; }
+  const itens = onbItens();
+  const feitos = itens.filter(i => i.done).length;
+  const todos = feitos === itens.length;
+  if (!onbAvaliou) {
+    onbAvaliou = true;
+    if (todos) { onbOcultarChecklist(); return; }
+  }
+  document.getElementById('onbContagem').textContent = feitos + ' de ' + itens.length;
+  document.getElementById('onbBarra').style.width = Math.round(feitos / itens.length * 100) + '%';
+  document.getElementById('onbItens').innerHTML = itens.map((it, i) =>
+    '<div class="onb-item' + (it.done ? ' done' : '') + '" data-onb-tab="' + it.tab + '" role="button" tabindex="0">' +
+      '<span class="onb-chk">' + (it.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') + '</span>' +
+      '<span class="onb-lbl">' + it.label + '</span>' +
+      '<span class="onb-go">Ir &rarr;</span>' +
+    '</div>').join('');
+  document.querySelectorAll('#onbItens .onb-item').forEach(el => {
+    const ir = () => ativarAba(el.dataset.onbTab);
+    el.addEventListener('click', ir);
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); } });
+  });
+  document.getElementById('onbConcluido').style.display = todos ? 'block' : 'none';
+  card.style.display = 'block';
+}
+document.getElementById('onbOcultar').addEventListener('click', () => {
+  onbOcultarChecklist();
+  showToast('Você pode rever o passo a passo no menu à esquerda.', 'success');
+});
+document.getElementById('onbConcluir').addEventListener('click', onbOcultarChecklist);
+
+function onbIniciar(dados) {
+  onbEstado = (dados && dados.onboarding) || {};
+  onbGravacoes = gravacoesDoCliente(dados);
+  onbHabilitado = true;
+  navReverTour.style.display = 'block';
+  if (!onbFlag('tourVisto')) setTimeout(onbAbrirTour, 700);
+  onbRender();
+}
 
 // --- Sobre o negócio (briefing) ---
 const SECOES_NEGOCIO = [
@@ -734,6 +911,7 @@ document.getElementById('btnSalvarNegocio').addEventListener('click', async () =
   briefing.respondidoEm = new Date();
   ultimoBriefingCliente = briefing;
   mostrarNegocioView(briefing);
+  onbRender();
 });
 
 // --- Gravações: array de itens no doc do cliente ---
@@ -1241,6 +1419,8 @@ async function salvarConfirmacaoGravacao(gravacaoId, status, motivo) {
   gravDadosAtuais.gravacoes = lista;
   renderGravacaoTab(gravDadosAtuais);
   renderGravacao(gravDadosAtuais);
+  onbGravacoes = gravacoesDoCliente(gravDadosAtuais);
+  onbRender();
 
   if (original) {
     const d = original.data.toDate ? original.data.toDate() : new Date(original.data);
@@ -1365,6 +1545,8 @@ function carregarVideos() {
       renderVideosBoard();
       renderCalendarioLista();
       renderCronogramaSemana();
+      onbCarregado.videos = true;
+      onbRender();
     });
 }
 
@@ -1492,6 +1674,7 @@ function atualizarStepperVideo(rank) {
 function abrirVideoDetalheCliente(id) {
   const v = meusVideosCache.find(x => x.id === id);
   if (!v) return;
+  if (onbHabilitado && !onbFlag('videoVisto')) { onbSalvar({ videoVisto: true }); onbRender(); }
   vdModalId = id;
   vdModalTitulo = v.titulo || 'Sem título';
   const feedback = v.feedback || {};
@@ -1740,6 +1923,9 @@ function carregarMateriais() {
     .where('clienteId', '==', currentUser.uid)
     .onSnapshot(snap => {
       const box = document.getElementById('listaMateriais');
+      onbQtdMateriais = snap.size;
+      onbCarregado.materiais = true;
+      onbRender();
       if (snap.empty) {
         box.innerHTML = '<div class="empty-state">Nenhum material disponibilizado ainda.</div>';
         return;

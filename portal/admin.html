@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -333,7 +333,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           Cadastrar cliente
         </button>
-        <input type="text" id="buscaClientes" placeholder="Buscar por nome ou empresa..." style="flex:1;min-width:200px;background:var(--black-card);border:1px solid var(--border);border-radius:8px;padding:0 14px;color:var(--white);font-size:0.9rem;font-family:inherit;">
+        <input type="text" id="buscaClientes" placeholder="Buscar por nome ou empresa..." style="flex:1;min-width:200px;min-height:42px;background:var(--black-card);border:1px solid var(--border);border-radius:8px;padding:0 14px;color:var(--white);font-size:0.9rem;font-family:inherit;">
       </div>
       <div id="gridClientes" class="client-list"><div class="empty-state">Carregando...</div></div>
     </section>
@@ -1329,7 +1329,7 @@ function renderResumoPeriodico() {
   if (paradosGeral.length) {
     const p = paradosGeral[0];
     const nome = (clientesCache[p.v.clienteId] && (clientesCache[p.v.clienteId].empresa || clientesCache[p.v.clienteId].nome)) || 'Cliente';
-    linhasVideos.push('<span style="color:var(--yellow);">' + nome + ' parado em aprovação há ' + p.dias + ' dias</span>');
+    linhasVideos.push('<span style="color:var(--yellow);">' + nome + ' parado em aprovação ' + textoHaDias(p.dias) + '</span>');
   }
   document.getElementById('resumoListaVideos').innerHTML = linhasVideos.join('<br>');
 
@@ -1361,7 +1361,7 @@ function renderResumoPeriodico() {
   if (duvidasAbertas.length) {
     const linhas = duvidasAbertas.slice(0, 5).map(x => {
       const nome = (clientesCache[x.d.clienteId] && (clientesCache[x.d.clienteId].empresa || clientesCache[x.d.clienteId].nome)) || 'Cliente';
-      return '<span style="color:var(--yellow);">' + nome + ' há ' + x.dias + ' dias</span>';
+      return '<span style="color:var(--yellow);">' + nome + ' ' + textoHaDias(x.dias) + '</span>';
     });
     document.getElementById('resumoListaDuvidas').innerHTML = linhas.join('<br>');
   } else {
@@ -1957,6 +1957,11 @@ let demandasCache = {};
 let demandaRevisandoId = null;
 let demandaEditandoId = null;
 
+// "2026-10-25" -> "25/10/2026" (o campo de data guarda no formato ISO)
+function formatarPrazo(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || '');
+}
 function demStatusInfo(status) {
   const mapa = {
     aberta: { texto: 'Aberta', classe: 'badge-neutral' },
@@ -2104,7 +2109,7 @@ function renderDemandasAdmin(filtroDesigner, filtroCliente, filtroStatus) {
   wrap.innerHTML = lista.map(d => {
     const info = demStatusInfo(d.status);
     let detalhes = '';
-    if (d.prazo) detalhes += `<div class="meta">Prazo: ${escapeHtml(d.prazo)}</div>`;
+    if (d.prazo) detalhes += `<div class="meta">Prazo: ${escapeHtml(formatarPrazo(d.prazo))}</div>`;
     if (d.quantidade) detalhes += `<div class="meta">Qtd: ${escapeHtml(String(d.quantidade))}${d.formato ? ' · ' + escapeHtml(demFormatoLabel(d.formato)) : ''}</div>`;
     if (d.referencias) detalhes += `<div class="meta">Referência: ${escapeHtml(d.referencias)}</div>`;
     if (d.feedbackAdmin && d.status === 'alteracao_solicitada') detalhes += `<div class="meta" style="color:var(--red);">Feedback: ${escapeHtml(d.feedbackAdmin)}</div>`;
@@ -2232,6 +2237,10 @@ function textoAcessoPorDias(dias, ultimoAcesso) {
   if (dias === 0) return hora ? `Acessou hoje às ${hora}` : 'Acessou hoje';
   if (dias === 1) return hora ? `Acessou ontem às ${hora}` : 'Acessou ontem';
   return `Último acesso há ${dias} dias`;
+}
+// "hoje", "há 1 dia", "há 3 dias" (singular quando for 1 dia)
+function textoHaDias(n) {
+  return n <= 0 ? 'hoje' : (n === 1 ? 'há 1 dia' : 'há ' + n + ' dias');
 }
 function textoAcessoCurto(dias) {
   if (dias === null) return 'nunca acessou';
@@ -2781,7 +2790,7 @@ function renderPerfilCalendario() {
   const primeiroDia = new Date(ano, mes, 1).getDay();
   const totalDias = new Date(ano, mes + 1, 0).getDate();
 
-  let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;">';
+  let html = '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;text-align:center;">';
   ['D','S','T','Q','Q','S','S'].forEach(d => {
     html += `<div class="meta" style="padding:4px;">${d}</div>`;
   });
