@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Admin</title>
-<link rel="stylesheet" href="style.css?v=23">
+<link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -143,7 +143,7 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div class="resumo-listas" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
         <div class="card" style="margin-bottom:0;">
           <h3 style="margin-bottom:10px;">Vídeos</h3>
           <div id="resumoListaVideos" style="font-size:0.85rem;color:var(--gray);line-height:1.9;"></div>
@@ -3421,7 +3421,7 @@ function abrirNegocioCliente(uid) {
       </div>`;
     }).join('');
     return `<div style="font-size:0.72rem;color:var(--purple-light);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">${secao.titulo}</div>
-      <div style="display:grid;grid-template-columns:${secao.colunas === 2 ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)'};gap:12px 24px;margin-bottom:22px;">${itens}</div>`;
+      <div class="briefing-grid" style="display:grid;grid-template-columns:${secao.colunas === 2 ? 'minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1fr)'};gap:12px 24px;margin-bottom:22px;">${itens}</div>`;
   }).join('');
 }
 
