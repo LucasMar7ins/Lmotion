@@ -200,6 +200,7 @@
             <h2 style="margin:0;" id="perfilNome">Cliente</h2>
             <p class="meta" id="perfilSub" style="margin-top:2px;"></p>
             <span id="perfilUltimoAcesso" style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:0.76rem;font-weight:600;padding:4px 10px;border-radius:20px;"></span>
+            <div id="perfilAtividade" style="display:none;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -2459,6 +2460,7 @@ function abrirPerfilCliente(uid) {
   badgeAcesso.style.border = '1px solid color-mix(in srgb, ' + corAcessoPerfil + ' 35%, transparent)';
   badgeAcesso.style.color = corAcessoPerfil;
   badgeAcesso.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:' + corAcessoPerfil + ';"></span>' + textoAcessoPorDias(diasAcessoPerfil, c.ultimoAcesso);
+  document.getElementById('perfilAtividade').style.display = 'none';
 
   document.getElementById('perfilEditNome').value = c.nome || '';
   document.getElementById('perfilEditEmpresa').value = c.empresa || '';
@@ -2475,7 +2477,39 @@ function abrirPerfilCliente(uid) {
     snap.forEach(d => perfilEntregas.push({ id: d.id, ...d.data() }));
     renderPerfilCalendario();
     renderPerfilVideos();
+    renderPerfilAtividade();
   });
+}
+
+// --- Atividade do cliente no portal (chips no topo do perfil) ---
+// Para mudar os limites de alerta, ajuste só este número.
+const LIMITE_VIDEO_PARADO_DIAS = 3;
+function renderPerfilAtividade() {
+  const box = document.getElementById('perfilAtividade');
+  if (!box || !perfilUid) return;
+  const c = clientesCache[perfilUid] || {};
+  const onb = c.onboarding || {};
+  const chip = (texto, cor) => '<span style="display:inline-flex;align-items:center;gap:6px;font-size:0.76rem;font-weight:600;padding:4px 10px;border-radius:20px;color:' + cor + ';background:color-mix(in srgb, ' + cor + ' 15%, transparent);border:1px solid color-mix(in srgb, ' + cor + ' 35%, transparent);"><span style="width:6px;height:6px;border-radius:50%;background:' + cor + ';"></span>' + texto + '</span>';
+  const chips = [];
+
+  if (onb.checklistOculto) chips.push(chip('Tutorial concluído', 'var(--green)'));
+  else if (onb.tourVisto) chips.push(chip('Tutorial em andamento', 'var(--yellow)'));
+  else chips.push(chip('Ainda não abriu o tutorial', '#8a8a8a'));
+
+  const agora = new Date();
+  const esperando = perfilEntregas
+    .filter(v => !isPublicado(v) && !(v.feedback && v.feedback.tipo) && v.criadoEm)
+    .map(v => diasEntre(dataDeCampo(v.criadoEm), agora));
+  if (!esperando.length) {
+    chips.push(chip('Nenhum vídeo esperando aprovação', 'var(--green)'));
+  } else {
+    const maisAntigo = Math.max.apply(null, esperando);
+    const qtd = esperando.length === 1 ? '1 vídeo esperando' : esperando.length + ' vídeos esperando';
+    chips.push(chip(qtd + ' · o mais antigo ' + textoHaDias(maisAntigo), maisAntigo >= LIMITE_VIDEO_PARADO_DIAS ? 'var(--yellow)' : '#8a8a8a'));
+  }
+
+  box.innerHTML = chips.join('');
+  box.style.display = 'flex';
 }
 
 let perfilVideoFiltro = 'pendente';
