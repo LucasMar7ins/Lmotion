@@ -2,12 +2,18 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0a0a0a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Lmotion">
 <link rel="icon" type="image/png" href="../assets/favicon.png">
 <title>Portal Lmotion — Cliente</title>
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -665,6 +671,7 @@ const ONB_ICONES = {
   calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
   check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
   briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  phone: '<rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
   chat: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>'
 };
 function onbIconeSvg(nome, tam) {
@@ -678,6 +685,21 @@ const ONB_PASSOS = [
   { icone: 'briefcase', titulo: 'Sobre o negócio e materiais', texto: 'Conte um pouco sobre a sua empresa (leva uns 5 minutos) e envie logo e referências na aba Materiais da marca. Quanto mais a gente souber, melhor fica o conteúdo.' },
   { icone: 'chat', titulo: 'Ficou com dúvida?', texto: 'Mande sua pergunta na aba Dúvidas e receba a resposta aqui mesmo, ou fale direto com a gente no WhatsApp. Para rever este passo a passo, use o menu à esquerda.' }
 ];
+
+// Passo "Instalar no celular": só aparece em celular/tablet e se o portal ainda não está aberto como app.
+(function () {
+  try {
+    const ua = navigator.userAgent || '';
+    const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const android = /Android/.test(ua);
+    const instalado = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    if (instalado || !(ios || android)) return;
+    const texto = ios
+      ? 'Para abrir o portal como um app, toque no botão de compartilhar do Safari (o quadrado com uma seta) e escolha "Adicionar à Tela de Início". Fica o ícone da Lmotion no seu celular.'
+      : 'Para abrir o portal como um app, toque nos três pontinhos do Chrome e escolha "Instalar app" ou "Adicionar à tela inicial". Fica o ícone da Lmotion no seu celular.';
+    ONB_PASSOS.splice(ONB_PASSOS.length - 1, 0, { icone: 'phone', titulo: 'Instale no seu celular', texto: texto });
+  } catch (e) {}
+})();
 
 let onbEstado = {};
 let onbGravacoes = [];
