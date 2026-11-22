@@ -10,4 +10,19 @@
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
+  <url>
+    <loc>https://lmotion.com.br/gestao-de-redes-sociais-juiz-de-fora.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://lmotion.com.br/gravacao-de-conteudo-em-estudio-juiz-de-fora.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://lmotion.com.br/edicao-de-video-para-redes-sociais-juiz-de-fora.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
