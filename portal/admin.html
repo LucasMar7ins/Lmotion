@@ -56,6 +56,7 @@
     <div class="nav-item" data-tab="gravacao-geral">Gravação</div>
     <div class="nav-item" data-tab="calendario">Calendário</div>
     <div class="nav-item" data-tab="pagamentos">Pagamentos</div>
+    <div class="nav-item" data-tab="contratos">Contratos</div>
     <div class="nav-item" data-tab="duvidas">Dúvidas</div>
     <div class="nav-item" data-tab="design">Design</div>
     <div class="nav-item" data-tab="tutoriais">Tutoriais</div>
@@ -537,6 +538,16 @@
       </div>
 
       <div id="listaPagamentosAdmin"><div class="empty-state">Carregando...</div></div>
+    </section>
+
+    <!-- CONTRATOS -->
+    <section class="tab-section" id="tab-contratos">
+      <h2>Contratos</h2>
+      <p class="page-sub">Guarde o link do contrato de cada cliente. Clique no cliente para ver, abrir ou trocar o link. Visível só pra você.</p>
+      <div class="field" style="max-width:320px;margin-bottom:14px;">
+        <input type="text" id="buscaContratos" placeholder="Buscar cliente..." autocomplete="off">
+      </div>
+      <div id="listaContratos"><div class="empty-state">Carregando...</div></div>
     </section>
 
     <!-- DÚVIDAS -->
@@ -2269,6 +2280,76 @@ function iniciaisCliente(c) {
 // --- CLIENTES (lista com busca) ---
 let clientesTodos = [];
 
+// --- CONTRATOS (link por cliente, só admin) ---
+let contratoAbertoId = null;
+function renderContratos() {
+  const box = document.getElementById('listaContratos');
+  if (!box) return;
+  const termo = (document.getElementById('buscaContratos').value || '').toLowerCase().trim();
+  const lista = clientesTodos.filter(c =>
+    (c.empresa || '').toLowerCase().includes(termo) || (c.nome || '').toLowerCase().includes(termo)
+  );
+  if (clientesTodos.length === 0) { box.innerHTML = '<div class="empty-state">Nenhum cliente cadastrado ainda.</div>'; return; }
+  if (lista.length === 0) { box.innerHTML = '<div class="empty-state">Nenhum cliente encontrado.</div>'; return; }
+
+  box.innerHTML = '';
+  lista.forEach(c => {
+    const tem = !!(c.contratoLink && safeUrl(c.contratoLink) !== '#');
+    const aberto = contratoAbertoId === c.id;
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '8px';
+    const cor = tem ? 'var(--green)' : 'var(--gray)';
+    wrap.innerHTML = `
+      <div class="client-list-item" data-ct-row="${escapeHtml(c.id)}" style="margin-bottom:0;">
+        <div class="client-list-avatar">${iniciaisCliente(c)}</div>
+        <div class="client-list-info">
+          <div class="client-list-empresa">${escapeHtml(c.empresa || c.nome || '')}</div>
+          <div class="client-list-nome">${escapeHtml(c.nome || '')}</div>
+        </div>
+        <span class="client-list-status" style="border:1px solid color-mix(in srgb, ${cor} 40%, transparent);color:${cor};background:color-mix(in srgb, ${cor} 12%, transparent);">${tem ? 'Contrato anexado' : 'Sem contrato'}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transform:rotate(${aberto ? 90 : 0}deg);transition:transform .2s;"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </div>
+      ${aberto ? `
+      <div class="card" style="margin:6px 0 0;">
+        <div class="field">
+          <label>Link do contrato</label>
+          <input type="url" data-ct-input placeholder="https://drive.google.com/..." value="${escapeHtml(c.contratoLink || '')}">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn" data-ct-salvar>Salvar</button>
+          ${tem ? `<a class="btn btn-outline" href="${escapeHtml(safeUrl(c.contratoLink))}" target="_blank" rel="noopener">Abrir contrato</a>
+          <button class="btn btn-outline" data-ct-remover style="color:var(--red);">Remover</button>` : ''}
+          <span class="meta" data-ct-msg></span>
+        </div>
+      </div>` : ''}
+    `;
+    wrap.querySelector('[data-ct-row]').addEventListener('click', () => {
+      contratoAbertoId = aberto ? null : c.id;
+      renderContratos();
+    });
+    if (aberto) {
+      const msg = wrap.querySelector('[data-ct-msg]');
+      wrap.querySelector('[data-ct-salvar]').addEventListener('click', async () => {
+        const v = wrap.querySelector('[data-ct-input]').value.trim();
+        if (v && safeUrl(v) === '#') { msg.textContent = 'O link precisa começar com http:// ou https://'; return; }
+        await db.collection('clientes').doc(c.id).set({
+          contratoLink: v || null,
+          contratoData: v ? firebase.firestore.FieldValue.serverTimestamp() : null
+        }, { merge: true });
+        showToast(v ? 'Link salvo.' : 'Link removido.');
+      });
+      const rem = wrap.querySelector('[data-ct-remover]');
+      if (rem) rem.addEventListener('click', () => {
+        abrirConfirmModal('Remover link do contrato?', 'O link some do portal. O arquivo do contrato em si não é apagado.', async () => {
+          await db.collection('clientes').doc(c.id).set({ contratoLink: null, contratoData: null }, { merge: true });
+        }, 'Remover');
+      });
+    }
+    box.appendChild(wrap);
+  });
+}
+document.getElementById('buscaContratos').addEventListener('input', renderContratos);
+
 function renderListaClientes(filtro) {
   const grid = document.getElementById('gridClientes');
   const termo = (filtro || '').toLowerCase().trim();
@@ -2321,6 +2402,7 @@ function carregarClientes() {
 
     if (snap.empty) {
       renderListaClientes('');
+      renderContratos();
       selects.forEach(s => s.innerHTML = '<option value="">Nenhum cliente cadastrado</option>');
       clientesCarregadosPg = true;
       if (typeof tentarGerarCiclosPagamento === 'function') tentarGerarCiclosPagamento();
@@ -2379,6 +2461,7 @@ function carregarClientes() {
 
     clientesTodos.sort((a, b) => (a.empresa || a.nome || '').localeCompare(b.empresa || b.nome || ''));
     renderListaClientes(document.getElementById('buscaClientes').value);
+    renderContratos();
 
     filtroEntregas.value = filtroEntregasAtual;
     filtroPagamentos.value = filtroPagamentosAtual;
