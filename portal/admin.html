@@ -308,7 +308,13 @@
 
           <div class="card">
             <h3 style="margin-bottom:14px;">Calendário completo</h3>
-            <p class="meta" id="perfilCalMes" style="margin-bottom:12px;"></p>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+              <button class="cal-nav-btn" id="perfilCalPrev" aria-label="Mês anterior">‹</button>
+              <button class="cal-nav-btn" id="perfilCalNext" aria-label="Próximo mês">›</button>
+              <span class="cal-nav-label" id="perfilCalMes"></span>
+              <button class="btn btn-outline" id="perfilCalHoje" style="padding:6px 14px;font-size:0.75rem;margin-left:auto;">Hoje</button>
+            </div>
+            <p class="meta" id="perfilCalResumo" style="margin:-4px 0 12px;"></p>
             <div id="perfilCalendario"></div>
             <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
               <span style="width:12px;height:12px;border-radius:3px;background:rgba(110,45,231,0.28);display:inline-block;"></span>
@@ -942,6 +948,7 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 let perfilUid = null;
+let perfilCalData = new Date();
 let perfilUnsub = null;
 let perfilEntregas = [];
 let todasEntregas = [];
@@ -2445,6 +2452,7 @@ function abrirPerfilCliente(uid) {
   localStorage.setItem('adminAbaAtiva', 'perfil');
   localStorage.setItem('adminPerfilUid', uid);
 
+  perfilCalData = new Date();
   perfilVideoFiltro = 'pendente';
   document.querySelectorAll('#perfilVideosFiltro .view-toggle-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('#perfilVideosFiltro [data-filtro="pendente"]').classList.add('active');
@@ -2810,11 +2818,13 @@ document.getElementById('btnSalvarInfoCliente').addEventListener('click', async 
 });
 
 function renderPerfilCalendario() {
+  const ano = perfilCalData.getFullYear();
+  const mes = perfilCalData.getMonth();
   const hoje = new Date();
-  const ano = hoje.getFullYear();
-  const mes = hoje.getMonth();
+  const mesPassado = (ano < hoje.getFullYear()) || (ano === hoje.getFullYear() && mes < hoje.getMonth());
   const nomesMes = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   document.getElementById('perfilCalMes').textContent = nomesMes[mes] + ' de ' + ano;
+  document.getElementById('perfilCalDetalhe').innerHTML = '';
 
   const diasComVideo = {};
   perfilEntregas.forEach(v => {
@@ -2826,6 +2836,11 @@ function renderPerfilCalendario() {
       diasComVideo[key].push(v);
     }
   });
+
+  const totalVideosMes = Object.values(diasComVideo).reduce((n, arr) => n + arr.length, 0);
+  document.getElementById('perfilCalResumo').textContent = totalVideosMes
+    ? totalVideosMes + (totalVideosMes === 1 ? ' vídeo' : ' vídeos') + (mesPassado ? ' entregues neste mês' : ' neste mês')
+    : 'Nenhum vídeo neste mês';
 
   const primeiroDia = new Date(ano, mes, 1).getDay();
   const totalDias = new Date(ano, mes + 1, 0).getDate();
@@ -2854,7 +2869,8 @@ function renderPerfilCalendario() {
       const numero = formatarNumeroWhatsapp(cliente.whatsapp);
       detalhe.innerHTML = diasComVideo[dia].map(v => {
         let btnWhats = '';
-        if (numero) {
+        const diaPassado = new Date(ano, mes, dia, 23, 59, 59) < new Date();
+        if (numero && !diaPassado) {
           const dataTxt = v.horarioPostagem ? ', às ' + v.horarioPostagem : '';
           const texto = `Oi ${cliente.nome || ''}! Passando pra lembrar que hoje é o dia de postar o vídeo "${v.titulo}"${dataTxt}. Qualquer coisa me chama!`;
           btnWhats = `<a href="https://wa.me/${numero}?text=${encodeURIComponent(texto)}" target="_blank" rel="noopener" data-lembrar-postar="1" style="display:inline-flex;align-items:center;gap:6px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.35);color:#25D366;font-size:0.72rem;font-weight:600;padding:6px 10px;border-radius:8px;white-space:nowrap;flex-shrink:0;text-decoration:none;">
@@ -2879,6 +2895,19 @@ function renderPerfilCalendario() {
     });
   });
 }
+
+document.getElementById('perfilCalPrev').addEventListener('click', () => {
+  perfilCalData = new Date(perfilCalData.getFullYear(), perfilCalData.getMonth() - 1, 1);
+  renderPerfilCalendario();
+});
+document.getElementById('perfilCalNext').addEventListener('click', () => {
+  perfilCalData = new Date(perfilCalData.getFullYear(), perfilCalData.getMonth() + 1, 1);
+  renderPerfilCalendario();
+});
+document.getElementById('perfilCalHoje').addEventListener('click', () => {
+  perfilCalData = new Date();
+  renderPerfilCalendario();
+});
 
 // --- VÍDEOS ---
 function formatarNumeroWhatsapp(numero) {
